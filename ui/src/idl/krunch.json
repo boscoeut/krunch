@@ -1,0 +1,719 @@
+{
+  "version": "0.1.0",
+  "name": "krunch",
+  "instructions": [
+    {
+      "name": "initializeExchange",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "exchange",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "createUserAccount",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "calculate",
+      "accounts": [
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "returns": "i64"
+    },
+    {
+      "name": "calculateFee",
+      "accounts": [
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "price",
+          "type": "i64"
+        },
+        {
+          "name": "amount",
+          "type": "i64"
+        },
+        {
+          "name": "feeRate",
+          "type": "i64"
+        }
+      ],
+      "returns": "i64"
+    },
+    {
+      "name": "updateMarket",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "marketIndex",
+          "type": "u16"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "makerFee",
+          "type": "i16"
+        },
+        {
+          "name": "takerFee",
+          "type": "i16"
+        },
+        {
+          "name": "leverage",
+          "type": "u16"
+        },
+        {
+          "name": "marketWeight",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "executeTrade",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "exchange",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "marketIndex",
+          "type": "u16"
+        },
+        {
+          "name": "amount",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "availableCollateral",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "market",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userPosition",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "exchange",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "marketIndex",
+          "type": "u16"
+        }
+      ],
+      "returns": {
+        "defined": "AvailableCollateral"
+      }
+    },
+    {
+      "name": "addMarket",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "exchange",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "marketIndex",
+          "type": "u16"
+        },
+        {
+          "name": "takerFee",
+          "type": "i16"
+        },
+        {
+          "name": "makerFee",
+          "type": "i16"
+        },
+        {
+          "name": "leverage",
+          "type": "u16"
+        },
+        {
+          "name": "marketWeight",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "addUserPosition",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "marketIndex",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "deposit",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "exchange",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAccount",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "exchange",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "resetAccounts",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "exchange",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "marketIndex",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "getPrice",
+      "accounts": [
+        {
+          "name": "chainlinkFeed",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "returns": {
+        "defined": "DataFeed"
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Decimal",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "i128"
+          },
+          {
+            "name": "decimals",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Exchange",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "publicKey"
+          },
+          {
+            "name": "marginUsed",
+            "type": "i64"
+          },
+          {
+            "name": "numberOfMarkets",
+            "type": "u16"
+          },
+          {
+            "name": "marketWeight",
+            "type": "u16"
+          },
+          {
+            "name": "basis",
+            "type": "i64"
+          },
+          {
+            "name": "pnl",
+            "type": "i64"
+          },
+          {
+            "name": "fees",
+            "type": "i64"
+          },
+          {
+            "name": "collateralValue",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Market",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "marketIndex",
+            "type": "u16"
+          },
+          {
+            "name": "marketWeight",
+            "type": "u16"
+          },
+          {
+            "name": "tokenAmount",
+            "type": "i64"
+          },
+          {
+            "name": "basis",
+            "type": "i64"
+          },
+          {
+            "name": "pnl",
+            "type": "i64"
+          },
+          {
+            "name": "fees",
+            "type": "i64"
+          },
+          {
+            "name": "currentPrice",
+            "type": "u64"
+          },
+          {
+            "name": "takerFee",
+            "type": "i16"
+          },
+          {
+            "name": "makerFee",
+            "type": "i16"
+          },
+          {
+            "name": "leverage",
+            "type": "u16"
+          },
+          {
+            "name": "marginUsed",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "collateralValue",
+            "type": "i64"
+          },
+          {
+            "name": "marginUsed",
+            "type": "i64"
+          },
+          {
+            "name": "basis",
+            "type": "i64"
+          },
+          {
+            "name": "pnl",
+            "type": "i64"
+          },
+          {
+            "name": "fees",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserPosition",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "marketIndex",
+            "type": "u16"
+          },
+          {
+            "name": "tokenAmount",
+            "type": "i64"
+          },
+          {
+            "name": "basis",
+            "type": "i64"
+          },
+          {
+            "name": "pnl",
+            "type": "i64"
+          },
+          {
+            "name": "fees",
+            "type": "i64"
+          },
+          {
+            "name": "marginUsed",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "DataFeed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "round",
+            "type": "i128"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AvailableCollateral",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "userCollateralAvailable",
+            "type": "i64"
+          },
+          {
+            "name": "marketCollateralAvailable",
+            "type": "i64"
+          },
+          {
+            "name": "maxMarketCollateralAvailable",
+            "type": "i64"
+          },
+          {
+            "name": "exchangeCollateralAvailable",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "UserMarginInsufficient",
+      "msg": "User margin is insufficient"
+    },
+    {
+      "code": 6001,
+      "name": "MarketMarginInsufficient",
+      "msg": "Market margin is insufficient"
+    },
+    {
+      "code": 6002,
+      "name": "MaxMarketMarginExceeded",
+      "msg": "Market margin is Exceeded"
+    },
+    {
+      "code": 6003,
+      "name": "ExchangeMarginInsufficient",
+      "msg": "Exchange margin is insufficient"
+    },
+    {
+      "code": 6004,
+      "name": "ExchangeValueInsufficient",
+      "msg": "Exchange value is insufficient"
+    },
+    {
+      "code": 6005,
+      "name": "UserAccountValueInsufficient",
+      "msg": "User Account value is insufficient"
+    }
+  ],
+  "metadata": {
+    "address": "4oAXoj5ztwVhuLGnNNj1PHGBwXChBFfPYid5vhyTWq5F"
+  }
+}
