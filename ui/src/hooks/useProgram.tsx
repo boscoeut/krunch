@@ -22,7 +22,7 @@ const useProgram = () => {
     async function createProvider() {
         /* create the provider and return it to the caller */
         /* network set to local network for now */
-        const network = "http://127.0.0.1:8899";
+        const network = "https://shiny-halibut-7vpx9xx4wj2x579-8899.app.github.dev/";
         const connection = new Connection(network, opts.preflightCommitment as any);
 
         const provider = new AnchorProvider(

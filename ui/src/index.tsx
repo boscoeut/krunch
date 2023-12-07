@@ -9,13 +9,17 @@ import {
 } from '@project-serum/anchor';
 import { BrowserRouter as Router } from 'react-router-dom';
 import idl from './idl/krunch.json';
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { PhantomWalletAdapter, SolflareWalletAdapter,SolongWalletAdapter,MathWalletAdapter,SafePalWalletAdapter, } from '@solana/wallet-adapter-wallets';
 import { useWallet, WalletProvider, ConnectionProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 require('@solana/wallet-adapter-react-ui/styles.css');
 const wallets = [
   /* view list of available wallets at https://github.com/solana-labs/wallet-adapter#wallets */
-  new PhantomWalletAdapter()
+  new PhantomWalletAdapter(),
+  new SolflareWalletAdapter(),
+  new SafePalWalletAdapter(),
+  new SolongWalletAdapter(),
+  new MathWalletAdapter(),
 ]
 
 
@@ -26,12 +30,13 @@ const opts = {
 }
 const programID = new PublicKey(idl.metadata.address)
 
+const network = "https://shiny-halibut-7vpx9xx4wj2x579-8899.app.github.dev/";
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
   <React.StrictMode>
-    <ConnectionProvider endpoint="http://127.0.0.1:8899">
+    <ConnectionProvider endpoint={network}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
           <Router>

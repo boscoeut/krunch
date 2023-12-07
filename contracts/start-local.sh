@@ -1,11 +1,11 @@
 #MY_ADDRESS=54Cm8AmU6SDyP7gGwJaTgYFBCK5GEQGCgPZ9wtNmavq5D8yNGzntFyxdvoxBfFH8spVK3tnPovQ9FoaGagmbBVV2
-MY_ADDRESS=HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS
+MY_ADDRESS=EDsmoWKuanmGubggz7XxTYX6qc3LtWgXj39qSikEqk7S
 TOKEN_PROGRAM_ID=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
 ASSOCIATED_TOKEN_PROGRAM_ID=ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL
 SOL_USD=CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt
 USDC=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
 CHAINLINK=HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny
-KRUNCH=4oAXoj5ztwVhuLGnNNj1PHGBwXChBFfPYid5vhyTWq5F
+KRUNCH=5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm
 
 solana account -u m $SOL_USD --output-file ./cloned_accounts/sol_usd.json --output json-compact
 solana account -u m  $USDC --output-file ./cloned_accounts/usdc.json --output json-compact

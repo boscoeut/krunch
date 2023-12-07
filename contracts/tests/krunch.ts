@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Krunch } from "../target/types/krunch";
 import { expect } from 'chai'
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, Keypair } from '@solana/web3.js';
 import {
   getAssociatedTokenAddress,
   createMint,
@@ -61,13 +61,13 @@ describe("krunch", () => {
       new anchor.BN(.02 * FEE_DECIMALS))
       .accounts({
       }).view();
-    console.log("CalculateFee", tx.toNumber()/AMOUNT_DECIMALS);
+    console.log("CalculateFee", tx.toNumber() / AMOUNT_DECIMALS);
     expect(tx.toNumber(), 'CalculateFee').to.equal(-2 * PRICE_DECIMALS);
   });
 
 
   it("Is initialized!", async () => {
-    // Add your test here.
+
     const exchangeBuffer = Buffer.from("exchange");
     const [exchange, _exchangeBump] =
       await anchor.web3.PublicKey.findProgramAddress(
@@ -168,7 +168,7 @@ describe("krunch", () => {
     console.log("market tokenAmount is: ", marketUpdated.tokenAmount.toNumber());
     console.log("market basis is: ", marketUpdated.basis.toNumber());
     console.log("market fees is: ", marketUpdated.fees.toNumber());
-    expect(marketUpdated.tokenAmount.toNumber(), 'market tokenAmount should be 4').to.equal(4* AMOUNT_DECIMALS);
+    expect(marketUpdated.tokenAmount.toNumber(), 'market tokenAmount should be 4').to.equal(4 * AMOUNT_DECIMALS);
 
     const userPositionUpdated = await program.account.userPosition.fetch(userPosition);
     console.log("userPositionUpdated tokenAmount is: ", userPositionUpdated.tokenAmount.toNumber());

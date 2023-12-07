@@ -5,5 +5,5 @@ echo "building krunch"
 anchor build
 echo "deploying krunch"
 anchor deploy
-echo "copying krunch.json to /Users/eberma/Documents/BitBucket/krunch_solana_ui/src/idl/krunch.json"
-cp -v ./target/idl/krunch.json /Users/eberma/Documents/BitBucket/krunch_solana_ui/src/idl/krunch.json
+echo "copying krunch.json to ../ui/src/idl/krunch.json"
+cp -v ./target/idl/krunch.json ../ui/src/idl/krunch.json

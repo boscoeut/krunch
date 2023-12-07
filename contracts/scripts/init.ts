@@ -64,6 +64,7 @@ const fetchAccount = async (program:any,name: string, seeds: Array<String|Public
 
 const initializeKrunch = async function (provider: any, program: any) {
     const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', []);
+    console.log("ONWER ADDRESS", provider.wallet.publicKey.toString()); 
     console.log("exchange", exchange.collateralValue.toString());
 
     const _takerFee = 0.2;
@@ -117,7 +118,7 @@ const mintTokens = async function (provider: any, program: any) {
     const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
     const payer = (provider.wallet as anchor.Wallet).payer;
     const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = require("@solana/spl-token");
-    console.log("Initializing Local")
+    console.log("mintTokens owner", payer.publicKey.toString())
     // Configure client to use the provider.
     //create associated token account
     const mint = await getMint(provider.connection, new PublicKey(USDC_MINT))
@@ -129,7 +130,9 @@ const mintTokens = async function (provider: any, program: any) {
         USDC_MINT, //mint
         payer.publicKey, //owner
     )
-    console.log('usdcTokenAccount', usdcTokenAccount.address.toString())
+    console.log('usdcTokenAccount address', usdcTokenAccount.address.toString())
+    console.log('usdcTokenAccount Owner', usdcTokenAccount.owner.toString())
+    console.log('usdcTokenAccount payer', payer.publicKey.toString())
 
     //mint tokens
     const mintTokenTX = new anchor.web3.Transaction();

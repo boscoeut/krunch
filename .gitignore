@@ -12,3 +12,8 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+**/.anchor
+**/node_modules
+**/test-ledger
+
+contracts/.anchor/test-ledger/rocksdb/000052.sst
