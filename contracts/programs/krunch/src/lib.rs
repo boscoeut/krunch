@@ -21,6 +21,8 @@ pub mod krunch {
     const LEVERAGE_DECIMALS: u64 = 10u64.pow(4);
     const AMOUNT_DECIMALS: u64 = 10u64.pow(9);
     const PRICE_DECIMALS: u64 = 10u64.pow(9);
+    const STABLE_DECIMALS: u64 = 10u64.pow(6);
+    const STABLE_CONVERSION: u32 = 3;
 
     pub fn initialize_exchange(ctx: Context<InitializeExchange>) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
@@ -253,7 +255,7 @@ pub mod krunch {
         exchange.collateral_value += amount as i64;
 
         // do token transfer
-        let tokenAmount = amount / 10u64.pow(3);
+        let tokenAmount = amount / 10u64.pow(STABLE_CONVERSION);
 
         let destination = &ctx.accounts.escrow_account;
         let source = &ctx.accounts.user_token_account;
@@ -290,7 +292,7 @@ pub mod krunch {
         exchange.collateral_value -= amount as i64;
 
         // token transfer
-        let tokenAmount = amount / 10u64.pow(3);
+        let tokenAmount = amount / 10u64.pow(STABLE_CONVERSION);
         let source = &ctx.accounts.escrow_account;
         let destination = &ctx.accounts.user_token_account;
         let token_program = &ctx.accounts.token_program;
