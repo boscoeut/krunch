@@ -9,10 +9,15 @@
             "type": "node",
             "request": "launch",
             "cwd": "${workspaceRoot}/ui",
+            "console": "integratedTerminal",
             "runtimeExecutable": "npm",
             "runtimeArgs": [
-                "run-script", "start"
+                "run-script", 
+                "start"
             ],
+            "skipFiles": [
+                "<node_internals>/**"
+              ]
         },
     ]
 }
