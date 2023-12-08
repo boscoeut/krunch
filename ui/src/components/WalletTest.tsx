@@ -10,6 +10,7 @@ import Table from '@mui/joy/Table';
 import { useState } from 'react';
 import { getAssociatedTokenAddress, getMint } from "@solana/spl-token"
 import Input from '@mui/joy/Input';
+import { useKrunchStore } from "../hooks/useKrunchStore";
 
 const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 const ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
@@ -372,8 +373,13 @@ export default function WalletTest() {
     if (temp.user_position) {
         rows.push({ ...temp.user_position, name: 'user_position' })
     }
+
+    const bears = useKrunchStore(state => state.bears)
+    const increasePopulation = useKrunchStore((state) => state.increase)
     return (
         <div>
+            <h1>{bears} bears</h1>
+            <Button onClick={()=>increasePopulation(1)}>Increment Bears</Button>
             {wallet.connected &&
                 <div>
                     <Table>

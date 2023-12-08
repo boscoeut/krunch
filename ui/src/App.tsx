@@ -16,12 +16,18 @@ import Sidebar from './components/Sidebar';
 import Orders from './components/Orders';
 import Header from './components/Header';
 import WalletTest from './components/WalletTest';
+import Markets from './components/Markets';
+import { useLocation } from 'react-router-dom';
+
 
 const useEnhancedEffect =
     typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
 export default function JoyOrderDashboardTemplate() {
     const status = useScript(`https://unpkg.com/feather-icons`);
+
+    const location = useLocation();
+console.log(location.pathname); 
 
     useEnhancedEffect(() => {
         // Feather icon setup: https://github.com/feathericons/feather#4-replace
@@ -35,7 +41,7 @@ export default function JoyOrderDashboardTemplate() {
     return (
         <CssVarsProvider disableTransitionOnChange>
             <CssBaseline />
-            <Box sx={{ display: 'flex', minHeight: '100dvh' }}>
+            <Box sx={{ display: 'flex', minHeight: '100vh' }}>
                 <Header />
                 <Sidebar />
                 <Box
@@ -104,7 +110,7 @@ export default function JoyOrderDashboardTemplate() {
                             justifyContent: 'space-between',
                         }}
                     >
-                        <Typography level="h2">Test Functions</Typography>
+                        <Typography level="h2">{location.pathname}</Typography>
                         <Button
                             color="primary"
                             startDecorator={<DownloadRoundedIcon />}
@@ -113,11 +119,20 @@ export default function JoyOrderDashboardTemplate() {
                             Test All
                         </Button>
                     </Box>
-                    <Routes >
-                        <Route path="/home" Component={WalletTest} />
-                        <Route path="/dashboard" Component={Orders} />
-                        <Route path="/" element={<Navigate replace to="/home" />} />
-                    </Routes>
+                    <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1,
+                        overflowY: 'auto',
+                    
+                    }}>
+                        <Routes >
+                            <Route path="/home" Component={WalletTest} />
+                            <Route path="/markets" Component={Markets} />
+                            <Route path="/dashboard" Component={Orders} />
+                            <Route path="/" element={<Navigate replace to="/home" />} />
+                        </Routes>
+                    </Box>
                 </Box>
             </Box>
         </CssVarsProvider>

@@ -93,7 +93,7 @@ export default function Sidebar() {
                     md: 'none',
                 },
                 transition: 'transform 0.4s, width 0.4s',
-                zIndex: 10000,
+                zIndex: 1000,
                 height: '100dvh',
                 width: 'var(--Sidebar-width)',
                 top: 0,
@@ -177,6 +177,15 @@ export default function Sidebar() {
                             <DashboardRoundedIcon />
                             <ListItemContent>
                                 <Typography level="title-sm">Dashboard</Typography>
+                            </ListItemContent>
+                        </ListItemButton>
+                    </ListItem>
+
+                    <ListItem>
+                        <ListItemButton onClick={() => navigate("/markets")}>
+                            <DashboardRoundedIcon />
+                            <ListItemContent>
+                                <Typography level="title-sm">Markets</Typography>
                             </ListItemContent>
                         </ListItemButton>
                     </ListItem>
