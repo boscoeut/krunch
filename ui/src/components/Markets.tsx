@@ -18,7 +18,9 @@ export default function Markets() {
     const { getProgram, getProvider, wallet } = useProgram();
     const { findAddress, fetchOrCreateAccount, fetchAccount } = useAccounts();
     const [temp, setTemp] = useState({} as any);
-    const bears = useKrunchStore(state => state.bears)
+    const markets = useKrunchStore(state => state.markets)
+    const getPrice = useKrunchStore(state => state.getPrice)
+    const refreshMarkets = useKrunchStore(state => state.refreshMarkets)
     const [open, setOpen] = useState(false);
 
     const renderItem = (item: any, decimals = AMOUNT_DECIMALS) => {
@@ -36,27 +38,17 @@ export default function Markets() {
     }
 
     async function getAccounts() {
-        try {
-            const provider = await getProvider();
-            setTemp({
-                ...temp,
-                market_1: await fetchAccount('market', ['market', 1]),
-            })
-            console.log(temp)
-        } catch (err) {
-            console.log("getAccounts error: ", err);
-        }
+        await refreshMarkets(fetchAccount)
     }
 
-    const rows = [];
-    rows.push({ name: 'SOL', ...(temp.market_1 || {}) });
+    async function checkPrice(feedAddress:string    ) {
+        const program =await getProgram()
+        getPrice(program,feedAddress)
+    }
 
-    const increasePopulation = useKrunchStore((state) => state.increase)
     return (
         <Box>
-            <div>Bears {bears}</div>
             <Button onClick={()=>setOpen(true)}>Open Dialog</Button>
-            <Button onClick={()=>increasePopulation(1)}>Increment Bears</Button>
             <Button size="sm" variant="soft" onClick={getAccounts}>Refresh Accounts</Button>
             <Table>
                 <thead>
@@ -72,11 +64,12 @@ export default function Markets() {
                         <th>Taker Fee</th>
                         <th>Margin Used</th>
                         <th>Token Amt</th>
+                        <th>Address</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map(row => {
-                        return <tr>
+                    {markets.map(row => {
+                        return <tr key={row.name}>
                             <td>{renderItem(row.name)}</td>
                             <td>{row.marketIndex}</td>
                             <td>{row.leverage}</td>
@@ -88,6 +81,9 @@ export default function Markets() {
                             <td>{row.takerFee}</td>
                             <td>{renderItem(row.marginUsed)}</td>
                             <td>{renderItem(row.tokenAmount)}</td>
+                            <td>
+                                <Button onClick={async ()=>checkPrice(row.feedAddress?.toString())}>{row.feedAddress?.toString().substring(0,10)}</Button>
+                            </td>
                         </tr>
                     })}
                 </tbody>

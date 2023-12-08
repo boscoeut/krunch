@@ -55,38 +55,55 @@ const fetchOrCreateAccount = async (program: any,
     }
 }
 
-const fetchAccount = async (program:any,name: string, seeds: Array<String|PublicKey|Number>) => {
-    const address = await findAddress(program,seeds);
-    console.log('fetchAccount',name)
+const fetchAccount = async (program: any, name: string, seeds: Array<String | PublicKey | Number>) => {
+    const address = await findAddress(program, seeds);
+    console.log('fetchAccount', name)
     const acct = await program.account[name].fetch(address);
     return acct;
 }
 
-const initializeKrunch = async function (provider: any, program: any) {
-    const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', []);
-    console.log("ONWER ADDRESS", provider.wallet.publicKey.toString()); 
-    console.log("exchange", exchange.collateralValue.toString());
-
+const addMarkets = async function (provider: any, program: any) {
     const _takerFee = 0.2;
     const _makerFee = 0.1;
     const _leverage = 1;
     const _marketWeight = 0.1
 
     const marketIndex = 1;
-    const market: any = await fetchOrCreateAccount(
-        program,
-        'market',
-        ['market', marketIndex],
-        'addMarket', [
-        marketIndex,
-        new anchor.BN(_takerFee * FEE_DECIMALS),
-        new anchor.BN(_makerFee * FEE_DECIMALS),
-        new anchor.BN(_leverage * LEVERAGE_DECIMALS),
-        new anchor.BN(_marketWeight * MARKET_WEIGHT_DECIMALS)],
-        {
-            exchange: await findAddress(program, ['exchange']),
-        });
-    console.log("market", market.pnl.toString());
+
+    const markets = [{
+        index: 1,
+        address: "CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt",
+    }, {
+        index: 2,
+        address: "Cv4T27XbjVoKUYwP72NQQanvZeA7W4YF9L4EnYT9kx5o"
+    }]
+    for (const m of markets) {
+        const marketIndex = m.index;
+        const address = m.address;
+        const market: any = await fetchOrCreateAccount(
+            program,
+            'market',
+            ['market', marketIndex],
+            'addMarket', [
+            marketIndex,
+            new anchor.BN(_takerFee * FEE_DECIMALS),
+            new anchor.BN(_makerFee * FEE_DECIMALS),
+            new anchor.BN(_leverage * LEVERAGE_DECIMALS),
+            new anchor.BN(_marketWeight * MARKET_WEIGHT_DECIMALS),
+            new PublicKey(address)],
+            {
+                exchange: await findAddress(program, ['exchange']),
+            });
+        console.log("market", market.pnl.toString());
+    }
+}
+
+const initializeKrunch = async function (provider: any, program: any) {
+    const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', []);
+    console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
+    console.log("exchange", exchange.collateralValue.toString());
+    await addMarkets(provider, program);
+    const marketIndex = 1;
 
     const userAccount = await fetchOrCreateAccount(program, 'userAccount',
         ['user_account',
@@ -153,7 +170,7 @@ const mintTokens = async function (provider: any, program: any) {
         USDC_MINT])
     console.log("escrowAccount", escrowAccount.toString())
 
-      
+
     // deposit
     const escrowDepositAccount = await findAddress(program, [
         exchangeAddress,
@@ -171,14 +188,14 @@ const mintTokens = async function (provider: any, program: any) {
     console.log("deposit", tx);
 
     let programBalance = await provider.connection.getTokenAccountBalance(escrowAccount)
-    
+
     userBalance = await provider.connection.getTokenAccountBalance(usdcTokenAccount.address)
     console.log("userBalance After deposit", userBalance.value.amount);
 
     programBalance = await provider.connection.getTokenAccountBalance(escrowAccount)
     console.log("programBalance After deposit", programBalance.value.amount);
 
-    const acct: any = await fetchAccount(program,'userAccount', ['user_account', provider.wallet.publicKey]);
+    const acct: any = await fetchAccount(program, 'userAccount', ['user_account', provider.wallet.publicKey]);
     console.log('deposit', acct.collateralValue.toString())
 
     // withdraw

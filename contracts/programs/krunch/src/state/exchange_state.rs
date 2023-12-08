@@ -248,6 +248,7 @@ pub struct AddMarket<'info> {
                 + 2 // maker_fee:i16
                 + 2 // leverage:u16
                 + 8 // margin_used:i64
+                + 32 // feed_address:pubkey
         ,
         seeds = [b"market".as_ref(), market_index.to_le_bytes().as_ref()],
         bump
@@ -324,6 +325,7 @@ pub struct Market {
     pub maker_fee: i16,
     pub leverage: u16,
     pub margin_used: i64,
+    pub feed_address: Pubkey,
 }
 
 #[account]

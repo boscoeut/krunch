@@ -17,8 +17,11 @@ import Orders from './components/Orders';
 import Header from './components/Header';
 import WalletTest from './components/WalletTest';
 import Markets from './components/Markets';
+import Account from './components/Account';
+import Pool from './components/Pool';
+import Settings from './components/Settings';
+import Documentation from './components/Documentation';
 import { useLocation } from 'react-router-dom';
-
 
 const useEnhancedEffect =
     typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
@@ -70,35 +73,7 @@ console.log(location.pathname);
                         gap: 1,
                     }}
                 >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Breadcrumbs
-                            size="sm"
-                            aria-label="breadcrumbs"
-                            separator={<ChevronRightRoundedIcon fontSize="small" />}
-                            sx={{ pl: 0 }}
-                        >
-                            <Link
-                                underline="none"
-                                color="neutral"
-                                href="#some-link"
-                                aria-label="Home"
-                            >
-                                <HomeRoundedIcon />
-                            </Link>
-                            <Link
-                                underline="hover"
-                                color="neutral"
-                                href="#some-link"
-                                fontSize={12}
-                                fontWeight={500}
-                            >
-                                Dashboard
-                            </Link>
-                            <Typography color="primary" fontWeight={500} fontSize={12}>
-                                Orders
-                            </Typography>
-                        </Breadcrumbs>
-                    </Box>
+                    
                     <Box
                         sx={{
                             display: 'flex',
@@ -110,7 +85,7 @@ console.log(location.pathname);
                             justifyContent: 'space-between',
                         }}
                     >
-                        <Typography level="h2">{location.pathname}</Typography>
+                        <Typography level="h3">{location.pathname}</Typography>
                         <Button
                             color="primary"
                             startDecorator={<DownloadRoundedIcon />}
@@ -124,12 +99,14 @@ console.log(location.pathname);
                         flexDirection: 'column',
                         gap: 1,
                         overflowY: 'auto',
-                    
                     }}>
                         <Routes >
-                            <Route path="/home" Component={WalletTest} />
+                            <Route path="/home" Component={Account} />
+                            <Route path="/pool" Component={Pool} />
+                            <Route path="/settings" Component={Settings} />
+                            <Route path="/documentation" Component={Documentation} />
                             <Route path="/markets" Component={Markets} />
-                            <Route path="/dashboard" Component={Orders} />
+                            <Route path="/test" Component={WalletTest} />
                             <Route path="/" element={<Navigate replace to="/home" />} />
                         </Routes>
                     </Box>

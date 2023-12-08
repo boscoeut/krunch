@@ -229,6 +229,7 @@ pub mod krunch {
         maker_fee: i16,
         leverage: u16,
         market_weight: u16,
+        feed_address: Pubkey,
     ) -> Result<()> {
         let market = &mut ctx.accounts.market;
         market.market_index = market_index;
@@ -237,6 +238,7 @@ pub mod krunch {
         market.taker_fee = taker_fee;
         market.leverage = leverage;
         market.market_weight = market_weight;
+        market.feed_address = feed_address; 
         Ok(())
     }
 

@@ -11,6 +11,9 @@ import { useState } from 'react';
 import { getAssociatedTokenAddress, getMint } from "@solana/spl-token"
 import Input from '@mui/joy/Input';
 import { useKrunchStore } from "../hooks/useKrunchStore";
+import { OCR2Feed } from "@chainlink/solana-sdk"
+import { PriceStatus, PythHttpClient, getPythClusterApiUrl, getPythProgramKeyForCluster, PythCluster } from '@pythnetwork/client'
+import { Connection } from '@solana/web3.js'
 
 const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 const ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
@@ -64,12 +67,32 @@ export default function WalletTest() {
 
     const getPrice = async () => {
         const program = await getProgram();
-        const tx = await program.methods.getPrice().accounts({
-            chainlinkFeed: "CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt",
-            chainlinkProgram: "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
-        }).view();
-        console.log(tx)
-        console.log(tx.round.toNumber() / (10 ** tx.decimals))
+        const provider = await getProvider();
+        const PYTHNET_CLUSTER_NAME: PythCluster = 'pythnet'
+        const connection = new Connection(getPythClusterApiUrl(PYTHNET_CLUSTER_NAME))
+        const pythPublicKey = getPythProgramKeyForCluster(PYTHNET_CLUSTER_NAME)
+        const pythClient = new PythHttpClient(connection, pythPublicKey)
+        const data = await pythClient.getData()
+
+        for (const symbol of data.symbols) {
+            const price = data.productPrice.get(symbol)!
+            if (symbol.indexOf('SOL/USD') > -1) {
+                if (price.price && price.confidence) {
+                    // tslint:disable-next-line:no-console
+                    console.log(`${symbol}: $${price.price} \xB1$${price.confidence}`)
+                } else {
+                    // tslint:disable-next-line:no-console
+                    console.log(`${symbol}: price currently unavailable. status is ${PriceStatus[price.status]}`)
+                }
+            }
+        }
+        await new Promise(function () { })
+        // const tx = await program.methods.getPrice().accounts({
+        //     chainlinkFeed: "CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt",
+        //     chainlinkProgram: "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
+        // }).view();
+        // console.log(tx)
+        // console.log(tx.round.toNumber() / (10 ** tx.decimals))
     }
 
     const createUserPosition = async (marketIndex: number) => {
@@ -194,12 +217,12 @@ export default function WalletTest() {
                 USDC_MINT, //mint
                 provider.wallet.publicKey, //owner
             )
-            console.log('usdcTokenAccount', usdcTokenAccount.toString()    ) 
+            console.log('usdcTokenAccount', usdcTokenAccount.toString())
             let userBalance: any = await provider.connection.getTokenAccountBalance(usdcTokenAccount)
             console.log("usdcTokenAccount Before deposit", userBalance.value.amount);
-       
+
             await program.methods.deposit(new anchor.BN(amount * AMOUNT_DECIMALS)).accounts({
-                userTokenAccount:usdcTokenAccount,
+                userTokenAccount: usdcTokenAccount,
                 mint: USDC_MINT,
                 exchange: exchangeAddress,
                 escrowAccount: escrowAccount,
@@ -374,12 +397,10 @@ export default function WalletTest() {
         rows.push({ ...temp.user_position, name: 'user_position' })
     }
 
-    const bears = useKrunchStore(state => state.bears)
-    const increasePopulation = useKrunchStore((state) => state.increase)
+    
     return (
         <div>
-            <h1>{bears} bears</h1>
-            <Button onClick={()=>increasePopulation(1)}>Increment Bears</Button>
+    
             {wallet.connected &&
                 <div>
                     <Table>

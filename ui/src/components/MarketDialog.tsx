@@ -86,7 +86,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
             <Stack spacing={2}>
               {properties.map((property) => {
                 return (
-                  <FormControl>
+                  <FormControl key={property.label}>
                     <FormLabel>{property.label}</FormLabel>
                     <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
                   </FormControl>

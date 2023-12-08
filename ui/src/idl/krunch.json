@@ -255,6 +255,10 @@
         {
           "name": "marketWeight",
           "type": "u16"
+        },
+        {
+          "name": "feedAddress",
+          "type": "publicKey"
         }
       ]
     },
@@ -562,6 +566,10 @@
           {
             "name": "marginUsed",
             "type": "i64"
+          },
+          {
+            "name": "feedAddress",
+            "type": "publicKey"
           }
         ]
       }
