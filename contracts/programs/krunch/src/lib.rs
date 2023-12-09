@@ -284,16 +284,32 @@ pub mod krunch {
     }
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
+         // get price
+         let round = chainlink::latest_round_data(
+            ctx.accounts.chainlink_program.to_account_info(),
+            ctx.accounts.chainlink_feed.to_account_info(),
+        )?;
+        let price_decimals = chainlink::decimals(
+            ctx.accounts.chainlink_program.to_account_info(),
+            ctx.accounts.chainlink_feed.to_account_info(),
+        )?;
+        let price_print = Decimal::new(round.answer, u32::from(price_decimals));
+
+        
+        let total = (amount as u128 * round.answer as u128) / 10u128.pow(price_decimals.into());
+        let collateral_amount = total; // TODO REMOVE
+
+        // update collateral value
         let user_account = &mut ctx.accounts.user_account;
-        user_account.collateral_value += amount as i64;
+        user_account.collateral_value += collateral_amount as i64;
 
         let exchange = &mut ctx.accounts.exchange;
-        exchange.collateral_value += amount as i64;
+        exchange.collateral_value += collateral_amount as i64;
 
         // do token transfer
         let decimals = &ctx.accounts.exchange_treasury_position.decimals;
         let conversion = AMOUNT_NUM_DECIMALS-decimals;
-        let tokenAmount = amount / 10u64.pow(conversion.into());
+        let tokenAmount = amount / 10u64.pow(conversion.into()); 
 
         let destination = &ctx.accounts.escrow_account;
         let source = &ctx.accounts.user_token_account;

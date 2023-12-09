@@ -1,0 +1,23 @@
+{
+  "name": "utils",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.87.6"
+  }
+}

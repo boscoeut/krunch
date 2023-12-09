@@ -67,9 +67,6 @@ pub struct ExecuteTrade<'info> {
     system_program: Program<'info, System>,
 }
 
-// data validation
-
-// data validation
 #[derive(Accounts)]
 #[instruction(market_index: u16)]
 pub struct GetAvailableCollateral<'info> {
@@ -147,6 +144,10 @@ pub struct Deposit<'info> {
         bump
     )]
     pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
+    /// CHECK: We're reading data from this chainlink feed account
+    pub chainlink_feed: AccountInfo<'info>,
+    /// CHECK: This is the Chainlink program library
+    pub chainlink_program: AccountInfo<'info>
 }
 
 #[derive(Accounts)]

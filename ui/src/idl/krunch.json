@@ -429,6 +429,16 @@
           "name": "exchangeTreasuryPosition",
           "isMut": true,
           "isSigner": false
+        },
+        {
+          "name": "chainlinkFeed",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkProgram",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [

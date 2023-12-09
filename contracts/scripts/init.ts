@@ -5,44 +5,24 @@ import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { Program } from "@coral-xyz/anchor";
 import { Krunch } from "../target/types/krunch";
-import { token } from "@coral-xyz/anchor/dist/cjs/utils";
+const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = require("@solana/spl-token");
+import {USDC_MINT,ETH_MINT,ETH_USD_FEED, CHAINLINK_PROGRAM,
+    PRICE_DECIMALS,
+    FEE_DECIMALS,
+    MARKET_WEIGHT_DECIMALS,
+    AMOUNT_DECIMALS,
+    LEVERAGE_DECIMALS,
+    SOL_MINT,
+    USDT_MINT,
+    BTC_MINT,
+    SOL_USD_FEED,
+    USDC_USD_FEED,
+    USDT_USD_FEED,
+    BTC_USD_FEED,
+    EXCHANGE_POSITIONS
+} from 'utils/src/constants'
 
-const PRICE_DECIMALS = 10 ** 9;
-const FEE_DECIMALS = 10 ** 4;
-const MARKET_WEIGHT_DECIMALS = 10 ** 4;
-const AMOUNT_DECIMALS = 10 ** 9;
-const LEVERAGE_DECIMALS = 10 ** 4;
-const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
-const SOL_MINT = new PublicKey("So11111111111111111111111111111111111111112")
-const USDT_MINT = new PublicKey("Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB")
-const BTC_MINT = new PublicKey("3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh")
-const ETH_MINT = new PublicKey("7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs")
-const SOL_USD_FEED=new PublicKey("CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt")
-const USDC_USD_FEED=new PublicKey("GzGuoKXE8Unn7Vcg1DtomwD27tL4bVUpSK2M1yk6Xfz5")
-const USDT_USD_FEED=new PublicKey("GzGuoKXE8Unn7Vcg1DtomwD27tL4bVUpSK2M1yk6Xfz5")
-const ETH_USD_FEED=new PublicKey("716hFAECqotxcXcj8Hs8nr7AG6q9dBw2oX3k3M8V7uGq")
-const BTC_USD_FEED=new PublicKey("Cv4T27XbjVoKUYwP72NQQanvZeA7W4YF9L4EnYT9kx5o")
-const EXCHANGE_POSITIONS = [{
-    decimals: 9,
-    mint: SOL_MINT,
-    feedAddress:SOL_USD_FEED
-},{
-    decimals: 6,
-    mint: USDC_MINT,
-    feedAddress:USDC_USD_FEED
-},{
-    decimals: 8,
-    mint: BTC_MINT,
-    feedAddress:BTC_USD_FEED
-},{
-    decimals: 6,
-    mint: USDT_MINT,
-    feedAddress:USDT_USD_FEED
-},{
-    decimals: 8,
-    mint: ETH_MINT,
-    feedAddress:ETH_USD_FEED
-}]
+
 
 const findAddress = async (program: any, args: Array<String | PublicKey | Number>) => {
     const buffer = args.map((arg) => {
@@ -130,7 +110,7 @@ const addMarkets = async function (provider: any, program: any) {
 }
 
 const addExchangePositions = async function (provider: any, program: any) {
-    for(const tokenMint of EXCHANGE_POSITIONS){
+    for (const tokenMint of EXCHANGE_POSITIONS) {
         const exchangePosition: any = await fetchOrCreateAccount(program,
             'exchangeTreasuryPosition',
             ['exchange_position',
@@ -138,8 +118,8 @@ const addExchangePositions = async function (provider: any, program: any) {
             ],
             'addExchangePosition',
             [tokenMint.mint, true, new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS),
-                new anchor.BN(tokenMint.decimals ),
-                tokenMint.feedAddress
+            new anchor.BN(tokenMint.decimals),
+            tokenMint.feedAddress
             ],
             {
                 admin: provider.wallet.publicKey,
@@ -148,13 +128,13 @@ const addExchangePositions = async function (provider: any, program: any) {
 
         await program?.methods.
             updateExchangePosition(
-                tokenMint.mint, 
-                true, 
+                tokenMint.mint,
+                true,
                 new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS),
-                new anchor.BN(tokenMint.decimals ),
+                new anchor.BN(tokenMint.decimals),
                 tokenMint.feedAddress).
             accounts({
-                exchangeTreasuryPosition:await findAddress(program, ['exchange_position', tokenMint.mint]),
+                exchangeTreasuryPosition: await findAddress(program, ['exchange_position', tokenMint.mint]),
                 owner: provider.wallet.publicKey,
             }).rpc();
     }
@@ -186,39 +166,52 @@ const initializeKrunch = async function (provider: any, program: any) {
         });
     console.log('createUserPosition', userPosition.pnl.toString());
 
-    await addExchangePositions(provider, program);  
-    
+    await addExchangePositions(provider, program);
+
 };
 
-const mintTokens = async function (provider: any, program: any) {
-    const payer = (provider.wallet as anchor.Wallet).payer;
-    const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = require("@solana/spl-token");
-    console.log("mintTokens owner", payer.publicKey.toString())
-    // Configure client to use the provider.
-    //create associated token account
-    const mint = await getMint(provider.connection, new PublicKey(USDC_MINT))
-    console.log("SUPPLY", mint.supply.toString())
 
+const mintTokens = async function (provider: any) {
+    const payer = (provider.wallet as anchor.Wallet).payer;
+    console.log("mintTokens owner", payer.publicKey.toString())
+
+
+    for (const token of EXCHANGE_POSITIONS) {
+        const mint = await getMint(provider.connection, new PublicKey(token.mint))
+        console.log("SUPPLY", mint.supply.toString())
+
+        let tokenAccount = await getOrCreateAssociatedTokenAccount(
+            provider.connection, //connection
+            payer, //payer
+            token.mint, //mint
+            payer.publicKey, //owner
+        )
+        console.log('usdcTokenAccount address', tokenAccount.address.toString())
+        console.log('usdcTokenAccount Owner', tokenAccount.owner.toString())
+        console.log('usdcTokenAccount payer', payer.publicKey.toString())
+
+        //mint tokens
+        const mintTokenTX = new anchor.web3.Transaction();
+        mintTokenTX.add(createMintToInstruction(
+            token.mint,
+            tokenAccount.address,
+            payer.publicKey,
+            1000 * 10 ** mint.decimals, //1000 usdc tokens
+        ));
+        await provider.sendAndConfirm(mintTokenTX,);
+    }
+}
+
+const setupAccounts = async function (provider: any, program: any) {
+    const payer = (provider.wallet as anchor.Wallet).payer;
+
+    await mintTokens(provider);
     let usdcTokenAccount = await getOrCreateAssociatedTokenAccount(
         provider.connection, //connection
         payer, //payer
         USDC_MINT, //mint
         payer.publicKey, //owner
     )
-    console.log('usdcTokenAccount address', usdcTokenAccount.address.toString())
-    console.log('usdcTokenAccount Owner', usdcTokenAccount.owner.toString())
-    console.log('usdcTokenAccount payer', payer.publicKey.toString())
-
-    //mint tokens
-    const mintTokenTX = new anchor.web3.Transaction();
-    mintTokenTX.add(createMintToInstruction(
-        USDC_MINT,
-        usdcTokenAccount.address,
-        payer.publicKey,
-        1000 * 10 ** 6, //1000 usdc tokens
-    ));
-    await provider.sendAndConfirm(mintTokenTX,);
-
     let userBalance = await provider.connection.getTokenAccountBalance(usdcTokenAccount.address)
     console.log("userBalance Before", userBalance.value.amount);
 
@@ -227,7 +220,6 @@ const mintTokens = async function (provider: any, program: any) {
         exchangeAddress,
         USDC_MINT])
     console.log("escrowAccount", escrowAccount.toString())
-
 
     // deposit
     const escrowDepositAccount = await findAddress(program, [
@@ -242,7 +234,9 @@ const mintTokens = async function (provider: any, program: any) {
         escrowAccount: escrowDepositAccount,
         userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
         exchangeTreasuryPosition: await findAddress(program, ['exchange_position', USDC_MINT]),
-        owner: provider.wallet.publicKey
+        owner: provider.wallet.publicKey,
+        chainlinkFeed: USDC_USD_FEED,
+        chainlinkProgram: CHAINLINK_PROGRAM,
     }).rpc();
     console.log("deposit", tx);
 
@@ -283,7 +277,7 @@ const mintTokens = async function (provider: any, program: any) {
         const program = anchor.workspace.Krunch as Program<Krunch>;
 
         await initializeKrunch(provider, program);
-        await mintTokens(provider, program);
+        await setupAccounts(provider, program);
     } catch (e) {
         console.log(e)
     }

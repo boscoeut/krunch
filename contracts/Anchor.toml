@@ -16,5 +16,6 @@ wallet = "/home/codespace/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-init = "./deploy.sh && yarn run ts-mocha -p ./tsconfig.json -t 1000000 scripts/**/*.ts"
+startValidator="yarn run ts-mocha -p ./tsconfig.json -t 1000000 scripts/**/startValidator.ts"
+init = "./deploy.sh && yarn run ts-mocha -p ./tsconfig.json -t 1000000 scripts/**/init.ts"
 temp = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 scripts/**/*.ts"

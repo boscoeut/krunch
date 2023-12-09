@@ -14,20 +14,17 @@ import { useKrunchStore } from "../hooks/useKrunchStore";
 import { OCR2Feed } from "@chainlink/solana-sdk"
 import { PriceStatus, PythHttpClient, getPythClusterApiUrl, getPythProgramKeyForCluster, PythCluster } from '@pythnetwork/client'
 import { Connection } from '@solana/web3.js'
+import * as utils from 'utils/src/index'
+import {USDC_MINT,ETH_MINT,ETH_USD_FEED, CHAINLINK_PROGRAM,
+    PRICE_DECIMALS,
+    FEE_DECIMALS,
+    MARKET_WEIGHT_DECIMALS,
+    AMOUNT_DECIMALS,
+    LEVERAGE_DECIMALS
+} from 'utils/src/constants'
 
-const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-const ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-const SOL_USD = "CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt"
-const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-const CHAINLINK = "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
-const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 
 export default function WalletTest() {
-    const PRICE_DECIMALS = 10 ** 9;
-    const FEE_DECIMALS = 10 ** 4;
-    const MARKET_WEIGHT_DECIMALS = 10 ** 4;
-    const AMOUNT_DECIMALS = 10 ** 9;
-    const LEVERAGE_DECIMALS = 10 ** 4;
     const { getProgram, getProvider, wallet } = useProgram();
     const [_price, setPrice] = useState(10);
     const [_makerFee, setMakerFee] = useState(.1);
@@ -86,13 +83,13 @@ export default function WalletTest() {
                 }
             }
         }
-        await new Promise(function () { })
-        // const tx = await program.methods.getPrice().accounts({
-        //     chainlinkFeed: "CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt",
-        //     chainlinkProgram: "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
-        // }).view();
-        // console.log(tx)
-        // console.log(tx.round.toNumber() / (10 ** tx.decimals))
+        
+        const tx = await program.methods.getPrice().accounts({
+            chainlinkFeed: "CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt",
+            chainlinkProgram: "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
+        }).view();
+        console.log(tx)
+        console.log(tx.round.toNumber() / (10 ** tx.decimals))
     }
 
     const createUserPosition = async (marketIndex: number) => {
@@ -187,28 +184,37 @@ export default function WalletTest() {
     }
 
     const deposit = async (amount: number) => {
+
+        const feed = ETH_USD_FEED
+        const mint = ETH_MINT
+
+        // const feed = USDC_USD_FEED
+        // const mint = USDC_MINT
         try {
             const program = await getProgram();
             const provider = await getProvider();
             const exchangeAddress = await findAddress(['exchange'])
             const escrowAccount = await findAddress([
                 exchangeAddress,
-                USDC_MINT])
-            let usdcTokenAccount = await getAssociatedTokenAddress(
-                USDC_MINT, //mint
+                mint])
+            let tokenAccount = await getAssociatedTokenAddress(
+                mint, //mint
                 provider.wallet.publicKey, //owner
             )
-            console.log('usdcTokenAccount', usdcTokenAccount.toString())
-            let userBalance: any = await provider.connection.getTokenAccountBalance(usdcTokenAccount)
-            console.log("usdcTokenAccount Before deposit", userBalance.value.amount);
+            console.log('tokenAccount', tokenAccount.toString())
+            let userBalance: any = await provider.connection.getTokenAccountBalance(tokenAccount)
+            console.log("tokenAccount Before deposit", userBalance.value.amount);
 
             await program.methods.deposit(new anchor.BN(amount * AMOUNT_DECIMALS)).accounts({
-                userTokenAccount: usdcTokenAccount,
-                mint: USDC_MINT,
+                userTokenAccount: tokenAccount,
+                mint: mint,
                 exchange: exchangeAddress,
                 escrowAccount: escrowAccount,
                 userAccount: await findAddress(['user_account', provider.wallet.publicKey]),
-                owner: provider.wallet.publicKey
+                owner: provider.wallet.publicKey,
+                exchangeTreasuryPosition: await findAddress(['exchange_position', mint]),
+                chainlinkFeed: feed,
+                chainlinkProgram: CHAINLINK_PROGRAM
             }).rpc();
             const acct: any = await fetchAccount('userAccount', ['user_account', provider.wallet.publicKey]);
             console.log('deposit', acct)
@@ -272,7 +278,7 @@ export default function WalletTest() {
     const mintTokens = async () => {
         try {
             const provider = await getProvider();
-            const mint = await getMint(provider.connection, new PublicKey(USDC))
+            const mint = await getMint(provider.connection, USDC_MINT)
             console.log("SUPPLY", mint.supply.toString())
 
         } catch (err) {
@@ -378,6 +384,7 @@ export default function WalletTest() {
         rows.push({ ...temp.user_position, name: 'user_position' })
     }
 
+    console.log('apiurl', utils.API  )
     return (
         <div>
 
