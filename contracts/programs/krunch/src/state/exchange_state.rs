@@ -140,13 +140,13 @@ pub struct Deposit<'info> {
         token::mint=mint,
         token::authority=exchange,
     )]
+    pub escrow_account: Account<'info, TokenAccount>,
     #[account(
         mut, 
-        seeds = [b"exchange_position".as_ref(), mint.as_ref()],
+        seeds = [b"exchange_position".as_ref(), mint.key().as_ref()],
         bump
     )]
     pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
-    pub escrow_account: Account<'info, TokenAccount>,
 }
 
 #[derive(Accounts)]
@@ -183,7 +183,7 @@ pub struct Withdraw<'info> {
     pub mint: Account<'info, Mint>,
     #[account(
         mut, 
-        seeds = [b"exchange_position".as_ref(), mint.as_ref()],
+        seeds = [b"exchange_position".as_ref(), mint.key().as_ref()],
         bump
     )]
     pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
@@ -260,8 +260,9 @@ pub struct AddExchangeTreasuryPosition<'info> {
                 + 2 // active:bool
                 + 2 // treasuryWeight:u16,
                 + 1 // decimals:u8
+                + 32 // feed_address:Pubkey
         ,
-        seeds = [b"exchange_position".as_ref(), token_mint.as_ref()],
+        seeds = [b"exchange_position".as_ref(), token_mint.key().as_ref()],
         bump
     )]
     pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
@@ -275,7 +276,7 @@ pub struct UpdateExchangeTreasuryPosition<'info> {
     pub owner: Signer<'info>,
     #[account(
         mut, 
-        seeds = [b"exchange_position".as_ref(), tokenMint.as_ref()],
+        seeds = [b"exchange_position".as_ref(), tokenMint.key().as_ref()],
         bump
     )]
     pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
@@ -336,6 +337,7 @@ pub struct ExchangeTreasuryPosition {
     pub active: bool,
     pub treasury_weight: u16,
     pub decimals: u8,
+    pub feed_address: Pubkey,
 }
 
 #[account]

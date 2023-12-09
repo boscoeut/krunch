@@ -5,6 +5,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { Program } from "@coral-xyz/anchor";
 import { Krunch } from "../target/types/krunch";
+import { token } from "@coral-xyz/anchor/dist/cjs/utils";
 
 const PRICE_DECIMALS = 10 ** 9;
 const FEE_DECIMALS = 10 ** 4;
@@ -12,6 +13,36 @@ const MARKET_WEIGHT_DECIMALS = 10 ** 4;
 const AMOUNT_DECIMALS = 10 ** 9;
 const LEVERAGE_DECIMALS = 10 ** 4;
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
+const SOL_MINT = new PublicKey("So11111111111111111111111111111111111111112")
+const USDT_MINT = new PublicKey("Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB")
+const BTC_MINT = new PublicKey("3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh")
+const ETH_MINT = new PublicKey("7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs")
+const SOL_USD_FEED=new PublicKey("CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt")
+const USDC_USD_FEED=new PublicKey("GzGuoKXE8Unn7Vcg1DtomwD27tL4bVUpSK2M1yk6Xfz5")
+const USDT_USD_FEED=new PublicKey("GzGuoKXE8Unn7Vcg1DtomwD27tL4bVUpSK2M1yk6Xfz5")
+const ETH_USD_FEED=new PublicKey("716hFAECqotxcXcj8Hs8nr7AG6q9dBw2oX3k3M8V7uGq")
+const BTC_USD_FEED=new PublicKey("Cv4T27XbjVoKUYwP72NQQanvZeA7W4YF9L4EnYT9kx5o")
+const EXCHANGE_POSITIONS = [{
+    decimals: 9,
+    mint: SOL_MINT,
+    feedAddress:SOL_USD_FEED
+},{
+    decimals: 6,
+    mint: USDC_MINT,
+    feedAddress:USDC_USD_FEED
+},{
+    decimals: 8,
+    mint: BTC_MINT,
+    feedAddress:BTC_USD_FEED
+},{
+    decimals: 6,
+    mint: USDT_MINT,
+    feedAddress:USDT_USD_FEED
+},{
+    decimals: 8,
+    mint: ETH_MINT,
+    feedAddress:ETH_USD_FEED
+}]
 
 const findAddress = async (program: any, args: Array<String | PublicKey | Number>) => {
     const buffer = args.map((arg) => {
@@ -98,6 +129,39 @@ const addMarkets = async function (provider: any, program: any) {
     }
 }
 
+const addExchangePositions = async function (provider: any, program: any) {
+    for(const tokenMint of EXCHANGE_POSITIONS){
+        const exchangePosition: any = await fetchOrCreateAccount(program,
+            'exchangeTreasuryPosition',
+            ['exchange_position',
+                tokenMint.mint
+            ],
+            'addExchangePosition',
+            [tokenMint.mint, true, new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS),
+                new anchor.BN(tokenMint.decimals ),
+                tokenMint.feedAddress
+            ],
+            {
+                admin: provider.wallet.publicKey,
+            });
+        console.log('exchangePosition', exchangePosition.tokenMint.toString());
+
+        await program?.methods.
+            updateExchangePosition(
+                tokenMint.mint, 
+                true, 
+                new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS),
+                new anchor.BN(tokenMint.decimals ),
+                tokenMint.feedAddress).
+            accounts({
+                exchangeTreasuryPosition:await findAddress(program, ['exchange_position', tokenMint.mint]),
+                owner: provider.wallet.publicKey,
+            }).rpc();
+    }
+
+}
+
+
 const initializeKrunch = async function (provider: any, program: any) {
     const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', []);
     console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
@@ -122,28 +186,8 @@ const initializeKrunch = async function (provider: any, program: any) {
         });
     console.log('createUserPosition', userPosition.pnl.toString());
 
-    const tokenMint = USDC_MINT
-
-
-    const exchangePosition: any = await fetchOrCreateAccount(program,
-        'exchangeTreasuryPosition',
-        ['exchange_position',
-            tokenMint
-        ],
-        'addExchangePosition',
-        [tokenMint, true, new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS),
-            new anchor.BN(6)],
-        {
-            admin: provider.wallet.publicKey,
-        });
-    console.log('exchangePosition', exchangePosition.tokenMint.toString());
-
-    const tx = await program?.methods.
-        updateExchangePosition(tokenMint, true, new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS)).
-        accounts({
-            exchangeTreasuryPosition:await findAddress(program, ['exchange_position', tokenMint]),
-        }).rpc();
-
+    await addExchangePositions(provider, program);  
+    
 };
 
 const mintTokens = async function (provider: any, program: any) {

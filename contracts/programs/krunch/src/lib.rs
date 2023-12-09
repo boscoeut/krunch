@@ -20,7 +20,7 @@ pub mod krunch {
     const FEE_DECIMALS: u64 = 10u64.pow(4);
     const LEVERAGE_DECIMALS: u64 = 10u64.pow(4);
     const AMOUNT_NUM_DECIMALS:u8 = 9;
-    const AMOUNT_DECIMALS: u64 = 10u64.pow(AMOUNT_NUM_DECIMALS);
+    const AMOUNT_DECIMALS: u64 = 10u64.pow(AMOUNT_NUM_DECIMALS as u32);
     const PRICE_DECIMALS: u64 = 10u64.pow(9);
     const STABLE_DECIMALS: u64 = 10u64.pow(6);
     const STABLE_CONVERSION: u32 = 3;
@@ -228,13 +228,15 @@ pub mod krunch {
         token_mint: Pubkey,
         active: bool,
         treasury_weight: u16,
-        decimals:u8
+        decimals:u8,
+        feed_address: Pubkey,
     ) -> Result<()> {
         let position = &mut ctx.accounts.exchange_treasury_position;
         position.token_mint = token_mint;
         position.active = active;   
         position.treasury_weight = treasury_weight;
         position.decimals = decimals;
+        position.feed_address = feed_address;
         Ok(())
     }
 
@@ -243,12 +245,14 @@ pub mod krunch {
         _token_mint: Pubkey,
         active: bool,
         treasury_weight: u16,
-        decimals:u8
+        decimals:u8,
+        feed_address: Pubkey,
     ) -> Result<()> {
         let position = &mut ctx.accounts.exchange_treasury_position;
         position.active = active;   
         position.treasury_weight = treasury_weight;
         position.decimals = decimals;
+        position.feed_address = feed_address;
         Ok(())
     }
 
@@ -289,7 +293,7 @@ pub mod krunch {
         // do token transfer
         let decimals = &ctx.accounts.exchange_treasury_position.decimals;
         let conversion = AMOUNT_NUM_DECIMALS-decimals;
-        let tokenAmount = amount / 10u64.pow(conversion);
+        let tokenAmount = amount / 10u64.pow(conversion.into());
 
         let destination = &ctx.accounts.escrow_account;
         let source = &ctx.accounts.user_token_account;
@@ -328,7 +332,7 @@ pub mod krunch {
         // token transfer
         let decimals = &ctx.accounts.exchange_treasury_position.decimals;
         let conversion = AMOUNT_NUM_DECIMALS-decimals;
-        let tokenAmount = amount / 10u64.pow(conversion);
+        let tokenAmount = amount / 10u64.pow(conversion.into());
         let source = &ctx.accounts.escrow_account;
         let destination = &ctx.accounts.user_token_account;
         let token_program = &ctx.accounts.token_program;
