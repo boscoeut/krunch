@@ -377,10 +377,10 @@ export default function WalletTest() {
     if (temp.user_position) {
         rows.push({ ...temp.user_position, name: 'user_position' })
     }
-    
+
     return (
         <div>
-    
+
             {wallet.connected &&
                 <div>
                     <Table>
@@ -491,7 +491,7 @@ export default function WalletTest() {
                                 <td>Refresh Accounts</td>
                                 <td><Button size="sm" variant="soft" onClick={getAccounts}>Refresh Accounts</Button></td>
                             </tr>
-                          
+
                             <tr>
                                 <td>Execute Trade</td>
                                 <td>

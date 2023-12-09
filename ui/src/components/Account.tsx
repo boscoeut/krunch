@@ -8,6 +8,7 @@ export default function Account() {
     const refreshUserAccount = useKrunchStore(state => state.refreshUserAccount)
     const refreshPositions = useKrunchStore(state => state.refreshPositions)
     const userAccount = useKrunchStore(state => state.userAccount)
+    const userStableBalance = useKrunchStore(state => state.userStableBalance)
     const positions = useKrunchStore(state => state.positions)
     const { findAddress, fetchOrCreateAccount, fetchAccount } = useAccounts();
     const { getProgram, getProvider, wallet } = useProgram();
@@ -20,7 +21,8 @@ export default function Account() {
     return (
         <Box>
             <Button onClick={getAccount}>Get Account</Button>
-            <div>Balance: {userAccount.fees?.toString()}</div>
+            <div>Balance: {userStableBalance}</div>
+            <div>Fees: {userAccount.fees?.toString()}</div>
             <>
             {positions.map((position) => {
                 return <div key={position.marketIndex} >{position.market}: {position.marketIndex.toString()} </div>

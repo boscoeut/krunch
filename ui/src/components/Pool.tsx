@@ -7,6 +7,7 @@ import Button from '@mui/joy/Button';
 export default function Pool() {
     const refreshPool = useKrunchStore(state => state.refreshPool)
     const refreshMarkets = useKrunchStore(state => state.refreshMarkets)
+    const exchangeStableBalance = useKrunchStore(state => state.exchangeStableBalance)
     const markets = useKrunchStore(state => state.markets)
     const exchange = useKrunchStore(state => state.exchange)
     const { findAddress, fetchOrCreateAccount, fetchAccount } = useAccounts();
@@ -14,13 +15,14 @@ export default function Pool() {
     
     async function getPool() {
         const provider = await getProvider()
-        refreshPool(provider,fetchOrCreateAccount)
+        refreshPool(provider,fetchOrCreateAccount, findAddress)
         refreshMarkets(fetchAccount)
     }
     return (
         <Box>
             <Button onClick={getPool}>Get Pool</Button>
-            <div>Balance: {exchange.fees?.toString()}</div>
+            <div>Balance: {exchangeStableBalance}</div>
+            <div>Fees: {exchange.fees?.toString()}</div>
             <>
             {markets.map((market) => {
                 return <div key={market.marketIndex} >{market.name}: {market.marketIndex.toString()} </div>

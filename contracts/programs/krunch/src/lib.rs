@@ -222,6 +222,31 @@ pub mod krunch {
         Ok(result)
     }
 
+    pub fn add_exchange_position(
+        ctx: Context<AddExchangeTreasuryPosition>,
+        token_mint: Pubkey,
+        active: bool,
+        treasury_weight: u16,
+    ) -> Result<()> {
+        let position = &mut ctx.accounts.exchange_treasury_position;
+        position.token_mint = token_mint;
+        position.active = active;   
+        position.treasury_weight = treasury_weight;
+        Ok(())
+    }
+
+    pub fn update_exchange_position(
+        ctx: Context<UpdateExchangeTreasuryPosition>,
+        _token_mint: Pubkey,
+        active: bool,
+        treasury_weight: u16,
+    ) -> Result<()> {
+        let position = &mut ctx.accounts.exchange_treasury_position;
+        position.active = active;   
+        position.treasury_weight = treasury_weight;
+        Ok(())
+    }
+
     pub fn add_market(
         ctx: Context<AddMarket>,
         market_index: u16,

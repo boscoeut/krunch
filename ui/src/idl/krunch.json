@@ -212,6 +212,74 @@
       }
     },
     {
+      "name": "addExchangePosition",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "exchangeTreasuryPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "tokenMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "active",
+          "type": "bool"
+        },
+        {
+          "name": "treasuryWeight",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "updateExchangePosition",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "exchangeTreasuryPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "tokenMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "active",
+          "type": "bool"
+        },
+        {
+          "name": "treasuryWeight",
+          "type": "u16"
+        }
+      ]
+    },
+    {
       "name": "addMarket",
       "accounts": [
         {
@@ -401,47 +469,6 @@
       ]
     },
     {
-      "name": "resetAccounts",
-      "accounts": [
-        {
-          "name": "owner",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "market",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userPosition",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "exchange",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "marketIndex",
-          "type": "u16"
-        }
-      ]
-    },
-    {
       "name": "getPrice",
       "accounts": [
         {
@@ -514,6 +541,26 @@
           {
             "name": "collateralValue",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExchangeTreasuryPosition",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tokenMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          },
+          {
+            "name": "treasuryWeight",
+            "type": "u16"
           }
         ]
       }

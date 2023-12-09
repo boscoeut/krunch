@@ -11,7 +11,7 @@ const FEE_DECIMALS = 10 ** 4;
 const MARKET_WEIGHT_DECIMALS = 10 ** 4;
 const AMOUNT_DECIMALS = 10 ** 9;
 const LEVERAGE_DECIMALS = 10 ** 4;
-
+const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 
 const findAddress = async (program: any, args: Array<String | PublicKey | Number>) => {
     const buffer = args.map((arg) => {
@@ -121,10 +121,31 @@ const initializeKrunch = async function (provider: any, program: any) {
             market: await findAddress(program, ['market', marketIndex]),
         });
     console.log('createUserPosition', userPosition.pnl.toString());
+
+    const tokenMint = USDC_MINT
+
+
+    const exchangePosition: any = await fetchOrCreateAccount(program,
+        'exchangeTreasuryPosition',
+        ['exchange_position',
+            tokenMint
+        ],
+        'addExchangePosition',
+        [tokenMint, true, new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS)],
+        {
+            admin: provider.wallet.publicKey,
+        });
+    console.log('exchangePosition', exchangePosition.tokenMint.toString());
+
+    const tx = await program?.methods.
+        updateExchangePosition(tokenMint, true, new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS)).
+        accounts({
+            exchangeTreasuryPosition:await findAddress(program, ['exchange_position', tokenMint]),
+        }).rpc();
+
 };
 
 const mintTokens = async function (provider: any, program: any) {
-    const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
     const payer = (provider.wallet as anchor.Wallet).payer;
     const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = require("@solana/spl-token");
     console.log("mintTokens owner", payer.publicKey.toString())
