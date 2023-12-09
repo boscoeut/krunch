@@ -319,40 +319,6 @@ pub mod krunch {
         Ok(())
     }
 
-    pub fn reset_accounts(ctx: Context<Reset>, _market_index: u16) -> Result<()> {
-        let user_account = &mut ctx.accounts.user_account;
-        let user_position = &mut ctx.accounts.user_position;
-        let market = &mut ctx.accounts.market;
-        let exchange = &mut ctx.accounts.exchange;
-
-        user_account.collateral_value = 100 * AMOUNT_DECIMALS as i64;
-        user_account.basis = 0;
-        user_account.fees = 0;
-        user_account.pnl = 0;
-        user_account.margin_used = 0;
-
-        user_position.basis = 0;
-        user_position.fees = 0;
-        user_position.token_amount = 0;
-        user_position.margin_used = 0;
-        user_position.pnl = 0;
-
-        market.basis = 0;
-        market.fees = 0;
-        market.current_price = 10 * PRICE_DECIMALS as u64;
-        market.token_amount = 0;
-        market.margin_used = 0;
-        market.pnl = 0;
-
-        exchange.basis = 0;
-        exchange.fees = 0;
-        exchange.pnl = 0;
-        exchange.margin_used = 0;
-        exchange.collateral_value = 100 * AMOUNT_DECIMALS as i64;
-
-        Ok(())
-    }
-
     pub fn get_price(ctx: Context<GetPrice>) -> Result<DataFeed> {
         let round = chainlink::latest_round_data(
             ctx.accounts.chainlink_program.to_account_info(),

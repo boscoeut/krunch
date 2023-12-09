@@ -68,35 +68,6 @@ pub struct ExecuteTrade<'info> {
 }
 
 // data validation
-#[derive(Accounts)]
-#[instruction(market_index: u16)]
-pub struct Reset<'info> {
-    #[account(mut)]
-    pub owner: Signer<'info>,
-    #[account(
-        mut, 
-        seeds = [b"market".as_ref(), market_index.to_le_bytes().as_ref()],
-        bump
-    )]
-    pub market: Account<'info, Market>,
-    #[account(
-        mut,
-        seeds = [b"user_account".as_ref(),owner.key().as_ref()],
-        bump)]
-    pub user_account: Account<'info, UserAccount>,
-    #[account(
-        mut,
-        seeds = [b"user_position".as_ref(),owner.key().as_ref(),market_index.to_le_bytes().as_ref()],
-        bump)]
-    pub user_position: Account<'info, UserPosition>,
-    #[account(
-        mut, 
-        seeds = [b"exchange".as_ref()],
-        bump
-    )]
-    pub exchange: Account<'info, Exchange>,
-    system_program: Program<'info, System>,
-}
 
 // data validation
 #[derive(Accounts)]

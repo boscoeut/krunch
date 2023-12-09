@@ -156,25 +156,6 @@ export default function WalletTest() {
         } catch (err) {
             console.log("availableCollateral error: ", err);
         }
-
-    }
-
-    const resetAccounts = async (marketIndex: number) => {
-        const provider = await getProvider();
-        try {
-            const program = await getProgram();
-            const tx = await program.methods.resetAccounts(new anchor.BN(marketIndex)).accounts({
-                exchange: await findAddress(['exchange']),
-                market: await findAddress(['market', marketIndex]),
-                userAccount: await findAddress(['user_account', provider.wallet.publicKey]),
-                userPosition: await findAddress(['user_position', provider.wallet.publicKey, marketIndex]),
-            }).rpc();
-            console.log("resetAccounts", tx);
-            await getAccounts();
-        } catch (err) {
-            console.log("Transaction error: ", err);
-        }
-
     }
 
     const updateMarket = async (marketIndex: number, price: number, makerFee: number, takerFee: number, leverage: number, marketWeight: number) => {
@@ -396,7 +377,6 @@ export default function WalletTest() {
     if (temp.user_position) {
         rows.push({ ...temp.user_position, name: 'user_position' })
     }
-
     
     return (
         <div>
@@ -511,11 +491,7 @@ export default function WalletTest() {
                                 <td>Refresh Accounts</td>
                                 <td><Button size="sm" variant="soft" onClick={getAccounts}>Refresh Accounts</Button></td>
                             </tr>
-                            <tr>
-                                <td>Reset Accounts</td>
-                                <td><Button size="sm" variant="soft" onClick={() => resetAccounts(1)}>Reset Accounts</Button></td>
-                            </tr>
-
+                          
                             <tr>
                                 <td>Execute Trade</td>
                                 <td>

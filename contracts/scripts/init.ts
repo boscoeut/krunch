@@ -121,14 +121,6 @@ const initializeKrunch = async function (provider: any, program: any) {
             market: await findAddress(program, ['market', marketIndex]),
         });
     console.log('createUserPosition', userPosition.pnl.toString());
-
-    const tx = await program.methods.resetAccounts(new anchor.BN(marketIndex)).accounts({
-        exchange: await findAddress(program, ['exchange']),
-        market: await findAddress(program, ['market', marketIndex]),
-        userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-        userPosition: await findAddress(program, ['user_position', provider.wallet.publicKey, marketIndex]),
-    }).rpc();
-    console.log("resetAccounts", tx);
 };
 
 const mintTokens = async function (provider: any, program: any) {

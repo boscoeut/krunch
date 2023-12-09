@@ -1,46 +1,28 @@
-import * as React from 'react';
-import { CssVarsProvider } from '@mui/joy/styles';
-import CssBaseline from '@mui/joy/CssBaseline';
 import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
-import Breadcrumbs from '@mui/joy/Breadcrumbs';
-import Link from '@mui/joy/Link';
+import CssBaseline from '@mui/joy/CssBaseline';
+import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
+import { CssVarsProvider } from '@mui/joy/styles';
 // icons
-import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
-import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import useScript from './useScript';
-import Sidebar from './components/Sidebar';
-import Orders from './components/Orders';
-import Header from './components/Header';
-import WalletTest from './components/WalletTest';
-import Markets from './components/Markets';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Account from './components/Account';
+import Documentation from './components/Documentation';
+import Header from './components/Header';
+import Markets from './components/Markets';
 import Pool from './components/Pool';
 import Settings from './components/Settings';
-import Documentation from './components/Documentation';
-import { useLocation } from 'react-router-dom';
-
-const useEnhancedEffect =
-    typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
+import Sidebar from './components/Sidebar';
+import WalletTest from './components/WalletTest';
+import TradeDialog from './components/TradeDialog';
+import AccountDialog from './components/AccountDialog';
+import { useState } from 'react';
 
 export default function JoyOrderDashboardTemplate() {
-    const status = useScript(`https://unpkg.com/feather-icons`);
-
     const location = useLocation();
-console.log(location.pathname); 
-
-    useEnhancedEffect(() => {
-        // Feather icon setup: https://github.com/feathericons/feather#4-replace
-        // @ts-ignore
-        if (typeof feather !== 'undefined') {
-            // @ts-ignore
-            feather.replace();
-        }
-    }, [status]);
-
+    const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
+    const [accountDialogOpen, setAccountDialogOpen] = useState(false);
     return (
         <CssVarsProvider disableTransitionOnChange>
             <CssBaseline />
@@ -73,7 +55,7 @@ console.log(location.pathname);
                         gap: 1,
                     }}
                 >
-                    
+
                     <Box
                         sx={{
                             display: 'flex',
@@ -86,13 +68,24 @@ console.log(location.pathname);
                         }}
                     >
                         <Typography level="h3">{location.pathname}</Typography>
-                        <Button
-                            color="primary"
-                            startDecorator={<DownloadRoundedIcon />}
-                            size="sm"
-                        >
-                            Test All
-                        </Button>
+                        <Stack direction={"row"} spacing={1}>
+                            <Button
+                                color="primary"
+                                startDecorator={<DownloadRoundedIcon />}
+                                size="sm"
+                                onClick={() => setTradeDialogOpen(true)}
+                            >
+                                Trade
+                            </Button>
+                            <Button
+                                color="primary"
+                                startDecorator={<DownloadRoundedIcon />}
+                                size="sm"
+                                onClick={() => setAccountDialogOpen(true)}
+                            >
+                                Deposit
+                            </Button>
+                        </Stack>
                     </Box>
                     <Box sx={{
                         display: 'flex',
@@ -112,6 +105,8 @@ console.log(location.pathname);
                     </Box>
                 </Box>
             </Box>
+            <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
+            <AccountDialog open={accountDialogOpen} setOpen={setAccountDialogOpen} />
         </CssVarsProvider>
     );
 }

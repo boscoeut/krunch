@@ -28,6 +28,17 @@ export type Market = {
     feedAddress:string,
 }
 
+export type UserPosition = {
+    owner: PublicKey,
+    market:string,
+    marketIndex:number,
+    basis?:number,
+    fees?:number,
+    tokenAmount?:number,
+    pnl?:number,
+}
+
+
 export const markets = [{
     name:"SOL/USD",
     feedAddress:SOL_USD,
