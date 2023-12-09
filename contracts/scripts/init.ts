@@ -131,7 +131,8 @@ const initializeKrunch = async function (provider: any, program: any) {
             tokenMint
         ],
         'addExchangePosition',
-        [tokenMint, true, new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS)],
+        [tokenMint, true, new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS),
+            new anchor.BN(6)],
         {
             admin: provider.wallet.publicKey,
         });
@@ -196,6 +197,7 @@ const mintTokens = async function (provider: any, program: any) {
         exchange: exchangeAddress,
         escrowAccount: escrowDepositAccount,
         userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+        exchangeTreasuryPosition: await findAddress(program, ['exchange_position', USDC_MINT]),
         owner: provider.wallet.publicKey
     }).rpc();
     console.log("deposit", tx);
@@ -217,6 +219,7 @@ const mintTokens = async function (provider: any, program: any) {
         mint: USDC_MINT,
         exchange: exchangeAddress,
         escrowAccount: escrowDepositAccount,
+        exchangeTreasuryPosition: await findAddress(program, ['exchange_position', USDC_MINT]),
         userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
         owner: provider.wallet.publicKey
 

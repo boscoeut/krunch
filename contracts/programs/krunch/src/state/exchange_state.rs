@@ -140,6 +140,12 @@ pub struct Deposit<'info> {
         token::mint=mint,
         token::authority=exchange,
     )]
+    #[account(
+        mut, 
+        seeds = [b"exchange_position".as_ref(), mint.as_ref()],
+        bump
+    )]
+    pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
     pub escrow_account: Account<'info, TokenAccount>,
 }
 
@@ -175,6 +181,13 @@ pub struct Withdraw<'info> {
     pub user_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub mint: Account<'info, Mint>,
+    #[account(
+        mut, 
+        seeds = [b"exchange_position".as_ref(), mint.as_ref()],
+        bump
+    )]
+    pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
+    
    
 }
 
@@ -245,7 +258,8 @@ pub struct AddExchangeTreasuryPosition<'info> {
         space = 8 
                 + 32 // tokenMint:Pubkey
                 + 2 // active:bool
-                + 2 // treasuryWeight:u16
+                + 2 // treasuryWeight:u16,
+                + 1 // decimals:u8
         ,
         seeds = [b"exchange_position".as_ref(), token_mint.as_ref()],
         bump
@@ -321,6 +335,7 @@ pub struct ExchangeTreasuryPosition {
     pub token_mint: Pubkey,
     pub active: bool,
     pub treasury_weight: u16,
+    pub decimals: u8,
 }
 
 #[account]
