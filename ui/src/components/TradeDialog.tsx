@@ -12,7 +12,7 @@ import DialogContent from '@mui/joy/DialogContent';
 import useProgram from '../hooks/useProgram';
 import * as anchor from "@coral-xyz/anchor";
 import Stack from '@mui/joy/Stack';
-import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/src/utils";   
+import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/dist/utils";   
 import useAccounts from '../hooks/useAccounts';
 import Sheet from '@mui/joy/Sheet';
 import Typography from '@mui/joy/Typography';
@@ -50,11 +50,11 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
       new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
       new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
     ).accounts({
-      market: await findAddress(['market', Number(marketIndex)]),
-      exchange: await findAddress(['exchange']),
+      market: await findAddress(program,['market', Number(marketIndex)]),
+      exchange: await findAddress(program,['exchange']),
     }).rpc();
     console.log("updateMarket", tx);
-    const acct: any = await fetchAccount('market',
+    const acct: any = await fetchAccount(program,'market',
       ['market',
         marketIndex]);
     console.log('updateMarket', acct)

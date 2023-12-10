@@ -6,7 +6,7 @@ import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
-import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/src/utils";   
+import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/dist/utils";   
 import ModalDialog from '@mui/joy/ModalDialog';
 import DialogTitle from '@mui/joy/DialogTitle';
 import DialogContent from '@mui/joy/DialogContent';
@@ -50,11 +50,11 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
       new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
       new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
     ).accounts({
-      market: await findAddress(['market', Number(marketIndex)]),
-      exchange: await findAddress(['exchange']),
+      market: await findAddress(program,['market', Number(marketIndex)]),
+      exchange: await findAddress(program,['exchange']),
     }).rpc();
     console.log("updateMarket", tx);
-    const acct: any = await fetchAccount('market',
+    const acct: any = await fetchAccount(program,'market',
       ['market',
         marketIndex]);
     console.log('updateMarket', acct)

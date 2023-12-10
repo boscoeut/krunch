@@ -3,7 +3,7 @@ import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from "../hooks/useProgram";
 import useAccounts from "../hooks/useAccounts";
 import Button from '@mui/joy/Button';
-import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/src/utils";   
+import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/dist/utils";   
 
 export default function Account() {
     const refreshUserAccount = useKrunchStore(state => state.refreshUserAccount)

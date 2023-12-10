@@ -17,7 +17,7 @@ import Sheet from '@mui/joy/Sheet';
 import Typography from '@mui/joy/Typography';
 import TextField from '@mui/joy/TextField'; // Import TextField from Joy UI
 import * as React from 'react';
-import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/src/utils";   
+import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/dist/utils";   
 import { PRICE_DECIMALS, FEE_DECIMALS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS, LEVERAGE_DECIMALS} from '../constants';
 // icons
 
@@ -50,11 +50,11 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
       new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
       new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
     ).accounts({
-      market: await findAddress(['market', Number(marketIndex)]),
-      exchange: await findAddress(['exchange']),
+      market: await findAddress(program,['market', Number(marketIndex)]),
+      exchange: await findAddress(program,['exchange']),
     }).rpc();
     console.log("updateMarket", tx);
-    const acct: any = await fetchAccount('market',
+    const acct: any = await fetchAccount(program,'market',
       ['market',
         marketIndex]);
     console.log('updateMarket', acct)

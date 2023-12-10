@@ -47,36 +47,8 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAccount = exports.fetchOrCreateAccount = exports.findAddress = void 0;
+exports.findAddress = exports.fetchAccount = exports.fetchOrCreateAccount = void 0;
 var anchor = require("@coral-xyz/anchor");
-var findAddress = function (program, args) { return __awaiter(void 0, void 0, void 0, function () {
-    var buffer, account;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                buffer = args.map(function (arg) {
-                    if (typeof arg === 'string') {
-                        return Buffer.from(arg);
-                    }
-                    else if (arg.toBuffer) {
-                        return arg.toBuffer();
-                    }
-                    else if (typeof arg === 'number') {
-                        return new anchor.BN(arg.toString()).toArrayLike(Buffer, "le", 2);
-                    }
-                    else {
-                        console.log("invalid type", arg);
-                        throw new Error("invalid type");
-                    }
-                });
-                return [4 /*yield*/, anchor.web3.PublicKey.findProgramAddress(buffer, program.programId)];
-            case 1:
-                account = (_a.sent())[0];
-                return [2 /*return*/, account];
-        }
-    });
-}); };
-exports.findAddress = findAddress;
 var fetchOrCreateAccount = function (program, name, seeds, createMethod, args, additionalAccounts) { return __awaiter(void 0, void 0, void 0, function () {
     var address, acct, err_1, accounts, tx;
     var _a, _b;
@@ -125,3 +97,32 @@ var fetchAccount = function (program, name, seeds) { return __awaiter(void 0, vo
     });
 }); };
 exports.fetchAccount = fetchAccount;
+var findAddress = function (program, args) { return __awaiter(void 0, void 0, void 0, function () {
+    var buffer, account;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                console.log('findAddress args', args);
+                buffer = args.map(function (arg) {
+                    if (typeof arg === 'string') {
+                        return Buffer.from(arg);
+                    }
+                    else if (arg.toBuffer) {
+                        return arg.toBuffer();
+                    }
+                    else if (typeof arg === 'number') {
+                        return new anchor.BN(arg.toString()).toArrayLike(Buffer, "le", 2);
+                    }
+                    else {
+                        console.log("invalid type", arg);
+                        throw new Error("invalid type");
+                    }
+                });
+                return [4 /*yield*/, anchor.web3.PublicKey.findProgramAddress(buffer, program.programId)];
+            case 1:
+                account = (_a.sent())[0];
+                return [2 /*return*/, account];
+        }
+    });
+}); };
+exports.findAddress = findAddress;

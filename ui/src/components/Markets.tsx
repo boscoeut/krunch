@@ -12,11 +12,12 @@ import { useState } from 'react';
 import * as anchor from "@coral-xyz/anchor";
 import Button from '@mui/joy/Button';
 import { useKrunchStore } from "../hooks/useKrunchStore";
+import {findAddress,fetchAccount} from "utils/dist/utils";
 const AMOUNT_DECIMALS = 10 ** 9;
 
 export default function Markets() {
     const { getProgram, getProvider, wallet } = useProgram();
-    const { findAddress, fetchOrCreateAccount, fetchAccount } = useAccounts();
+
     const [temp, setTemp] = useState({} as any);
     const markets = useKrunchStore(state => state.markets)
     const getPrice = useKrunchStore(state => state.getPrice)

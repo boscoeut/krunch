@@ -57,10 +57,7 @@ const useAccounts = () => {
 
     return {
         decodeAccount,
-        fetchAccount,
         lookupAccounts,
-        findAddress,
-        fetchOrCreateAccount
     };
 };
 export default useAccounts;

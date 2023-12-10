@@ -2,31 +2,9 @@ import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 
 
-export const findAddress = async (program: any, args: Array<String | PublicKey | Number | any>) => {
-    const buffer = args.map((arg) => {
-        if (typeof arg === 'string') {
-            return Buffer.from(arg)
-        } else if (arg.toBuffer) {
-            return arg.toBuffer()
-        } else if (typeof arg === 'number') {
-            return new anchor.BN(arg.toString()).toArrayLike(Buffer, "le", 2)
-        } else {
-
-            console.log("invalid type", arg)
-            throw new Error("invalid type")
-        }
-    });
-    const [account] =
-        await anchor.web3.PublicKey.findProgramAddress(
-            buffer,
-            program.programId as any
-        );
-    return account
-}
-
 export const fetchOrCreateAccount = async (program: any,
     name: string,
-    seeds: Array<String | PublicKey | Number>,
+    seeds: Array<any>,
     createMethod: string,
     args: Array<any>,
     additionalAccounts?: any) => {
@@ -52,3 +30,26 @@ export const fetchAccount = async (program: any, name: string, seeds: Array<Stri
     return acct;
 }
 
+
+export const findAddress = async (program: any, args: any) => {
+    console.log('findAddress args',args)
+    const buffer = args.map((arg:any) => {
+        if (typeof arg === 'string') {
+            return Buffer.from(arg)
+        } else if (arg.toBuffer) {
+            return arg.toBuffer()
+        } else if (typeof arg === 'number') {
+            return new anchor.BN(arg.toString()).toArrayLike(Buffer, "le", 2)
+        } else {
+
+            console.log("invalid type", arg)
+            throw new Error("invalid type")
+        }
+    });
+    const [account] =
+        await anchor.web3.PublicKey.findProgramAddress(
+            buffer,
+            program.programId as any
+        );
+    return account
+}

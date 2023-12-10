@@ -21,7 +21,7 @@ import {USDC_MINT,ETH_MINT,ETH_USD_FEED, CHAINLINK_PROGRAM,
     BTC_USD_FEED,
     EXCHANGE_POSITIONS
 } from 'utils/src/constants'
-import { findAddress, fetchOrCreateAccount, fetchAccount } from 'utils/src/utils'
+import { findAddress, fetchOrCreateAccount, fetchAccount } from 'utils/dist/utils'
 
 
 const addMarkets = async function (provider: any, program: any) {
