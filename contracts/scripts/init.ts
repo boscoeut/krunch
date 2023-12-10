@@ -21,72 +21,20 @@ import {USDC_MINT,ETH_MINT,ETH_USD_FEED, CHAINLINK_PROGRAM,
     BTC_USD_FEED,
     EXCHANGE_POSITIONS
 } from 'utils/src/constants'
+import { findAddress, fetchOrCreateAccount, fetchAccount } from 'utils/src/utils'
 
-
-
-const findAddress = async (program: any, args: Array<String | PublicKey | Number>) => {
-    const buffer = args.map((arg) => {
-        if (typeof arg === 'string') {
-            return Buffer.from(arg)
-        } else if (arg instanceof PublicKey) {
-            return arg.toBuffer()
-        } else if (typeof arg === 'number') {
-            return new anchor.BN(arg.toString()).toArrayLike(Buffer, "le", 2)
-        } else {
-            console.log("invalid type", arg)
-            throw new Error("invalid type")
-        }
-    });
-    const [account] =
-        await anchor.web3.PublicKey.findProgramAddress(
-            buffer,
-            program.programId as any
-        );
-    return account
-}
-
-const fetchOrCreateAccount = async (program: any,
-    name: string,
-    seeds: Array<String | PublicKey | Number>,
-    createMethod: string,
-    args: Array<any>,
-    additionalAccounts?: any) => {
-    const address = await findAddress(program, seeds);
-    try {
-        const acct = await program.account[name].fetch(address);
-        return acct;
-    } catch (err) {
-        console.log("Account not found: ", name);
-        console.log('Initializing ' + name);
-        const accounts = { [name]: address, ...(additionalAccounts || {}), }
-        console.log('Initializing accounts ' + JSON.stringify(accounts));
-        const tx = await program?.methods[createMethod](...args).accounts(accounts).rpc();
-        console.log("fetchOrCreateAccount", tx);
-        return await program.account[name].fetch(address);
-    }
-}
-
-const fetchAccount = async (program: any, name: string, seeds: Array<String | PublicKey | Number>) => {
-    const address = await findAddress(program, seeds);
-    console.log('fetchAccount', name)
-    const acct = await program.account[name].fetch(address);
-    return acct;
-}
 
 const addMarkets = async function (provider: any, program: any) {
     const _takerFee = 0.2;
     const _makerFee = 0.1;
     const _leverage = 1;
     const _marketWeight = 0.1
-
-    const marketIndex = 1;
-
     const markets = [{
         index: 1,
-        address: "CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt",
+        address: SOL_USD_FEED,
     }, {
         index: 2,
-        address: "Cv4T27XbjVoKUYwP72NQQanvZeA7W4YF9L4EnYT9kx5o"
+        address: BTC_USD_FEED
     }]
     for (const m of markets) {
         const marketIndex = m.index;
@@ -101,7 +49,7 @@ const addMarkets = async function (provider: any, program: any) {
             new anchor.BN(_makerFee * FEE_DECIMALS),
             new anchor.BN(_leverage * LEVERAGE_DECIMALS),
             new anchor.BN(_marketWeight * MARKET_WEIGHT_DECIMALS),
-            new PublicKey(address)],
+            address],
             {
                 exchange: await findAddress(program, ['exchange']),
             });

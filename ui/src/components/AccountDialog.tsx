@@ -17,6 +17,7 @@ import Sheet from '@mui/joy/Sheet';
 import Typography from '@mui/joy/Typography';
 import TextField from '@mui/joy/TextField'; // Import TextField from Joy UI
 import * as React from 'react';
+import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/src/utils";   
 import { PRICE_DECIMALS, FEE_DECIMALS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS, LEVERAGE_DECIMALS} from '../constants';
 // icons
 
@@ -35,7 +36,7 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
   const [makerFee, setMakerFee] = React.useState('0.1');
   const [price, setPrice] = React.useState('100');
   const {getProgram, getProvider, wallet} = useProgram();
-  const { findAddress, fetchOrCreateAccount, fetchAccount } = useAccounts();
+  
 
   const handleSubmit = async () => {
     // Handle form submission here

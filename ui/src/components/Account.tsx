@@ -3,6 +3,7 @@ import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from "../hooks/useProgram";
 import useAccounts from "../hooks/useAccounts";
 import Button from '@mui/joy/Button';
+import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/src/utils";   
 
 export default function Account() {
     const refreshUserAccount = useKrunchStore(state => state.refreshUserAccount)
@@ -10,7 +11,6 @@ export default function Account() {
     const userAccount = useKrunchStore(state => state.userAccount)
     const userStableBalance = useKrunchStore(state => state.userStableBalance)
     const positions = useKrunchStore(state => state.positions)
-    const { findAddress, fetchOrCreateAccount, fetchAccount } = useAccounts();
     const { getProgram, getProvider, wallet } = useProgram();
     
     async function getAccount() {

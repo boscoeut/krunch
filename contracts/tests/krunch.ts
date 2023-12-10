@@ -3,6 +3,7 @@ import { Program } from "@coral-xyz/anchor";
 import { Krunch } from "../target/types/krunch";
 import { expect } from 'chai'
 import { PublicKey, Keypair } from '@solana/web3.js';
+import { findAddress, fetchOrCreateAccount, fetchAccount } from 'utils/src/utils' 
 import {
   getAssociatedTokenAddress,
   createMint,
@@ -18,27 +19,6 @@ const FEE_DECIMALS = 10 ** 4;
 const MARKET_WEIGHT_DECIMALS = 10 ** 4;
 const AMOUNT_DECIMALS = 10 ** 9;
 const LEVERAGE_DECIMALS = 10 ** 4;
-
-const findAddress = async (program: any, args: Array<String | PublicKey | Number>) => {
-  const buffer = args.map((arg) => {
-    if (typeof arg === 'string') {
-      return Buffer.from(arg)
-    } else if (arg instanceof PublicKey) {
-      return arg.toBuffer()
-    } else if (typeof arg === 'number') {
-      return new anchor.BN(arg.toString()).toArrayLike(Buffer, "le", 2)
-    } else {
-      console.log("invalid type", arg)
-      throw new Error("invalid type")
-    }
-  });
-  const [account] =
-    await anchor.web3.PublicKey.findProgramAddress(
-      buffer,
-      program.programId as any
-    );
-  return account
-}
 
 describe("krunch", () => {
   // Configure the client to use the local cluster.

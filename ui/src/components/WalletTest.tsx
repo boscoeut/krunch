@@ -7,6 +7,7 @@ import '../App.css';
 import useProgram from "../hooks/useProgram";
 import useAccounts from "../hooks/useAccounts";
 import Table from '@mui/joy/Table';
+import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/src/utils";   
 import { useState } from 'react';
 import { getAssociatedTokenAddress, getMint } from "@solana/spl-token"
 import Input from '@mui/joy/Input';
@@ -37,8 +38,7 @@ export default function WalletTest() {
     const [_userBalance, setUserBalance] = useState(0)
     const [_programBalance, setProgramBalance] = useState(0)
 
-    const { findAddress, fetchOrCreateAccount, fetchAccount } = useAccounts();
-
+    
     const [temp, setTemp] = useState({} as any);
     const getBalance = async () => {
         const provider = await getProvider();

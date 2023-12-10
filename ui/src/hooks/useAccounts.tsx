@@ -13,56 +13,6 @@ const useAccounts = () => {
         return acct;
     }
 
-    const fetchAccount = async (name: string, seeds: Array<String|PublicKey|Number>) => {
-        const program = await getProgram();
-        const address = await findAddress(seeds);
-        console.log('fetchAccount',name)
-        const acct = await program.account[name].fetch(address);
-        return acct;
-    }
-
-    const fetchOrCreateAccount = async (name: string, 
-        seeds: Array<String|PublicKey|Number>, 
-        createMethod:string,
-        args:Array<any>,
-        additionalAccounts?:any) => {
-        const program = await getProgram();
-        const address = await findAddress(seeds);
-        try {
-            const acct = await program.account[name].fetch(address);
-            return acct;
-        } catch (err) {
-            console.log("Account not found: ", err);
-            console.log('Initializing '+name);
-            const accounts = {[name]:address,...(additionalAccounts || {}),}
-            console.log('Initializing accounts '+JSON.stringify(accounts));
-            const tx = await program?.methods[createMethod](...args).accounts(accounts).rpc();
-            console.log("fetchOrCreateAccount", tx);
-            return await program.account[name].fetch(address);
-        }
-    }
-
-    const findAddress = async (args: Array<String|PublicKey|Number>) => {
-        const buffer = args.map((arg) => {
-            if (typeof arg === 'string') {
-                return Buffer.from(arg)
-            }else if (arg instanceof PublicKey) {
-                return arg.toBuffer()
-            }else if (typeof arg === 'number') {
-                return new anchor.BN(arg.toString()).toArrayLike(Buffer, "le", 2)
-            }else {
-                console.log("invalid type", arg)    
-                throw new Error("invalid type")
-            }
-        });
-        const program = await getProgram();
-        const [account] =
-            await anchor.web3.PublicKey.findProgramAddress(
-                buffer,
-                program.programId as any
-            );
-       return account
-    }
 
     function sighash(nameSpace: string, ixName: string): Buffer {
         let name = ixName;

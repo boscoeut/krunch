@@ -6,6 +6,7 @@ import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
+import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/src/utils";   
 import ModalDialog from '@mui/joy/ModalDialog';
 import DialogTitle from '@mui/joy/DialogTitle';
 import DialogContent from '@mui/joy/DialogContent';
@@ -35,7 +36,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
   const [makerFee, setMakerFee] = React.useState('0.1');
   const [price, setPrice] = React.useState('100');
   const {getProgram, getProvider, wallet} = useProgram();
-  const { findAddress, fetchOrCreateAccount, fetchAccount } = useAccounts();
+  
 
   const handleSubmit = async () => {
     // Handle form submission here

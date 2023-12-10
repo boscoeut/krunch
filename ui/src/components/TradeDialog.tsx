@@ -12,6 +12,7 @@ import DialogContent from '@mui/joy/DialogContent';
 import useProgram from '../hooks/useProgram';
 import * as anchor from "@coral-xyz/anchor";
 import Stack from '@mui/joy/Stack';
+import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/src/utils";   
 import useAccounts from '../hooks/useAccounts';
 import Sheet from '@mui/joy/Sheet';
 import Typography from '@mui/joy/Typography';
@@ -35,7 +36,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const [makerFee, setMakerFee] = React.useState('0.1');
   const [price, setPrice] = React.useState('100');
   const {getProgram, getProvider, wallet} = useProgram();
-  const { findAddress, fetchOrCreateAccount, fetchAccount } = useAccounts();
+  
 
   const handleSubmit = async () => {
     // Handle form submission here

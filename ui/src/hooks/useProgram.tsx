@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-
+import { useKrunchStore } from "../hooks/useKrunchStore";
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import idl from '../idl/krunch.json';
@@ -18,6 +18,7 @@ const programID = new PublicKey(idl.metadata.address);
 const useProgram = () => {
     const [program, setProgram] = useState(undefined as Program | undefined);
     const [provider, setProvider] = useState(undefined as AnchorProvider | undefined);
+    const initialize = useKrunchStore(state => state.initialize)
     const wallet = useWallet();
     async function createProvider() {
         /* create the provider and return it to the caller */
@@ -44,6 +45,7 @@ const useProgram = () => {
                 setProgram(_program);
                 setProvider(_provider);
                 console.log('*********** program set up');
+                initialize(_program, _provider);
                 return {
                     program: _program,
                     provider: _provider
