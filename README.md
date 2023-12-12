@@ -14,3 +14,9 @@ install base58 for copy account script
 
 ## Update .bashrc to export PATH
 export PATH="/home/codespace/.local/share/solana/install/active_release/bin:$PATH"
+
+## to start validator
+anchor run startValidator
+
+## To deploy changes
+anchor run init
