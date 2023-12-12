@@ -18,7 +18,7 @@ import Sheet from '@mui/joy/Sheet';
 import Typography from '@mui/joy/Typography';
 import TextField from '@mui/joy/TextField'; // Import TextField from Joy UI
 import * as React from 'react';
-import { PRICE_DECIMALS, FEE_DECIMALS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS, LEVERAGE_DECIMALS} from '../constants';
+import { PRICE_DECIMALS, FEE_DECIMALS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS, LEVERAGE_DECIMALS} from 'utils/dist/constants';
 // icons
 
 

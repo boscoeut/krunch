@@ -1,15 +1,14 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import type { } from '@redux-devtools/extension' // required for devtools typing
-import { markets, Market, UserPosition } from '../constants'
-import { CHAINLINK_PROGRAM, USDC_MINT } from '../constants'
+import { CHAINLINK_PROGRAM, USDC_MINT, EXCHANGE_POSITIONS, MARKETS, Market, UserPosition, ExchangeBalance } from 'utils/dist/constants'
 import * as anchor from "@coral-xyz/anchor";
 import { getAssociatedTokenAddress, getMint } from "@solana/spl-token"
 
 interface KrunchState {
   program: any,
   provider: any,
-  exchangeStableBalance: number,
+  exchangeBalances: Array<ExchangeBalance>,
   userStableBalance: number,
   markets: Array<Market>,
   positions: Array<UserPosition>,
@@ -32,30 +31,30 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   },
   program: {},
   provider: {},
-  exchangeStableBalance: 0,
   userStableBalance: 0,
-  markets,
+  markets: MARKETS,
   positions: [],
+  exchangeBalances: [],
   userAccount: {},
   exchange: {},
   refreshMarkets: async (fetchAccount) => {
     let tempMarkets: Array<Market> = []
     for (const market of get().markets) {
-      tempMarkets.push({ ...market, ...(await fetchAccount(get().program,'market', ['market', market.marketIndex])) })
+      tempMarkets.push({ ...market, ...(await fetchAccount(get().program, 'market', ['market', market.marketIndex])) })
     }
     set(() => ({ markets: tempMarkets }))
   },
   refreshPositions: async (provider, fetchOrCreateAccount, findAddress) => {
     let temp: Array<UserPosition> = []
     for (const market of get().markets) {
-      const acct: any = await fetchOrCreateAccount(get().program,'userPosition',
+      const acct: any = await fetchOrCreateAccount(get().program, 'userPosition',
         ['user_position',
           provider.wallet.publicKey,
           market.marketIndex],
         'addUserPosition', [new anchor.BN(market.marketIndex)],
         {
-          userAccount: await findAddress(get().program,['user_account', provider.wallet.publicKey]),
-          market: await findAddress(get().program,['market', market.marketIndex]),
+          userAccount: await findAddress(get().program, ['user_account', provider.wallet.publicKey]),
+          market: await findAddress(get().program, ['market', market.marketIndex]),
         });
       temp.push({ market: market.name, ...acct })
     }
@@ -68,7 +67,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     )
 
     let userBalance: any = await provider.connection.getTokenAccountBalance(usdcTokenAccount)
-    const userAccount: any = await fetchOrCreateAccount(get().program,'userAccount',
+    const userAccount: any = await fetchOrCreateAccount(get().program, 'userAccount',
       ['user_account',
         provider.wallet.publicKey],
       'createUserAccount', []);
@@ -77,15 +76,31 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   },
 
   refreshPool: async (provider, fetchOrCreateAccount, findAddress) => {
-    const exchangeAddress = await findAddress(get().program,['exchange'])
-    const escrowAccount = await findAddress(get().program,[
-      exchangeAddress,
-      USDC_MINT])
-    let programBalance: any = await provider.connection.getTokenAccountBalance(escrowAccount)
-    console.log("programBalance Before deposit", programBalance.value.amount);
+    const exchangeAddress = await findAddress(get().program, ['exchange'])
 
-    const exchange: any = await fetchOrCreateAccount(get().program,'exchange', ['exchange'], 'initializeExchange', []);
-    set(() => ({ exchange, exchangeStableBalance: programBalance.value.uiAmount }))
+    const balances: Array<ExchangeBalance> = []
+    for (const item of EXCHANGE_POSITIONS) {
+      const escrowAccount = await findAddress(get().program, [
+        exchangeAddress,
+        item.mint])
+      let balance = 0
+      try {
+        let programBalance: any = await provider.connection.getTokenAccountBalance(escrowAccount)
+        console.log("programBalance Before deposit", programBalance.value.amount);
+        balance = programBalance.value.amount
+      } catch (x) {
+        console.log('could not get balance:' + item.market)
+      }
+      balances.push({
+        market: item.market,
+        mint: item.mint,
+        balance,
+        decimals: item.decimals
+      })
+    }
+
+    const exchange: any = await fetchOrCreateAccount(get().program, 'exchange', ['exchange'], 'initializeExchange', []);
+    set(() => ({ exchange, exchangeBalances: balances }))
   },
   getPrice: async (program, feedAddress) => {
     const tx = await program.methods.getPrice().accounts({

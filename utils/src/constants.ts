@@ -23,24 +23,40 @@ export const TOKEN_PROGRAM_ID="TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 export const ASSOCIATED_TOKEN_PROGRAM_ID="ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
 export const KRUNCH="5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm"
 
+export const MARKETS= [{
+    name:"SOL/USD",
+    feedAddress:SOL_USD_FEED.toString(),
+    marketIndex:1
+},{
+    name:"BTC/USD",
+    feedAddress:BTC_USD_FEED.toString(),
+    marketIndex:2
+}]
+
 export const EXCHANGE_POSITIONS = [{
     decimals: 9,
     mint: SOL_MINT,
-    feedAddress: SOL_USD_FEED
+    feedAddress: SOL_USD_FEED,
+    market:"SOL/USD",
 }, {
     decimals: 6,
     mint: USDC_MINT,
-    feedAddress: USDC_USD_FEED
+    feedAddress: USDC_USD_FEED,
+    market:"USDC/USD",
 }, {
     decimals: 8,
     mint: BTC_MINT,
-    feedAddress: BTC_USD_FEED
+    feedAddress: BTC_USD_FEED,
+    market:"BTC/USD",
 }, {
     decimals: 6,
     mint: USDT_MINT,
-    feedAddress: USDT_USD_FEED
+    feedAddress: USDT_USD_FEED,
+    market:"USDT/USD",
 }, {
     decimals: 8,
     mint: ETH_MINT,
-    feedAddress: ETH_USD_FEED
+    feedAddress: ETH_USD_FEED,
+    market:"ETH/USD",
 }]
+
