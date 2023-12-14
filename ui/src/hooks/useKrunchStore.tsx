@@ -9,6 +9,7 @@ interface KrunchState {
   program: any,
   provider: any,
   exchangeBalances: Array<ExchangeBalance>,
+  userBalances: Array<ExchangeBalance>,
   userStableBalance: number,
   markets: Array<Market>,
   positions: Array<UserPosition>,
@@ -17,7 +18,7 @@ interface KrunchState {
   initialize: (program: any, provider: any) => void,
   refreshMarkets: (fetchAccount: any) => void,
   refreshPositions: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
-  refreshUserAccount: (provider: any, fetchOrCreateAccount: any) => void,
+  refreshUserAccount: (provider: any, fetchOrCreateAccount: any, findAddress:any) => void,
   refreshPool: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   getPrice: (program: any, feedAddress: string) => Promise<number>,
 }
@@ -35,6 +36,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   markets: MARKETS,
   positions: [],
   exchangeBalances: [],
+  userBalances: [],
   userAccount: {},
   exchange: {},
   refreshMarkets: async (fetchAccount) => {
@@ -60,19 +62,36 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     }
     set(() => ({ positions: temp }))
   },
-  refreshUserAccount: async (provider, fetchOrCreateAccount) => {
-    let usdcTokenAccount = await getAssociatedTokenAddress(
-      USDC_MINT, //mint
-      provider.wallet.publicKey, //owner
-    )
-
-    let userBalance: any = await provider.connection.getTokenAccountBalance(usdcTokenAccount)
+  refreshUserAccount: async (provider, fetchOrCreateAccount, findAddress) => {
     const userAccount: any = await fetchOrCreateAccount(get().program, 'userAccount',
       ['user_account',
         provider.wallet.publicKey],
       'createUserAccount', []);
     console.log('createUserAccount', userAccount)
-    set(() => ({ userAccount, userStableBalance: userBalance.value.uiAmount }))
+
+    const balances: Array<ExchangeBalance> = []
+    for (const item of EXCHANGE_POSITIONS) {
+
+      let tokenAccount = await getAssociatedTokenAddress(
+        item.mint, //mint
+        provider.wallet.publicKey, //owner
+      )
+      let balance = 0
+      try {
+        let programBalance: any = await provider.connection.getTokenAccountBalance(tokenAccount)
+        balance = programBalance.value.amount
+      } catch (x) {
+        console.log('could not get balance:' + item.market)
+      }
+      balances.push({
+        market: item.market,
+        mint: item.mint,
+        balance,
+        decimals: item.decimals
+      })
+    }
+
+    set(() => ({ userAccount, userBalances: balances }))
   },
 
   refreshPool: async (provider, fetchOrCreateAccount, findAddress) => {
