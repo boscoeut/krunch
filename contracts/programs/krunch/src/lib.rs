@@ -10,7 +10,8 @@ pub mod utils;
 use state::*;
 use utils::*;
 
-declare_id!("5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm");
+// declare_id!("5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm"); // codespaces
+declare_id!("EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52"); // local
 
 #[program]
 pub mod krunch {

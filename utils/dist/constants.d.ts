@@ -10,15 +10,16 @@ export declare const USDT_USD_FEED: PublicKey;
 export declare const ETH_USD_FEED: PublicKey;
 export declare const BTC_USD_FEED: PublicKey;
 export declare const CHAINLINK_PROGRAM = "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny";
+export declare const NETWORK_URL = "http://localhost:8899";
 export declare const PRICE_DECIMALS: number;
 export declare const FEE_DECIMALS: number;
 export declare const MARKET_WEIGHT_DECIMALS: number;
 export declare const AMOUNT_DECIMALS: number;
 export declare const LEVERAGE_DECIMALS: number;
-export declare const ADMIN_ADDRESS = "EDsmoWKuanmGubggz7XxTYX6qc3LtWgXj39qSikEqk7S";
+export declare const ADMIN_ADDRESS = "HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS";
 export declare const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 export declare const ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
-export declare const KRUNCH = "5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm";
+export declare const KRUNCH = "EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52";
 export declare const MARKETS: {
     name: string;
     feedAddress: string;
@@ -30,32 +31,3 @@ export declare const EXCHANGE_POSITIONS: {
     feedAddress: PublicKey;
     market: string;
 }[];
-export type Market = {
-    name: string;
-    marketIndex: number;
-    leverage?: number;
-    marketWeight?: number;
-    basis?: number;
-    fees?: number;
-    currentPrice?: number;
-    makerFee?: number;
-    takerFee?: number;
-    marginUsed?: number;
-    tokenAmount?: number;
-    feedAddress: string;
-};
-export type ExchangeBalance = {
-    mint: PublicKey;
-    market: string;
-    balance: number;
-    decimals: number;
-};
-export type UserPosition = {
-    owner: PublicKey;
-    market: string;
-    marketIndex: number;
-    basis?: number;
-    fees?: number;
-    tokenAmount?: number;
-    pnl?: number;
-};

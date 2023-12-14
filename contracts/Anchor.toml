@@ -5,14 +5,19 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-krunch = "5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm"
+krunch = "EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52" 
+# codespaces
+# krunch = "5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm" 
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-wallet = "/home/codespace/.config/solana/id.json"
+# local
+wallet = "/Users/eberma/.config/solana/id.json"
+# codespace
+# wallet = "/home/codespace/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

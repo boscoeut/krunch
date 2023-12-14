@@ -11,6 +11,8 @@ export const USDT_USD_FEED = new PublicKey("8vAuuqC5wVZ9Z9oQUGGDSjYgudTfjmyqGU5V
 export const ETH_USD_FEED = new PublicKey("716hFAECqotxcXcj8Hs8nr7AG6q9dBw2oX3k3M8V7uGq")
 export const BTC_USD_FEED = new PublicKey("Cv4T27XbjVoKUYwP72NQQanvZeA7W4YF9L4EnYT9kx5o")
 export const CHAINLINK_PROGRAM="HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
+// export const NETWORK_URL="https://shiny-halibut-7vpx9xx4wj2x579-3000.app.github.dev/" // codespaces
+export const NETWORK_URL = "http://localhost:8899";
 
 export const PRICE_DECIMALS = 10 ** 9;
 export const FEE_DECIMALS = 10 ** 4;
@@ -18,10 +20,12 @@ export const MARKET_WEIGHT_DECIMALS = 10 ** 4;
 export const AMOUNT_DECIMALS = 10 ** 9;
 export const LEVERAGE_DECIMALS = 10 ** 4;
 
-export const ADMIN_ADDRESS="EDsmoWKuanmGubggz7XxTYX6qc3LtWgXj39qSikEqk7S"
+// export const ADMIN_ADDRESS="EDsmoWKuanmGubggz7XxTYX6qc3LtWgXj39qSikEqk7S" // codespaces
+export const ADMIN_ADDRESS="HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS" // local
 export const TOKEN_PROGRAM_ID="TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 export const ASSOCIATED_TOKEN_PROGRAM_ID="ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-export const KRUNCH="5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm"
+// export const KRUNCH="5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm" // codespaces
+export const KRUNCH="EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52" // local address
 
 export const MARKETS= [{
     name:"SOL/USD",

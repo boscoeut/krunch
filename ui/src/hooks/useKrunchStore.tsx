@@ -1,9 +1,9 @@
+import * as anchor from "@coral-xyz/anchor"
+import type { } from '@redux-devtools/extension'; // required for devtools typing
+import { getAssociatedTokenAddress } from "@solana/spl-token"
+import { CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, MARKETS, USDC_MINT } from 'utils/dist/constants'
 import { create } from 'zustand'
-import { devtools, persist } from 'zustand/middleware'
-import type { } from '@redux-devtools/extension' // required for devtools typing
-import { CHAINLINK_PROGRAM, USDC_MINT, EXCHANGE_POSITIONS, MARKETS, Market, UserPosition, ExchangeBalance } from 'utils/dist/constants'
-import * as anchor from "@coral-xyz/anchor";
-import { getAssociatedTokenAddress, getMint } from "@solana/spl-token"
+import type { ExchangeBalance, Market, UserPosition } from '../types'
 
 interface KrunchState {
   program: any,

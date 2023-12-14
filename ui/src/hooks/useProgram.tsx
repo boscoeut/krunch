@@ -1,8 +1,9 @@
 
-import { useEffect, useState } from 'react';
-import { useKrunchStore } from "../hooks/useKrunchStore";
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { useState } from 'react';
+import { NETWORK_URL } from 'utils/dist/constants';
+import { useKrunchStore } from "../hooks/useKrunchStore";
 import idl from '../idl/krunch.json';
 
 import {
@@ -23,7 +24,7 @@ const useProgram = () => {
     async function createProvider() {
         /* create the provider and return it to the caller */
         /* network set to local network for now */
-        const network = "https://shiny-halibut-7vpx9xx4wj2x579-8899.app.github.dev/";
+        const network = NETWORK_URL;
         const connection = new Connection(network, opts.preflightCommitment as any);
 
         const provider = new AnchorProvider(
@@ -37,7 +38,7 @@ const useProgram = () => {
             return {
                 program,
                 provider
-            }   
+            }
         } else {
             try {
                 const _provider = await createProvider();

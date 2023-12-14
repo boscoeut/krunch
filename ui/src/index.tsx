@@ -1,17 +1,13 @@
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { MathWalletAdapter, PhantomWalletAdapter, SafePalWalletAdapter, SolflareWalletAdapter, SolongWalletAdapter, } from '@solana/wallet-adapter-wallets';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
-import { Connection, PublicKey } from '@solana/web3.js';
-import {
-  Program, Provider, web3
-} from '@project-serum/anchor';
 import { BrowserRouter as Router } from 'react-router-dom';
-import idl from './idl/krunch.json';
-import { PhantomWalletAdapter, SolflareWalletAdapter,SolongWalletAdapter,MathWalletAdapter,SafePalWalletAdapter, } from '@solana/wallet-adapter-wallets';
-import { useWallet, WalletProvider, ConnectionProvider } from '@solana/wallet-adapter-react';
-import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import App from './App';
+import './index.css';
+import reportWebVitals from './reportWebVitals';
+import { NETWORK_URL } from 'utils/dist/constants';
 require('@solana/wallet-adapter-react-ui/styles.css');
 const wallets = [
   /* view list of available wallets at https://github.com/solana-labs/wallet-adapter#wallets */
@@ -23,14 +19,7 @@ const wallets = [
 ]
 
 
-const { SystemProgram, Keypair } = web3;
-const baseAccount = Keypair.generate();
-const opts = {
-  preflightCommitment: "processed"
-}
-const programID = new PublicKey(idl.metadata.address)
-
-const network = "https://shiny-halibut-7vpx9xx4wj2x579-8899.app.github.dev/";
+const network = NETWORK_URL;
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
