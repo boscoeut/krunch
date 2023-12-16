@@ -10,6 +10,7 @@ import '../App.css';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from "../hooks/useProgram";
 import { renderItem } from '../utils';
+import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS } from 'utils/dist/constants';
 
 export default function Markets() {
     const { getProgram } = useProgram();
@@ -53,13 +54,13 @@ export default function Markets() {
                         return <tr key={row.name}>
                             <td>{renderItem(row.name)}</td>
                             <td>{row.marketIndex}</td>
-                            <td>{row.leverage}</td>
-                            <td>{row.marketWeight}</td>
+                            <td>{renderItem(row.marketWeight, MARKET_WEIGHT_DECIMALS)}</td>
+                            <td>{renderItem(row.leverage, LEVERAGE_DECIMALS)}</td>
                             <td>{renderItem(row.basis)}</td>
                             <td>{renderItem(row.currentPrice)}</td>
                             <td>{renderItem(row.fees)}</td>
-                            <td>{row.makerFee}</td>
-                            <td>{row.takerFee}</td>
+                            <td>{renderItem(row.makerFee, FEE_DECIMALS)}</td>
+                            <td>{renderItem(row.takerFee, FEE_DECIMALS)}</td>
                             <td>{renderItem(row.marginUsed)}</td>
                             <td>{renderItem(row.tokenAmount)}</td>
                             <td>

@@ -42,7 +42,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   refreshMarkets: async (fetchAccount) => {
     let tempMarkets: Array<Market> = []
     for (const market of get().markets) {
-      tempMarkets.push({ ...market, ...(await fetchAccount(get().program, 'market', ['market', market.marketIndex])) })
+      tempMarkets.push({ market:market.name,...market, ...(await fetchAccount(get().program, 'market', ['market', market.marketIndex])) })
     }
     set(() => ({ markets: tempMarkets }))
   },
