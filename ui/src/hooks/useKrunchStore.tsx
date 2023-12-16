@@ -71,15 +71,15 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     const balances: Array<ExchangeBalance> = []
     for (const item of EXCHANGE_POSITIONS) {
-
       let tokenAccount = await getAssociatedTokenAddress(
         item.mint, //mint
         provider.wallet.publicKey, //owner
       )
       let balance = 0
       try {
-        let programBalance: any = await provider.connection.getTokenAccountBalance(tokenAccount)
-        balance = programBalance.value.amount
+        let tokenBalance: any = await provider.connection.getTokenAccountBalance(tokenAccount)
+        console.log("tokenBalance "+item.market, tokenBalance.value)
+        balance = Number(tokenBalance.value.amount)
       } catch (x) {
         console.log('could not get balance:' + item.market)
       }

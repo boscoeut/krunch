@@ -2,26 +2,24 @@
 // console.log("migration script invoked")
 // console.log(anchor.AnchorProvider.env());
 import * as anchor from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
 import { Program } from "@coral-xyz/anchor";
+import { PublicKey } from "@solana/web3.js";
+import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
+import {
+    AMOUNT_DECIMALS,
+    BTC_USD_FEED,
+    CHAINLINK_PROGRAM,
+    EXCHANGE_POSITIONS,
+    FEE_DECIMALS,
+    LEVERAGE_DECIMALS,
+    MARKET_WEIGHT_DECIMALS,
+    SOL_MINT,
+    SOL_USD_FEED,
+    USDC_MINT,
+    USDC_USD_FEED
+} from 'utils/src/constants';
 import { Krunch } from "../target/types/krunch";
 const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = require("@solana/spl-token");
-import {USDC_MINT,ETH_MINT,ETH_USD_FEED, CHAINLINK_PROGRAM,
-    PRICE_DECIMALS,
-    FEE_DECIMALS,
-    MARKET_WEIGHT_DECIMALS,
-    AMOUNT_DECIMALS,
-    LEVERAGE_DECIMALS,
-    SOL_MINT,
-    USDT_MINT,
-    BTC_MINT,
-    SOL_USD_FEED,
-    USDC_USD_FEED,
-    USDT_USD_FEED,
-    BTC_USD_FEED,
-    EXCHANGE_POSITIONS
-} from 'utils/src/constants'
-import { findAddress, fetchOrCreateAccount, fetchAccount } from 'utils/dist/utils'
 
 
 const addMarkets = async function (provider: any, program: any) {
@@ -150,73 +148,56 @@ const mintTokens = async function (provider: any) {
     }
 }
 
-const setupAccounts = async function (provider: any, program: any) {
+const deposit = async function (provider: any,
+    program: any,
+    mint: PublicKey,
+    feed: PublicKey,
+    amount:number) {
     const payer = (provider.wallet as anchor.Wallet).payer;
-
-    await mintTokens(provider);
-    let usdcTokenAccount = await getOrCreateAssociatedTokenAccount(
+    let tokenAccount = await getOrCreateAssociatedTokenAccount(
         provider.connection, //connection
         payer, //payer
-        USDC_MINT, //mint
+        mint, //mint
         payer.publicKey, //owner
     )
-    let userBalance = await provider.connection.getTokenAccountBalance(usdcTokenAccount.address)
+    let userBalance = await provider.connection.getTokenAccountBalance(tokenAccount.address)
     console.log("userBalance Before", userBalance.value.amount);
 
     const exchangeAddress = await findAddress(program, ['exchange'])
-    const escrowAccount = await findAddress(program, [
-        exchangeAddress,
-        USDC_MINT])
-    console.log("escrowAccount", escrowAccount.toString())
-
-    // deposit
     const escrowDepositAccount = await findAddress(program, [
         exchangeAddress,
-        USDC_MINT])
+        mint])
     console.log("escrowDepositAccount", escrowDepositAccount.toString())
 
-    let tx = await program.methods.deposit(new anchor.BN(2000000000)).accounts({
-        userTokenAccount: new PublicKey(usdcTokenAccount.address.toString()),
-        mint: USDC_MINT,
+    let tx = await program.methods.deposit(new anchor.BN(amount * AMOUNT_DECIMALS)).accounts({
+        userTokenAccount: new PublicKey(tokenAccount.address.toString()),
+        mint: mint,
         exchange: exchangeAddress,
         escrowAccount: escrowDepositAccount,
         userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-        exchangeTreasuryPosition: await findAddress(program, ['exchange_position', USDC_MINT]),
+        exchangeTreasuryPosition: await findAddress(program, ['exchange_position', mint]),
         owner: provider.wallet.publicKey,
-        chainlinkFeed: USDC_USD_FEED,
+        chainlinkFeed: feed,
         chainlinkProgram: CHAINLINK_PROGRAM,
     }).rpc();
     console.log("deposit", tx);
 
-    let programBalance = await provider.connection.getTokenAccountBalance(escrowAccount)
-
-    userBalance = await provider.connection.getTokenAccountBalance(usdcTokenAccount.address)
-    console.log("userBalance After deposit", userBalance.value.amount);
-
-    programBalance = await provider.connection.getTokenAccountBalance(escrowAccount)
-    console.log("programBalance After deposit", programBalance.value.amount);
+    let programBalance = await provider.connection.getTokenAccountBalance(escrowDepositAccount)
 
     const acct: any = await fetchAccount(program, 'userAccount', ['user_account', provider.wallet.publicKey]);
     console.log('deposit', acct.collateralValue.toString())
 
-    // withdraw
-    tx = await program.methods.withdraw(new anchor.BN(500000000)).accounts({
-        userTokenAccount: new PublicKey(usdcTokenAccount.address.toString()),
-        mint: USDC_MINT,
-        exchange: exchangeAddress,
-        escrowAccount: escrowDepositAccount,
-        exchangeTreasuryPosition: await findAddress(program, ['exchange_position', USDC_MINT]),
-        userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-        owner: provider.wallet.publicKey
+    userBalance = await provider.connection.getTokenAccountBalance(tokenAccount.address)
+    console.log("userBalance After deposit", userBalance.value.amount);
 
-    }).rpc();
-    console.log("withdraw", tx);
+    programBalance = await provider.connection.getTokenAccountBalance(escrowDepositAccount)
+    console.log("programBalance After deposit", programBalance.value.amount);
+}
 
-    userBalance = await provider.connection.getTokenAccountBalance(usdcTokenAccount.address)
-    console.log("userBalance After withdraw", userBalance.value.amount);
-
-    programBalance = await provider.connection.getTokenAccountBalance(escrowAccount)
-    console.log("programBalance After withdraw", programBalance.value.amount);
+const setupAccounts = async function (provider: any, program: any) {
+    await mintTokens(provider);
+    //await deposit(provider, program, USDC_MINT, USDC_USD_FEED, 100);
+  //  await deposit(provider, program, SOL_MINT, SOL_USD_FEED, 100);
 };
 
 (async () => {

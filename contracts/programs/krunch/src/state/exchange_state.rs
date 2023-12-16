@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{mint_to, Mint, MintTo, Token, TokenAccount},
+    token::{ Mint, Token, TokenAccount},
 };
 #[derive(Accounts)]
 pub struct Calculate<'info> {
@@ -65,6 +64,10 @@ pub struct ExecuteTrade<'info> {
     )]
     pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
+    /// CHECK: We're reading data from this chainlink feed account
+    pub chainlink_feed: AccountInfo<'info>,
+    /// CHECK: This is the Chainlink program library
+    pub chainlink_program: AccountInfo<'info>
 }
 
 #[derive(Accounts)]
@@ -166,7 +169,10 @@ pub struct Withdraw<'info> {
         bump)]
     pub user_account: Account<'info, UserAccount>,
     system_program: Program<'info, System>,
-
+    #[account(mut)]
+    pub user_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+    pub mint: Account<'info, Mint>,
     #[account(
         init_if_needed,
         payer = owner,
@@ -178,17 +184,16 @@ pub struct Withdraw<'info> {
         token::authority=exchange,
     )]
     pub escrow_account: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub user_token_account: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
-    pub mint: Account<'info, Mint>,
     #[account(
         mut, 
         seeds = [b"exchange_position".as_ref(), mint.key().as_ref()],
         bump
     )]
     pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
-    
+    /// CHECK: We're reading data from this chainlink feed account
+    pub chainlink_feed: AccountInfo<'info>,
+    /// CHECK: This is the Chainlink program library
+    pub chainlink_program: AccountInfo<'info>
    
 }
 
@@ -257,7 +262,7 @@ pub struct AddExchangeTreasuryPosition<'info> {
         init, 
         payer = admin,
         space = 8 
-                + 32 // tokenMint:Pubkey
+                + 32 // token_mint:Pubkey
                 + 2 // active:bool
                 + 2 // treasuryWeight:u16,
                 + 1 // decimals:u8
@@ -271,13 +276,13 @@ pub struct AddExchangeTreasuryPosition<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(tokenMint: Pubkey)]
+#[instruction(token_mint: Pubkey)]
 pub struct UpdateExchangeTreasuryPosition<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     #[account(
         mut, 
-        seeds = [b"exchange_position".as_ref(), tokenMint.key().as_ref()],
+        seeds = [b"exchange_position".as_ref(), token_mint.key().as_ref()],
         bump
     )]
     pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,

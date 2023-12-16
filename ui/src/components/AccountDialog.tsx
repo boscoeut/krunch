@@ -1,24 +1,21 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
+import * as anchor from "@coral-xyz/anchor";
 import Button from '@mui/joy/Button';
-import Divider from '@mui/joy/Divider';
-import ModalClose from '@mui/joy/ModalClose';
+import DialogContent from '@mui/joy/DialogContent';
+import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
+import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
-import DialogTitle from '@mui/joy/DialogTitle';
-import DialogContent from '@mui/joy/DialogContent';
-import useProgram from '../hooks/useProgram';
-import * as anchor from "@coral-xyz/anchor";
 import Stack from '@mui/joy/Stack';
-import useAccounts from '../hooks/useAccounts';
-import Sheet from '@mui/joy/Sheet';
-import Typography from '@mui/joy/Typography';
-import TextField from '@mui/joy/TextField'; // Import TextField from Joy UI
+import { PublicKey } from "@solana/web3.js";
 import * as React from 'react';
-import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/dist/utils";   
-import { PRICE_DECIMALS, FEE_DECIMALS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS, LEVERAGE_DECIMALS} from "utils/dist/constants";  
+import { CHAINLINK_PROGRAM, EXCHANGE_POSITIONS,AMOUNT_DECIMALS } from "utils/dist/constants";
+import { findAddress } from "utils/dist/utils";
+import useProgram from '../hooks/useProgram';
+const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
 // icons
 
 
@@ -28,47 +25,57 @@ export interface AccountDialogProps {
 }
 
 export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
-  const [name, setName] = React.useState('SOL');
-  const [marketIndex, setMarketIndex] = React.useState('1');
-  const [marketWeight, setMarketWeight] = React.useState('.1');
-  const [leverage, setLeverage] = React.useState('1');
-  const [takerFee, setTakerFee] = React.useState('0.2');
-  const [makerFee, setMakerFee] = React.useState('0.1');
-  const [price, setPrice] = React.useState('100');
-  const {getProgram, getProvider, wallet} = useProgram();
-  
+  const [market, setMarket] = React.useState('USDC/USD');
+  const [amount, setAmount] = React.useState('100');
+  const { getProgram, getProvider } = useProgram();
+
 
   const handleSubmit = async () => {
-    // Handle form submission here
-    console.log('handleSubmit', marketIndex)
-    const program = await getProgram(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
-    const tx = await program.methods.updateMarket(
-      new anchor.BN(marketIndex),
-      new anchor.BN(Number(price) * PRICE_DECIMALS),
-      new anchor.BN(Number(makerFee) * FEE_DECIMALS),
-      new anchor.BN(Number(takerFee) * FEE_DECIMALS),
-      new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
-      new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
-    ).accounts({
-      market: await findAddress(program,['market', Number(marketIndex)]),
-      exchange: await findAddress(program,['exchange']),
-    }).rpc();
-    console.log("updateMarket", tx);
-    const acct: any = await fetchAccount(program,'market',
-      ['market',
-        marketIndex]);
-    console.log('updateMarket', acct)
-    setOpen(false)
+    const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
+    
+    if (position) {
+      console.log("position", position);
+      const program = await getProgram(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
+      const provider = await getProvider(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
+  
+      let tokenAccount = await getOrCreateAssociatedTokenAccount(
+        provider.connection, //connection
+        provider.wallet.publicKey, //payer
+        position.mint, //mint
+        provider.wallet.publicKey, //owner
+      )
+
+      const exchangeAddress = await findAddress(program, ['exchange'])
+      const escrowAccount = await findAddress(program, [
+        exchangeAddress,
+        position.mint])
+
+      const transactionAmount = Number(amount) * AMOUNT_DECIMALS
+      console.log("transactionAmount", transactionAmount);
+
+      const method = transactionAmount > 0 ? 'deposit' : 'withdraw'
+
+      const tx = await program.methods[method](
+        new anchor.BN(Math.abs(transactionAmount))
+      ).accounts({
+        userTokenAccount: new PublicKey(tokenAccount.address.toString()),
+        mint: position.mint,
+        exchange: exchangeAddress,
+        escrowAccount,
+        userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+        exchangeTreasuryPosition: await findAddress(program, ['exchange_position', position.mint]),
+        owner: provider.wallet.publicKey,
+        chainlinkFeed: position.feedAddress,
+        chainlinkProgram: CHAINLINK_PROGRAM,
+      }).rpc();
+      console.log("transactionAmount tx", tx);
+      setOpen(false)
+    }
   };
 
   const properties = [
-    { label: 'Name', value: name, onChange: setName },
-    { label: 'Index', value: marketIndex, onChange: setMarketIndex },
-    { label: 'Weight', value: marketWeight, onChange: setMarketWeight },
-    { label: 'Leverage', value: leverage, onChange: setLeverage },
-    { label: 'Taker Fee', value: takerFee, onChange: setTakerFee },
-    { label: 'Maker Fee', value: makerFee, onChange: setMakerFee },
-    { label: 'Price', value: price, onChange: setPrice },
+    { label: 'Amount', value: amount, onChange: setAmount },
+    { label: 'Market', value: market, onChange: setMarket },
   ]
 
   return (

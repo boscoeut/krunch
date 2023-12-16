@@ -1,28 +1,27 @@
 import * as anchor from "@coral-xyz/anchor";
 import '@fontsource/inter';
-import { PublicKey } from "@solana/web3.js";
 import Button from '@mui/joy/Button';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import Input from '@mui/joy/Input';
+import Table from '@mui/joy/Table';
+import { PriceStatus, PythCluster, PythHttpClient, getPythClusterApiUrl, getPythProgramKeyForCluster } from '@pythnetwork/client';
+import { getAssociatedTokenAddress, getMint } from "@solana/spl-token";
+import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { useState } from 'react';
+import { fetchAccount, fetchOrCreateAccount, findAddress } from "utils/dist/utils";
+import {
+    AMOUNT_DECIMALS,
+    CHAINLINK_PROGRAM,
+    ETH_MINT, ETH_USD_FEED,
+    FEE_DECIMALS,
+    LEVERAGE_DECIMALS,
+    MARKET_WEIGHT_DECIMALS,
+    PRICE_DECIMALS,
+    USDC_MINT
+} from 'utils/src/constants';
+import * as utils from 'utils/src/index';
 import '../App.css';
 import useProgram from "../hooks/useProgram";
-import useAccounts from "../hooks/useAccounts";
-import Table from '@mui/joy/Table';
-import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/dist/utils";   
-import { useState } from 'react';
-import { getAssociatedTokenAddress, getMint } from "@solana/spl-token"
-import Input from '@mui/joy/Input';
-import { useKrunchStore } from "../hooks/useKrunchStore";
-import { OCR2Feed } from "@chainlink/solana-sdk"
-import { PriceStatus, PythHttpClient, getPythClusterApiUrl, getPythProgramKeyForCluster, PythCluster } from '@pythnetwork/client'
-import { Connection } from '@solana/web3.js'
-import * as utils from 'utils/src/index'
-import {USDC_MINT,ETH_MINT,ETH_USD_FEED, CHAINLINK_PROGRAM,
-    PRICE_DECIMALS,
-    FEE_DECIMALS,
-    MARKET_WEIGHT_DECIMALS,
-    AMOUNT_DECIMALS,
-    LEVERAGE_DECIMALS
-} from 'utils/src/constants'
+import { renderItem } from "../utils";
 
 
 export default function WalletTest() {
@@ -38,7 +37,7 @@ export default function WalletTest() {
     const [_userBalance, setUserBalance] = useState(0)
     const [_programBalance, setProgramBalance] = useState(0)
 
-    
+
     const [temp, setTemp] = useState({} as any);
     const getBalance = async () => {
         const provider = await getProvider();
@@ -49,14 +48,14 @@ export default function WalletTest() {
 
     const initializeExchange = async () => {
         const program = await getProgram();
-        const exchange: any = await fetchOrCreateAccount(program,'exchange', ['exchange'], 'initializeExchange', []);
+        const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', []);
         setTemp({ ...temp, exchange: exchange })
     }
 
     const createUserAccount = async () => {
         const provider = await getProvider();
         const program = await getProgram();
-        const exchange: any = await fetchOrCreateAccount(program,'userAccount',
+        const exchange: any = await fetchOrCreateAccount(program, 'userAccount',
             ['user_account',
                 provider.wallet.publicKey],
             'createUserAccount', []);
@@ -85,7 +84,7 @@ export default function WalletTest() {
                 }
             }
         }
-        
+
         const tx = await program.methods.getPrice().accounts({
             chainlinkFeed: "CH31Xns5z3M1cTAbKW34jcxPPciazARpijcHj9rxtemt",
             chainlinkProgram: "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
@@ -97,14 +96,14 @@ export default function WalletTest() {
     const createUserPosition = async (marketIndex: number) => {
         const provider = await getProvider();
         const program = await getProgram();
-        const exchange: any = await fetchOrCreateAccount(program,'userPosition',
+        const exchange: any = await fetchOrCreateAccount(program, 'userPosition',
             ['user_position',
                 provider.wallet.publicKey,
                 marketIndex],
             'addUserPosition', [new anchor.BN(marketIndex)],
             {
-                userAccount: await findAddress(program,['user_account', provider.wallet.publicKey]),
-                market: await findAddress(program,['market', marketIndex]),
+                userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+                market: await findAddress(program, ['market', marketIndex]),
             });
         console.log('createUserPosition', exchange)
         setTemp({ ...temp, user_position: exchange })
@@ -118,13 +117,13 @@ export default function WalletTest() {
                 new anchor.BN(marketIndex),
                 new anchor.BN(amount * AMOUNT_DECIMALS)
             ).accounts({
-                exchange: await findAddress(program,['exchange']),
-                market: await findAddress(program,['market', marketIndex]),
-                userAccount: await findAddress(program,['user_account', provider.wallet.publicKey]),
-                userPosition: await findAddress(program,['user_position', provider.wallet.publicKey, marketIndex]),
+                exchange: await findAddress(program, ['exchange']),
+                market: await findAddress(program, ['market', marketIndex]),
+                userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+                userPosition: await findAddress(program, ['user_position', provider.wallet.publicKey, marketIndex]),
             }).rpc();
             console.log("executeTrade", tx);
-            const acct: any = await fetchAccount(program,'userPosition',
+            const acct: any = await fetchAccount(program, 'userPosition',
                 ['user_position',
                     provider.wallet.publicKey,
                     marketIndex]);
@@ -144,10 +143,10 @@ export default function WalletTest() {
         try {
             const program = await getProgram();
             const tx = await program.methods.availableCollateral(_marketIndex).accounts({
-                exchange: await findAddress(program,['exchange']),
-                market: await findAddress(program,['market', _marketIndex]),
-                userAccount: await findAddress(program,['user_account', provider.wallet.publicKey]),
-                userPosition: await findAddress(program,['user_position', provider.wallet.publicKey, _marketIndex]),
+                exchange: await findAddress(program, ['exchange']),
+                market: await findAddress(program, ['market', _marketIndex]),
+                userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+                userPosition: await findAddress(program, ['user_position', provider.wallet.publicKey, _marketIndex]),
             }).view();
             console.log("exchangeCollateralAvailable", `${renderItem(tx.exchangeCollateralAvailable)}`);
             console.log("marketCollateralAvailable", `${renderItem(tx.marketCollateralAvailable)}`);
@@ -169,11 +168,11 @@ export default function WalletTest() {
                 new anchor.BN(leverage * LEVERAGE_DECIMALS),
                 new anchor.BN(marketWeight * MARKET_WEIGHT_DECIMALS),
             ).accounts({
-                market: await findAddress(program,['market', marketIndex]),
-                exchange: await findAddress(program,['exchange']),
+                market: await findAddress(program, ['market', marketIndex]),
+                exchange: await findAddress(program, ['exchange']),
             }).rpc();
             console.log("updateMarket", tx);
-            const acct: any = await fetchAccount(program,'market',
+            const acct: any = await fetchAccount(program, 'market',
                 ['market',
                     marketIndex]);
             console.log('updateMarket', acct)
@@ -196,8 +195,8 @@ export default function WalletTest() {
         try {
             const program = await getProgram();
             const provider = await getProvider();
-            const exchangeAddress = await findAddress(program,['exchange'])
-            const escrowAccount = await findAddress(program,[
+            const exchangeAddress = await findAddress(program, ['exchange'])
+            const escrowAccount = await findAddress(program, [
                 exchangeAddress,
                 mint])
             let tokenAccount = await getAssociatedTokenAddress(
@@ -213,13 +212,13 @@ export default function WalletTest() {
                 mint: mint,
                 exchange: exchangeAddress,
                 escrowAccount: escrowAccount,
-                userAccount: await findAddress(program,['user_account', provider.wallet.publicKey]),
+                userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
                 owner: provider.wallet.publicKey,
-                exchangeTreasuryPosition: await findAddress(program,['exchange_position', mint]),
+                exchangeTreasuryPosition: await findAddress(program, ['exchange_position', mint]),
                 chainlinkFeed: feed,
                 chainlinkProgram: CHAINLINK_PROGRAM
             }).rpc();
-            const acct: any = await fetchAccount(program,'userAccount', ['user_account', provider.wallet.publicKey]);
+            const acct: any = await fetchAccount(program, 'userAccount', ['user_account', provider.wallet.publicKey]);
             console.log('deposit', acct)
             setTemp({
                 ...temp,
@@ -234,8 +233,8 @@ export default function WalletTest() {
         try {
             const program = await getProgram();
             const provider = await getProvider();
-            const exchangeAddress = await findAddress(program,['exchange'])
-            const escrowAccount = await findAddress(program,[
+            const exchangeAddress = await findAddress(program, ['exchange'])
+            const escrowAccount = await findAddress(program, [
                 exchangeAddress,
                 USDC_MINT])
             let usdcTokenAccount = await getAssociatedTokenAddress(
@@ -248,10 +247,10 @@ export default function WalletTest() {
                 mint: USDC_MINT,
                 exchange: exchangeAddress,
                 escrowAccount: escrowAccount,
-                userAccount: await findAddress(program,['user_account', provider.wallet.publicKey]),
+                userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
                 owner: provider.wallet.publicKey
             }).rpc();
-            const acct: any = await fetchAccount(program,'userAccount', ['user_account', provider.wallet.publicKey]);
+            const acct: any = await fetchAccount(program, 'userAccount', ['user_account', provider.wallet.publicKey]);
             console.log('withdraw', acct)
             setTemp({
                 ...temp,
@@ -263,7 +262,7 @@ export default function WalletTest() {
     }
     const addMarket = async (marketIndex: number) => {
         const program = await getProgram()
-        const exchange = await findAddress(program,['exchange']);
+        const exchange = await findAddress(program, ['exchange']);
         const acct: any = await fetchOrCreateAccount(program,
             'market',
             ['market', marketIndex],
@@ -296,10 +295,10 @@ export default function WalletTest() {
             const program = await getProgram()
             setTemp({
                 ...temp,
-                exchange: await fetchAccount(program,'exchange', ['exchange']),
-                market_1: await fetchAccount(program,'market', ['market', 1]),
-                user_position: await fetchAccount(program,'userPosition', ['user_position', provider.wallet.publicKey, 1]),
-                user_account: await fetchAccount(program,'userAccount', ['user_account', provider.wallet.publicKey]),
+                exchange: await fetchAccount(program, 'exchange', ['exchange']),
+                market_1: await fetchAccount(program, 'market', ['market', 1]),
+                user_position: await fetchAccount(program, 'userPosition', ['user_position', provider.wallet.publicKey, 1]),
+                user_account: await fetchAccount(program, 'userAccount', ['user_account', provider.wallet.publicKey]),
             })
         } catch (err) {
             console.log("getAccounts error: ", err);
@@ -324,8 +323,8 @@ export default function WalletTest() {
     async function getUSDCBalances() {
         const provider = await getProvider()
         const program = await getProgram()
-        const exchangeAddress = await findAddress(program,['exchange'])
-        const escrowAccount = await findAddress(program,[
+        const exchangeAddress = await findAddress(program, ['exchange'])
+        const escrowAccount = await findAddress(program, [
             exchangeAddress,
             USDC_MINT])
         let programBalance: any = await provider.connection.getTokenAccountBalance(escrowAccount)
@@ -343,39 +342,6 @@ export default function WalletTest() {
         setUserBalance(userBalance.value.uiAmount);
     }
 
-    async function calculateFee() {
-        try {
-            const program = await getProgram();
-
-            const tx = await program.methods.calculateFee(
-                new anchor.BN(100 * PRICE_DECIMALS),
-                new anchor.BN(1 * AMOUNT_DECIMALS),
-                new anchor.BN(0.2 * FEE_DECIMALS)).accounts({
-                }).view();
-            console.log(`calculateFee`, `${tx}`)
-            setTemp({
-                ...temp,
-                calculate: tx.toNumber()
-            })
-        } catch (err) {
-            console.log("Transaction error: ", err);
-        }
-    }
-
-    const renderItem = (item: any, decimals = AMOUNT_DECIMALS) => {
-        if (!item) {
-            return ""
-        } else if (item instanceof PublicKey) {
-            return `${item.toString()}`
-        } else if (item instanceof anchor.BN) {
-            return `${(item.toNumber() / decimals).toFixed(3)}`
-        } else if (typeof item === 'number') {
-            return `${(item / decimals).toFixed(3)}`
-        } else {
-            return `${item.toString()}`
-        }
-    }
-
     const rows: any = []
     if (temp.exchange) {
         rows.push({ ...temp.exchange, name: 'exchange' })
@@ -390,7 +356,7 @@ export default function WalletTest() {
         rows.push({ ...temp.user_position, name: 'user_position' })
     }
 
-    console.log('apiurl', utils.API  )
+    console.log('apiurl', utils.API)
     return (
         <div>
 
@@ -527,10 +493,7 @@ export default function WalletTest() {
                                 <td>Withdraw</td>
                                 <td><Button size="sm" variant="soft" onClick={() => withdraw(_bankAmount)}>withdraw</Button></td>
                             </tr>
-                            <tr>
-                                <td>Calculate Fee</td>
-                                <td><Button size="sm" variant="soft" onClick={calculateFee}>Calculate Fee</Button></td>
-                            </tr>
+
                             <tr>
                                 <td>calculate</td>
                                 <td><Button size="sm" variant="soft" onClick={calculate}>Calculate</Button></td>

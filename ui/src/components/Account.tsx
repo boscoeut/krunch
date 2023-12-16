@@ -4,6 +4,8 @@ import { fetchOrCreateAccount, findAddress } from "utils/dist/utils";
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from "../hooks/useProgram";
 import Typography from '@mui/joy/Typography';
+import Positions from './Positions';
+import { renderItem } from '../utils';
 
 export default function Account() {
     const refreshUserAccount = useKrunchStore(state => state.refreshUserAccount)
@@ -18,20 +20,23 @@ export default function Account() {
         refreshUserAccount(provider,fetchOrCreateAccount, findAddress)
         refreshPositions(provider,fetchOrCreateAccount,findAddress)
     }
+    console.log("userAccount", userAccount  )
     return (
         <Box>
             <Button onClick={getAccount}>Get Account</Button>
-            <div>Fees: {userAccount.fees?.toString()}</div>
-            <>
-            {positions.map((position) => {
-                return <div key={position.marketIndex} >{position.market}: {position.marketIndex.toString()} </div>
-            })}
-            </>
+            <Typography variant="outlined">Details</Typography>
+            <div>collateralValue: {renderItem(userAccount.collateralValue)}</div>
+            <div>Fees: {renderItem(userAccount.fees)}</div>
+            <div>marginUsed: {renderItem(userAccount.marginUsed)}</div>
+            <div>pnl: {renderItem(userAccount.pnl)}</div>
+            <div>basis: {renderItem(userAccount.basis)}</div>
 
+            <Typography variant="outlined">Markets</Typography>
+            <Positions positions={positions} />
             <Typography variant="outlined">User Balances</Typography>
             <>
-            {userBalances.map((market) => {
-                return <div key={market.market} >{market.market}: {market.balance/market.decimals} </div>
+            {userBalances.map((userBalance) => {
+                return <div key={userBalance.market} >{userBalance.market}: {renderItem(userBalance.balance,10**userBalance.decimals)}</div>
             })}
             </>
         </Box>

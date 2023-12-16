@@ -1,26 +1,19 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
+import * as anchor from "@coral-xyz/anchor";
 import Button from '@mui/joy/Button';
-import Divider from '@mui/joy/Divider';
-import ModalClose from '@mui/joy/ModalClose';
+import DialogContent from '@mui/joy/DialogContent';
+import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
-import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/dist/utils";   
+import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
-import DialogTitle from '@mui/joy/DialogTitle';
-import DialogContent from '@mui/joy/DialogContent';
-import useProgram from '../hooks/useProgram';
-import * as anchor from "@coral-xyz/anchor";
 import Stack from '@mui/joy/Stack';
-import useAccounts from '../hooks/useAccounts';
-import Sheet from '@mui/joy/Sheet';
-import Typography from '@mui/joy/Typography';
-import TextField from '@mui/joy/TextField'; // Import TextField from Joy UI
 import * as React from 'react';
-import { PRICE_DECIMALS, FEE_DECIMALS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS, LEVERAGE_DECIMALS} from 'utils/dist/constants';
-// icons
-
+import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS, PRICE_DECIMALS } from 'utils/dist/constants';
+import { fetchAccount, findAddress } from "utils/dist/utils";
+import useProgram from '../hooks/useProgram';
 
 export interface MarketDialogProps {
   open: boolean;
@@ -35,7 +28,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
   const [takerFee, setTakerFee] = React.useState('0.2');
   const [makerFee, setMakerFee] = React.useState('0.1');
   const [price, setPrice] = React.useState('100');
-  const {getProgram, getProvider, wallet} = useProgram();
+  const {getProgram} = useProgram();
   
 
   const handleSubmit = async () => {
@@ -77,7 +70,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
         <ModalDialog>
           <ModalClose />
           <DialogTitle>Update Market</DialogTitle>
-          <DialogContent>Fill in the information of the project.</DialogContent>
+          <DialogContent>Market Details</DialogContent>
           <form
             onSubmit={async (event: React.FormEvent<HTMLFormElement>) => {
               event.preventDefault();

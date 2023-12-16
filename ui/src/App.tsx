@@ -16,12 +16,14 @@ import Settings from './components/Settings';
 import Sidebar from './components/Sidebar';
 import WalletTest from './components/WalletTest';
 import TradeDialog from './components/TradeDialog';
+import MarketDialog from './components/MarketDialog';
 import AccountDialog from './components/AccountDialog';
 import { useState } from 'react';
 
 export default function JoyOrderDashboardTemplate() {
     const location = useLocation();
     const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
+    const [marketDialogOpen, setMarketDialogOpen] = useState(false);
     const [accountDialogOpen, setAccountDialogOpen] = useState(false);
     return (
         <CssVarsProvider disableTransitionOnChange>
@@ -69,6 +71,14 @@ export default function JoyOrderDashboardTemplate() {
                     >
                         <Typography level="h3">{location.pathname}</Typography>
                         <Stack direction={"row"} spacing={1}>
+                        <Button
+                                color="primary"
+                                startDecorator={<DownloadRoundedIcon />}
+                                size="sm"
+                                onClick={() => setMarketDialogOpen(true)}
+                            >
+                                Market
+                            </Button>
                             <Button
                                 color="primary"
                                 startDecorator={<DownloadRoundedIcon />}
@@ -106,6 +116,7 @@ export default function JoyOrderDashboardTemplate() {
                 </Box>
             </Box>
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
+            <MarketDialog open={marketDialogOpen} setOpen={setMarketDialogOpen} />
             <AccountDialog open={accountDialogOpen} setOpen={setAccountDialogOpen} />
         </CssVarsProvider>
     );

@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{mint_to, transfer, Mint, MintTo, Token, TokenAccount, Transfer as SplTransfer},
+    token::{transfer,  Transfer as SplTransfer},
 };
 use chainlink_solana as chainlink;
 
@@ -17,14 +16,10 @@ declare_id!("EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52"); // local
 pub mod krunch {
     use super::*;
 
-    const MARKET_WEIGHT_DECIMALS: u64 = 10u64.pow(4);
-    const FEE_DECIMALS: u64 = 10u64.pow(4);
-    const LEVERAGE_DECIMALS: u64 = 10u64.pow(4);
-    const AMOUNT_NUM_DECIMALS:u8 = 9;
-    const AMOUNT_DECIMALS: u64 = 10u64.pow(AMOUNT_NUM_DECIMALS as u32);
-    const PRICE_DECIMALS: u64 = 10u64.pow(9);
-    const STABLE_DECIMALS: u64 = 10u64.pow(6);
-    const STABLE_CONVERSION: u32 = 3;
+    const MARKET_WEIGHT_DECIMALS: u128 = 10u128.pow(4);
+    const FEE_DECIMALS: u128 = 10u128.pow(4);
+    const LEVERAGE_DECIMALS: u128 = 10u128.pow(4);
+    const AMOUNT_NUM_DECIMALS: u8 = 9;
 
     pub fn initialize_exchange(ctx: Context<InitializeExchange>) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
@@ -48,19 +43,6 @@ pub mod krunch {
 
     pub fn calculate(_ctx: Context<Calculate>) -> Result<i64> {
         Ok(115)
-    }
-
-    pub fn calculate_fee(
-        _ctx: Context<CalculateFee>,
-        price: i64,
-        amount: i64,
-        fee_rate: i64,
-    ) -> Result<i64> {
-        let basis =
-            (amount.abs() as f64 / AMOUNT_DECIMALS as f64) * (price as f64 / PRICE_DECIMALS as f64);
-        let fee = (fee_rate as f64) / FEE_DECIMALS as f64;
-        let total = (basis * fee * AMOUNT_DECIMALS as f64) as i64;
-        Ok(total).into()
     }
 
     pub fn update_market(
@@ -91,9 +73,17 @@ pub mod krunch {
         let market = &mut ctx.accounts.market;
         let exchange = &mut ctx.accounts.exchange;
 
-        let price = get_current_price(market.current_price);
-        let fbasis =
-            (amount as f64 / AMOUNT_DECIMALS as f64) * (price as f64 / PRICE_DECIMALS as f64);
+        // get price
+        let round = chainlink::latest_round_data(
+            ctx.accounts.chainlink_program.to_account_info(),
+            ctx.accounts.chainlink_feed.to_account_info(),
+        )?;
+        let price_decimals = chainlink::decimals(
+            ctx.accounts.chainlink_program.to_account_info(),
+            ctx.accounts.chainlink_feed.to_account_info(),
+        )?;
+
+        let fbasis = (amount as i128 * round.answer as i128) / 10i128.pow(price_decimals.into());
         msg!("basis is {}", fbasis);
 
         let mut fee_rate: i64 = market.taker_fee.into();
@@ -102,9 +92,8 @@ pub mod krunch {
             // maker
             fee_rate = market.maker_fee.into();
         }
-        let fee_percent = (fee_rate as f64) / FEE_DECIMALS as f64;
-        let fee = (fbasis.abs() * fee_percent * AMOUNT_DECIMALS as f64) as i64;
-        let basis = (fbasis * AMOUNT_DECIMALS as f64) as i64;
+        let fee = ((fbasis.abs() * fee_rate as i128) / FEE_DECIMALS as i128) as i64;
+        let basis = fbasis as i64;
 
         // update fees
         market.fees += fee;
@@ -117,8 +106,8 @@ pub mod krunch {
         let token_amount_before = user_position.token_amount;
 
         let mut token_delta = 0;
-        if ((user_position.token_amount < 0 && amount > 0)
-            || (user_position.token_amount > 0 && amount < 0))
+        if (user_position.token_amount < 0 && amount > 0)
+            || (user_position.token_amount > 0 && amount < 0)
         {
             token_delta = user_position.token_amount.abs().min(amount.abs());
         }
@@ -126,11 +115,11 @@ pub mod krunch {
         user_position.token_amount += amount;
 
         // update collateral value
-        let f_leverage = market.leverage as f64 / LEVERAGE_DECIMALS as f64;
-        let f_margin_basis = (user_position.token_amount as f64 / AMOUNT_DECIMALS as f64)
-            * (price as f64 / PRICE_DECIMALS as f64);
+        let f_margin_basis =
+            (user_position.token_amount as i128 * round.answer as i128) / 10i128.pow(price_decimals.into());
 
-        let margin_used = ((f_margin_basis.abs() / f_leverage) * AMOUNT_DECIMALS as f64) as i64;
+        let margin_used = ((f_margin_basis.abs() as i128 * market.leverage as i128)
+            / LEVERAGE_DECIMALS as i128) as i64;
         let f_delta = user_position.margin_used.abs() - margin_used;
 
         user_position.margin_used = margin_used * -1;
@@ -148,11 +137,10 @@ pub mod krunch {
             let avg_price = basis_before.abs() as f64 / token_amount_before.abs() as f64;
             let abasis = (avg_price * token_delta as f64) as i64;
 
-            let mut tbasis = (token_delta.abs() as f64 / AMOUNT_DECIMALS as f64)
-                * (price as f64 / PRICE_DECIMALS as f64);
-            tbasis = tbasis * AMOUNT_DECIMALS as f64;
+            let tbasis =
+                (token_delta.abs() as i128 * round.answer as i128) / 10i128.pow(price_decimals.into());
 
-            let mut pnl = abasis - tbasis as i64;
+            let pnl = abasis - tbasis as i64;
             // if (token_delta<0){
             //     pnl = tbasis - abasis as i64;
             // }
@@ -173,11 +161,11 @@ pub mod krunch {
         let exchange_total =
             exchange.pnl + exchange.fees + exchange.margin_used + exchange.collateral_value;
         if exchange_total < 0 {
-            return err!(KrunchErrors::ExchangeMarginInsufficient);
+            // return err!(KrunchErrors::ExchangeMarginInsufficient);
         }
 
-        let m_weight = market.market_weight as f64 / MARKET_WEIGHT_DECIMALS as f64;
-        let max_market_collateral = exchange_total as f64 * m_weight;
+        let max_market_collateral = (exchange_total as i128 * market.market_weight as i128)
+            / MARKET_WEIGHT_DECIMALS as i128;
         let market_total =
             market.pnl + market.fees + market.margin_used + max_market_collateral as i64;
         if market_total < 0 {
@@ -189,7 +177,7 @@ pub mod krunch {
             + user_account.margin_used
             + user_account.collateral_value;
         if user_total < 0 {
-            return err!(KrunchErrors::UserMarginInsufficient);
+            //return err!(KrunchErrors::UserMarginInsufficient);
         }
 
         Ok(())
@@ -200,7 +188,6 @@ pub mod krunch {
         _market_index: u16,
     ) -> Result<AvailableCollateral> {
         let user_account = &ctx.accounts.user_account;
-        let user_position = &ctx.accounts.user_position;
         let market = &ctx.accounts.market;
         let exchange = &ctx.accounts.exchange;
 
@@ -229,12 +216,12 @@ pub mod krunch {
         token_mint: Pubkey,
         active: bool,
         treasury_weight: u16,
-        decimals:u8,
+        decimals: u8,
         feed_address: Pubkey,
     ) -> Result<()> {
         let position = &mut ctx.accounts.exchange_treasury_position;
         position.token_mint = token_mint;
-        position.active = active;   
+        position.active = active;
         position.treasury_weight = treasury_weight;
         position.decimals = decimals;
         position.feed_address = feed_address;
@@ -246,11 +233,11 @@ pub mod krunch {
         _token_mint: Pubkey,
         active: bool,
         treasury_weight: u16,
-        decimals:u8,
+        decimals: u8,
         feed_address: Pubkey,
     ) -> Result<()> {
         let position = &mut ctx.accounts.exchange_treasury_position;
-        position.active = active;   
+        position.active = active;
         position.treasury_weight = treasury_weight;
         position.decimals = decimals;
         position.feed_address = feed_address;
@@ -273,7 +260,7 @@ pub mod krunch {
         market.taker_fee = taker_fee;
         market.leverage = leverage;
         market.market_weight = market_weight;
-        market.feed_address = feed_address; 
+        market.feed_address = feed_address;
         Ok(())
     }
 
@@ -285,8 +272,8 @@ pub mod krunch {
     }
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
-         // get price
-         let round = chainlink::latest_round_data(
+        // get price
+        let round = chainlink::latest_round_data(
             ctx.accounts.chainlink_program.to_account_info(),
             ctx.accounts.chainlink_feed.to_account_info(),
         )?;
@@ -294,11 +281,12 @@ pub mod krunch {
             ctx.accounts.chainlink_program.to_account_info(),
             ctx.accounts.chainlink_feed.to_account_info(),
         )?;
-        let price_print = Decimal::new(round.answer, u32::from(price_decimals));
-
         
+        let decimals = &ctx.accounts.exchange_treasury_position.decimals;
+        let conversion = AMOUNT_NUM_DECIMALS - decimals;
+
         let total = (amount as u128 * round.answer as u128) / 10u128.pow(price_decimals.into());
-        let collateral_amount = total; // TODO REMOVE
+        let collateral_amount = total;
 
         // update collateral value
         let user_account = &mut ctx.accounts.user_account;
@@ -308,9 +296,7 @@ pub mod krunch {
         exchange.collateral_value += collateral_amount as i64;
 
         // do token transfer
-        let decimals = &ctx.accounts.exchange_treasury_position.decimals;
-        let conversion = AMOUNT_NUM_DECIMALS-decimals;
-        let tokenAmount = amount / 10u64.pow(conversion.into()); 
+        let token_amount = (amount as u128) / 10u128.pow(conversion.into());
 
         let destination = &ctx.accounts.escrow_account;
         let source = &ctx.accounts.user_token_account;
@@ -325,13 +311,23 @@ pub mod krunch {
         let cpi_program = token_program.to_account_info();
         transfer(
             CpiContext::new(cpi_program, cpi_accounts),
-            tokenAmount.try_into().unwrap(),
+            token_amount.try_into().unwrap(),
         )?;
 
         Ok(())
     }
 
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+        // get price
+        let round = chainlink::latest_round_data(
+            ctx.accounts.chainlink_program.to_account_info(),
+            ctx.accounts.chainlink_feed.to_account_info(),
+        )?;
+        let price_decimals = chainlink::decimals(
+            ctx.accounts.chainlink_program.to_account_info(),
+            ctx.accounts.chainlink_feed.to_account_info(),
+        )?;
+        
         let user_account = &mut ctx.accounts.user_account;
         let exchange = &mut ctx.accounts.exchange;
 
@@ -339,7 +335,7 @@ pub mod krunch {
             return err!(KrunchErrors::UserAccountValueInsufficient);
         }
 
-        if exchange.collateral_value < amount as i64{
+        if exchange.collateral_value < amount as i64 {
             return err!(KrunchErrors::ExchangeValueInsufficient);
         }
 
@@ -348,13 +344,14 @@ pub mod krunch {
 
         // token transfer
         let decimals = &ctx.accounts.exchange_treasury_position.decimals;
-        let conversion = AMOUNT_NUM_DECIMALS-decimals;
-        let tokenAmount = amount / 10u64.pow(conversion.into());
+        let conversion = AMOUNT_NUM_DECIMALS - decimals;
+        let total = (amount as u128) / 10u128.pow(conversion.into());
+        let token_amount =
+            (total as u128 * 10u128.pow(price_decimals.into())) / round.answer as u128;
         let source = &ctx.accounts.escrow_account;
         let destination = &ctx.accounts.user_token_account;
         let token_program = &ctx.accounts.token_program;
         let authority = &ctx.accounts.exchange;
-        let mint = &ctx.accounts.mint;
 
         let cpi_accounts = SplTransfer {
             from: source.to_account_info().clone(),
@@ -368,7 +365,7 @@ pub mod krunch {
 
         transfer(
             CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds),
-            tokenAmount.try_into().unwrap(),
+            token_amount.try_into().unwrap(),
         )?;
 
         Ok(())
@@ -398,7 +395,6 @@ pub mod krunch {
             decimals: decimals.into(),
         })
     }
-
 }
 
 #[error_code]

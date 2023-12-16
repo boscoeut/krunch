@@ -33,19 +33,6 @@ describe("krunch", () => {
     console.log("calculate", tx.toNumber());
   });
 
-  it("CalculateFee", async () => {
-    // Add your test here.
-    const tx = await program.methods.calculateFee(
-      new anchor.BN(100 * PRICE_DECIMALS),
-      new anchor.BN(1 * AMOUNT_DECIMALS),
-      new anchor.BN(.02 * FEE_DECIMALS))
-      .accounts({
-      }).view();
-    console.log("CalculateFee", tx.toNumber() / AMOUNT_DECIMALS);
-    expect(tx.toNumber(), 'CalculateFee').to.equal(-2 * PRICE_DECIMALS);
-  });
-
-
   it("Is initialized!", async () => {
 
     const exchangeBuffer = Buffer.from("exchange");

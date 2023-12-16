@@ -57,31 +57,6 @@
       "returns": "i64"
     },
     {
-      "name": "calculateFee",
-      "accounts": [
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "price",
-          "type": "i64"
-        },
-        {
-          "name": "amount",
-          "type": "i64"
-        },
-        {
-          "name": "feeRate",
-          "type": "i64"
-        }
-      ],
-      "returns": "i64"
-    },
-    {
       "name": "updateMarket",
       "accounts": [
         {
@@ -157,6 +132,16 @@
         },
         {
           "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkFeed",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -472,11 +457,6 @@
           "isSigner": false
         },
         {
-          "name": "escrowAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "userTokenAccount",
           "isMut": true,
           "isSigner": false
@@ -492,8 +472,23 @@
           "isSigner": false
         },
         {
+          "name": "escrowAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "exchangeTreasuryPosition",
           "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkFeed",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkProgram",
+          "isMut": false,
           "isSigner": false
         }
       ],

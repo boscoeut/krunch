@@ -1,55 +1,35 @@
 import '@fontsource/inter';
 import MarketDialog from './MarketDialog';
 
-import Typography from '@mui/joy/Typography';
 import Box from '@mui/joy/Box';
-import { PublicKey } from "@solana/web3.js";
-import '../App.css';
-import Table from '@mui/joy/Table';
-import useProgram from "../hooks/useProgram";
-import useAccounts from "../hooks/useAccounts";
-import { useState } from 'react';
-import * as anchor from "@coral-xyz/anchor";
 import Button from '@mui/joy/Button';
+import Table from '@mui/joy/Table';
+import { useState } from 'react';
+import { fetchAccount } from "utils/dist/utils";
+import '../App.css';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import {findAddress,fetchAccount} from "utils/dist/utils";
-const AMOUNT_DECIMALS = 10 ** 9;
+import useProgram from "../hooks/useProgram";
+import { renderItem } from '../utils';
 
 export default function Markets() {
-    const { getProgram, getProvider, wallet } = useProgram();
+    const { getProgram } = useProgram();
 
-    const [temp, setTemp] = useState({} as any);
     const markets = useKrunchStore(state => state.markets)
     const getPrice = useKrunchStore(state => state.getPrice)
     const refreshMarkets = useKrunchStore(state => state.refreshMarkets)
     const [open, setOpen] = useState(false);
 
-    const renderItem = (item: any, decimals = AMOUNT_DECIMALS) => {
-        if (!item) {
-            return ""
-        } else if (item instanceof PublicKey) {
-            return `${item.toString()}`
-        } else if (item instanceof anchor.BN) {
-            return `${(item.toNumber() / decimals).toFixed(3)}`
-        } else if (typeof item === 'number') {
-            return `${(item / decimals).toFixed(3)}`
-        } else {
-            return `${item.toString()}`
-        }
-    }
-
     async function getAccounts() {
-        await refreshMarkets(fetchAccount)
+        refreshMarkets(fetchAccount)
     }
 
-    async function checkPrice(feedAddress:string    ) {
-        const program =await getProgram()
-        getPrice(program,feedAddress)
+    async function checkPrice(feedAddress: string) {
+        const program = await getProgram()
+        getPrice(program, feedAddress)
     }
 
     return (
         <Box>
-            <Button onClick={()=>setOpen(true)}>Open Dialog</Button>
             <Button size="sm" variant="soft" onClick={getAccounts}>Refresh Accounts</Button>
             <Table>
                 <thead>
@@ -83,13 +63,13 @@ export default function Markets() {
                             <td>{renderItem(row.marginUsed)}</td>
                             <td>{renderItem(row.tokenAmount)}</td>
                             <td>
-                                <Button onClick={async ()=>checkPrice(row.feedAddress?.toString())}>{row.feedAddress?.toString().substring(0,10)}</Button>
+                                <Button onClick={async () => checkPrice(row.feedAddress?.toString())}>{row.feedAddress?.toString().substring(0, 10)}</Button>
                             </td>
                         </tr>
                     })}
                 </tbody>
             </Table>
-            <MarketDialog open={open} setOpen={setOpen}/>
+            <MarketDialog open={open} setOpen={setOpen} />
         </Box>
     );
 }

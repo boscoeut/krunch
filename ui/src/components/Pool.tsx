@@ -4,6 +4,7 @@ import useProgram from "../hooks/useProgram";
 import Button from '@mui/joy/Button';
 import Typography from '@mui/joy/Typography';
 import {findAddress, fetchOrCreateAccount, fetchAccount} from "utils/dist/utils";   
+import Positions from './Positions';
 
 export default function Pool() {
     const refreshPool = useKrunchStore(state => state.refreshPool)
@@ -13,6 +14,7 @@ export default function Pool() {
     const exchange = useKrunchStore(state => state.exchange)
     const { getProvider } = useProgram();
     
+    
     async function getPool() {
         const provider = await getProvider()
         refreshPool(provider,fetchOrCreateAccount, findAddress)
@@ -21,19 +23,22 @@ export default function Pool() {
     return (
         <Box>
             <Button onClick={getPool}>Get Pool</Button>
-            <div>Fees: {exchange.fees?.toString()}</div>
+            <Typography variant="outlined">Details</Typography>
+            <div>collateralValue: {exchange.collateralValue?.toNumber()/(10**9)}</div>
+            <div>number_of_markets: {exchange.numberOfMarkets?.toString()}</div>
+            <div>marketWeight: {exchange.marketWeight?.toString()}</div>
+            <div>basis: {exchange.basis?.toNumber()/(10**9)}</div>
+            <div>fees: {exchange.fees?.toNumber()/(10**9)}</div>
+            <div>pnl: {exchange.pnl?.toNumber()/(10**9)}</div>
+            <div>margin_used: {exchange.marginUsed?.toNumber()/(10**9)}</div>
 
             <Typography variant="outlined">Markets</Typography>
-            <>
-            {markets.map((market) => {
-                return <div key={market.marketIndex} >{market.name}: {market.marketIndex.toString()} </div>
-            })}
-            </>
+            <Positions positions={markets} />
 
             <Typography variant="outlined">Pool Balances</Typography>
             <>
             {exchangeBalances.map((market) => {
-                return <div key={market.market} >{market.market}: {market.balance/market.decimals} </div>
+                return <div key={market.market} >{market.market}: {market.balance/(10**market.decimals)} </div>
             })}
             </>
         </Box>
