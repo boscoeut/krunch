@@ -233,7 +233,6 @@ pub struct AddMarket<'info> {
                 + 8 // basis:i64
                 + 8 // pnl:i64
                 + 8 // fees:i64
-                + 8 // current_price:u64
                 + 2 // taker_fee:i16
                 + 2 // maker_fee:i16
                 + 2 // leverage:u16
@@ -354,7 +353,6 @@ pub struct Market {
     pub basis: i64,
     pub pnl: i64,
     pub fees: i64,
-    pub current_price: u64,
     pub taker_fee: i16,
     pub maker_fee: i16,
     pub leverage: u16,

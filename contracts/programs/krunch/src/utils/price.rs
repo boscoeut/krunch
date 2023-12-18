@@ -1,8 +1,5 @@
 use anchor_lang::prelude::*;
 
-pub fn get_current_price(current_price: u64) -> i64 {
-    return current_price.try_into().unwrap();
-}
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct AvailableCollateral {

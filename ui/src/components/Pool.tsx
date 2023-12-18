@@ -17,7 +17,7 @@ export default function Pool() {
     
     async function getPool() {
         const provider = await getProvider()
-        refreshPool(provider,fetchOrCreateAccount, findAddress)
+        refreshPool(provider, fetchOrCreateAccount, findAddress)
         refreshMarkets(fetchAccount)
     }
     return (

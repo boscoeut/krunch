@@ -26,13 +26,7 @@ describe("krunch", () => {
 
   const program = anchor.workspace.Krunch as Program<Krunch>;
   const pg = anchor.AnchorProvider.env()
-  it("Calculate", async () => {
-    // Add your test here.
-    const tx = await program.methods.calculate().accounts({
-    }).view();
-    console.log("calculate", tx.toNumber());
-  });
-
+  
   it("Is initialized!", async () => {
 
     const exchangeBuffer = Buffer.from("exchange");
@@ -92,8 +86,7 @@ describe("krunch", () => {
     }).rpc();
     console.log("Your transaction signature", tx);
     const marketUpdated = await program.account.market.fetch(market);
-    console.log("market currentPrice is: ", marketUpdated.currentPrice.toNumber());
-    expect(marketUpdated.currentPrice.toNumber(), 'market currentPrice should be 10').to.equal(10 * PRICE_DECIMALS);
+    
   });
 
   it("Add User Position", async () => {

@@ -21,6 +21,7 @@ export default function Markets() {
     const [open, setOpen] = useState(false);
 
     async function getAccounts() {
+        await getProgram()
         refreshMarkets(fetchAccount)
     }
 
@@ -40,7 +41,6 @@ export default function Markets() {
                         <th>Weight</th>
                         <th>Leverage</th>
                         <th>Basis</th>
-                        <th>Price</th>
                         <th>Fees</th>
                         <th>Maker Fee</th>
                         <th>Taker Fee</th>
@@ -57,7 +57,6 @@ export default function Markets() {
                             <td>{renderItem(row.marketWeight, MARKET_WEIGHT_DECIMALS)}</td>
                             <td>{renderItem(row.leverage, LEVERAGE_DECIMALS)}</td>
                             <td>{renderItem(row.basis)}</td>
-                            <td>{renderItem(row.currentPrice)}</td>
                             <td>{renderItem(row.fees)}</td>
                             <td>{renderItem(row.makerFee, FEE_DECIMALS)}</td>
                             <td>{renderItem(row.takerFee, FEE_DECIMALS)}</td>

@@ -35,6 +35,10 @@ export const MARKETS= [{
     name:"BTC/USD",
     feedAddress:BTC_USD_FEED.toString(),
     marketIndex:2
+},{
+    name:"ETH/USD",
+    feedAddress:ETH_USD_FEED.toString(),
+    marketIndex:3
 }]
 
 export const EXCHANGE_POSITIONS = [{

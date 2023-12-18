@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor"
 import type { } from '@redux-devtools/extension'; // required for devtools typing
 import { getAssociatedTokenAddress } from "@solana/spl-token"
-import { CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, MARKETS, USDC_MINT } from 'utils/dist/constants'
+import { CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants'
 import { create } from 'zustand'
 import type { ExchangeBalance, Market, UserPosition } from '../types'
 
@@ -18,7 +18,7 @@ interface KrunchState {
   initialize: (program: any, provider: any) => void,
   refreshMarkets: (fetchAccount: any) => void,
   refreshPositions: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
-  refreshUserAccount: (provider: any, fetchOrCreateAccount: any, findAddress:any) => void,
+  refreshUserAccount: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   refreshPool: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   getPrice: (program: any, feedAddress: string) => Promise<number>,
 }
@@ -42,7 +42,13 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   refreshMarkets: async (fetchAccount) => {
     let tempMarkets: Array<Market> = []
     for (const market of get().markets) {
-      tempMarkets.push({ market:market.name,...market, ...(await fetchAccount(get().program, 'market', ['market', market.marketIndex])) })
+      try {
+        const acct = await fetchAccount(get().program, 'market', ['market', market.marketIndex])
+        tempMarkets.push({ market: market.name, ...market, ...acct })
+      } catch (x:any) {
+        console.log(x.message)
+        console.log('could not get market ' + market.name)
+      }
     }
     set(() => ({ markets: tempMarkets }))
   },
@@ -78,7 +84,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       let balance = 0
       try {
         let tokenBalance: any = await provider.connection.getTokenAccountBalance(tokenAccount)
-        console.log("tokenBalance "+item.market, tokenBalance.value)
+        console.log("tokenBalance " + item.market, tokenBalance.value)
         balance = Number(tokenBalance.value.amount)
       } catch (x) {
         console.log('could not get balance:' + item.market)

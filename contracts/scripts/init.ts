@@ -51,7 +51,7 @@ const addMarkets = async function (provider: any, program: any) {
             {
                 exchange: await findAddress(program, ['exchange']),
             });
-        console.log("market", market.pnl.toString());
+        console.log("market created ", market.marketIndex.toString());
     }
 }
 

@@ -14,6 +14,7 @@ import * as React from 'react';
 import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS, PRICE_DECIMALS } from 'utils/dist/constants';
 import { fetchAccount, findAddress } from "utils/dist/utils";
 import useProgram from '../hooks/useProgram';
+import { PublicKey } from "@solana/web3.js";
 
 export interface MarketDialogProps {
   open: boolean;
@@ -26,32 +27,58 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
   const [marketWeight, setMarketWeight] = React.useState('.1');
   const [leverage, setLeverage] = React.useState('1');
   const [takerFee, setTakerFee] = React.useState('0.2');
-  const [makerFee, setMakerFee] = React.useState('0.1');
-  const [price, setPrice] = React.useState('100');
+  const [makerFee, setMakerFee] = React.useState('0.1'); 
+  const [feedAddress, setFeedAddress] = React.useState('716hFAECqotxcXcj8Hs8nr7AG6q9dBw2oX3k3M8V7uGq');
   const {getProgram} = useProgram();
-  
+
 
   const handleSubmit = async () => {
     // Handle form submission here
+
+    let accountExists = false;
     console.log('handleSubmit', marketIndex)
     const program = await getProgram(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
-    const tx = await program.methods.updateMarket(
-      new anchor.BN(marketIndex),
-      new anchor.BN(Number(price) * PRICE_DECIMALS),
-      new anchor.BN(Number(makerFee) * FEE_DECIMALS),
-      new anchor.BN(Number(takerFee) * FEE_DECIMALS),
-      new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
-      new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
-    ).accounts({
-      market: await findAddress(program,['market', Number(marketIndex)]),
-      exchange: await findAddress(program,['exchange']),
-    }).rpc();
-    console.log("updateMarket", tx);
-    const acct: any = await fetchAccount(program,'market',
-      ['market',
-        marketIndex]);
-    console.log('updateMarket', acct)
-    setOpen(false)
+
+    try{
+      await fetchAccount(program,'market',['market', Number(marketIndex)])
+      accountExists = true;
+    }catch(x){
+      // create account
+    }
+    if (accountExists){
+      const tx = await program.methods.updateMarket(
+        new anchor.BN(marketIndex),
+        new anchor.BN(Number(makerFee) * FEE_DECIMALS),
+        new anchor.BN(Number(takerFee) * FEE_DECIMALS),
+        new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
+        new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
+      ).accounts({
+        market: await findAddress(program,['market', Number(marketIndex)]),
+        exchange: await findAddress(program,['exchange'])
+      }).rpc();
+      console.log("updateMarket", tx);
+      const acct: any = await fetchAccount(program,'market',
+        ['market',Number(marketIndex)]);
+      console.log('updateMarket', acct)
+      setOpen(false)
+    }else{
+      const tx = await program.methods.addMarket(
+        new anchor.BN(marketIndex),
+        new anchor.BN(Number(makerFee) * FEE_DECIMALS),
+        new anchor.BN(Number(takerFee) * FEE_DECIMALS),
+        new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
+        new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
+        new PublicKey(feedAddress), 
+      ).accounts({
+        market: await findAddress(program,['market', Number(marketIndex)]),
+        exchange: await findAddress(program,['exchange'])
+      }).rpc();
+      console.log("updateMarket", tx);
+      const acct: any = await fetchAccount(program,'market',
+        ['market',Number(marketIndex)]);
+      console.log('updateMarket', acct)
+      setOpen(false)
+    }
   };
 
   const properties = [
@@ -61,7 +88,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
     { label: 'Leverage', value: leverage, onChange: setLeverage },
     { label: 'Taker Fee', value: takerFee, onChange: setTakerFee },
     { label: 'Maker Fee', value: makerFee, onChange: setMakerFee },
-    { label: 'Price', value: price, onChange: setPrice },
+    { label: 'Feed Address', value: feedAddress, onChange: setFeedAddress },
   ]
 
   return (

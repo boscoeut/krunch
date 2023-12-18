@@ -41,21 +41,16 @@ pub mod krunch {
         Ok(())
     }
 
-    pub fn calculate(_ctx: Context<Calculate>) -> Result<i64> {
-        Ok(115)
-    }
-
+  
     pub fn update_market(
         ctx: Context<UpdateMarket>,
         _market_index: u16,
-        price: u64,
         maker_fee: i16,
         taker_fee: i16,
         leverage: u16,
         market_weight: u16,
     ) -> Result<()> {
         let market = &mut ctx.accounts.market;
-        market.current_price = price;
         market.taker_fee = taker_fee;
         market.maker_fee = maker_fee;
         market.leverage = leverage;

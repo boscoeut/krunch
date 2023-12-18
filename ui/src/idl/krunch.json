@@ -45,18 +45,6 @@
       "args": []
     },
     {
-      "name": "calculate",
-      "accounts": [
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [],
-      "returns": "i64"
-    },
-    {
       "name": "updateMarket",
       "accounts": [
         {
@@ -79,10 +67,6 @@
         {
           "name": "marketIndex",
           "type": "u16"
-        },
-        {
-          "name": "price",
-          "type": "u64"
         },
         {
           "name": "makerFee",
@@ -632,10 +616,6 @@
           {
             "name": "fees",
             "type": "i64"
-          },
-          {
-            "name": "currentPrice",
-            "type": "u64"
           },
           {
             "name": "takerFee",

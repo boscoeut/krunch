@@ -34,6 +34,10 @@ exports.MARKETS = [{
         name: "BTC/USD",
         feedAddress: exports.BTC_USD_FEED.toString(),
         marketIndex: 2
+    }, {
+        name: "ETH/USD",
+        feedAddress: exports.ETH_USD_FEED.toString(),
+        marketIndex: 3
     }];
 exports.EXCHANGE_POSITIONS = [{
         decimals: 9,

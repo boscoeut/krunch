@@ -376,7 +376,6 @@ export default function WalletTest() {
                                 <th>margin_used</th>
                                 <th>collateral_value</th>
                                 <th>token_amount</th>
-                                <th>current_price</th>
                                 {/* <th>taker_fee</th> */}
                                 {/* <th>maker_fee</th> */}
                                 {/* <th>leverage</th> */}
@@ -407,7 +406,6 @@ export default function WalletTest() {
                                     <td>{renderItem(row.marginUsed)}</td>
                                     <td>{renderItem(row.collateralValue)}</td>
                                     <td>{renderItem(row.tokenAmount)}</td>
-                                    <td>{renderItem(row.currentPrice, PRICE_DECIMALS)}</td>
                                     {/* <td>{renderItem(row.takerFee, FEE_DECIMALS)}</td> */}
                                     {/* <td>{renderItem(row.makerFee, FEE_DECIMALS)}</td> */}
                                     {/* <td>{renderItem(row.leverage, LEVERAGE_DECIMALS)}</td> */}
