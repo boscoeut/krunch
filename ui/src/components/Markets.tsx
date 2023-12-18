@@ -14,16 +14,9 @@ import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS } from 'utils/d
 
 export default function Markets() {
     const { getProgram } = useProgram();
-
     const markets = useKrunchStore(state => state.markets)
     const getPrice = useKrunchStore(state => state.getPrice)
-    const refreshMarkets = useKrunchStore(state => state.refreshMarkets)
     const [open, setOpen] = useState(false);
-
-    async function getAccounts() {
-        await getProgram()
-        refreshMarkets(fetchAccount)
-    }
 
     async function checkPrice(feedAddress: string) {
         const program = await getProgram()
@@ -32,7 +25,6 @@ export default function Markets() {
 
     return (
         <Box>
-            <Button size="sm" variant="soft" onClick={getAccounts}>Refresh Accounts</Button>
             <Table>
                 <thead>
                     <tr>

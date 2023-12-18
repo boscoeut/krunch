@@ -15,15 +15,9 @@ export default function Account() {
     const positions = useKrunchStore(state => state.positions)
     const { getProvider } = useProgram();
     
-    async function getAccount() {
-        const provider = await getProvider()
-        refreshUserAccount(provider,fetchOrCreateAccount, findAddress)
-        refreshPositions(provider,fetchOrCreateAccount,findAddress)
-    }
     console.log("userAccount", userAccount  )
     return (
         <Box>
-            <Button onClick={getAccount}>Get Account</Button>
             <Typography variant="outlined">Details</Typography>
             <div>collateralValue: {renderItem(userAccount.collateralValue)}</div>
             <div>Fees: {renderItem(userAccount.fees)}</div>

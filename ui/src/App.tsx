@@ -6,6 +6,7 @@ import Typography from '@mui/joy/Typography';
 import { CssVarsProvider } from '@mui/joy/styles';
 // icons
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Account from './components/Account';
 import Documentation from './components/Documentation';
@@ -18,13 +19,22 @@ import WalletTest from './components/WalletTest';
 import TradeDialog from './components/TradeDialog';
 import MarketDialog from './components/MarketDialog';
 import AccountDialog from './components/AccountDialog';
+import { useKrunchStore } from "./hooks/useKrunchStore";
 import { useState } from 'react';
+import useProgram from './hooks/useProgram';  
+import { fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
 
 export default function JoyOrderDashboardTemplate() {
     const location = useLocation();
+    const { getProvider } = useProgram();
     const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
     const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+    const refreshAll = useKrunchStore(state => state.refreshAll)
+    const refresh = async()=>{
+        const provider = await getProvider()
+        refreshAll(provider, fetchOrCreateAccount, findAddress)
+    }
     return (
         <CssVarsProvider disableTransitionOnChange>
             <CssBaseline />
@@ -75,7 +85,7 @@ export default function JoyOrderDashboardTemplate() {
                                 color="primary"
                                 startDecorator={<DownloadRoundedIcon />}
                                 size="sm"
-                                onClick={() => setMarketDialogOpen(true)}
+                                onClick={() => refresh()}
                             >
                                 Market
                             </Button>
@@ -94,6 +104,14 @@ export default function JoyOrderDashboardTemplate() {
                                 onClick={() => setAccountDialogOpen(true)}
                             >
                                 Deposit
+                            </Button>
+                            <Button
+                                color="primary"
+                                startDecorator={<RefreshRoundedIcon />}
+                                size="sm"
+                                onClick={() => refresh()}
+                            >
+                                Refresh
                             </Button>
                         </Stack>
                     </Box>

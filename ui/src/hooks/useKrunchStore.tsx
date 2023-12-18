@@ -17,6 +17,7 @@ interface KrunchState {
   exchange: any,
   initialize: (program: any, provider: any) => void,
   refreshMarkets: (fetchAccount: any) => void,
+  refreshAll: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   refreshPositions: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   refreshUserAccount: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   refreshPool: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
@@ -99,7 +100,12 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     set(() => ({ userAccount, userBalances: balances }))
   },
-
+  refreshAll: (provider, fetchOrCreateAccount, findAddress) => {
+    get().refreshMarkets(fetchOrCreateAccount)
+    get().refreshPositions(provider, fetchOrCreateAccount, findAddress)
+    get().refreshPool(provider, fetchOrCreateAccount, findAddress)
+    get().refreshUserAccount(provider, fetchOrCreateAccount, findAddress)
+  },
   refreshPool: async (provider, fetchOrCreateAccount, findAddress) => {
     const exchangeAddress = await findAddress(get().program, ['exchange'])
 

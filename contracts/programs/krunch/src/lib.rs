@@ -156,7 +156,7 @@ pub mod krunch {
         let exchange_total =
             exchange.pnl + exchange.fees + exchange.margin_used + exchange.collateral_value;
         if exchange_total < 0 {
-            // return err!(KrunchErrors::ExchangeMarginInsufficient);
+            return err!(KrunchErrors::ExchangeMarginInsufficient);
         }
 
         let max_market_collateral = (exchange_total as i128 * market.market_weight as i128)
@@ -164,7 +164,7 @@ pub mod krunch {
         let market_total =
             market.pnl + market.fees + market.margin_used + max_market_collateral as i64;
         if market_total < 0 {
-            // return err!(KrunchErrors::MarketMarginInsufficient);
+            return err!(KrunchErrors::MarketMarginInsufficient);
         }
 
         let user_total = user_account.pnl
@@ -172,7 +172,7 @@ pub mod krunch {
             + user_account.margin_used
             + user_account.collateral_value;
         if user_total < 0 {
-            //return err!(KrunchErrors::UserMarginInsufficient);
+            return err!(KrunchErrors::UserMarginInsufficient);
         }
 
         Ok(())
