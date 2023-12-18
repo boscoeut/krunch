@@ -96,8 +96,7 @@ pub mod krunch {
             fee_rate = market.maker_fee.into();
         }
         let fee = ((fbasis.abs() * fee_rate as i128) / FEE_DECIMALS as i128) as i64;
-        let basis = fbasis as i64;
-
+        
         // update fees
         market.fees += fee;
         exchange.fees += fee;
@@ -130,12 +129,6 @@ pub mod krunch {
         market.margin_used += f_delta;
         exchange.margin_used += f_delta;
 
-        // update token basis
-        user_position.basis -= basis;
-        user_account.basis -= basis;
-        market.basis += basis;
-        exchange.basis += basis;
-
         if token_delta != 0 {
             let avg_price = basis_before.abs() as f64 / token_amount_before.abs() as f64;
             let abasis = (avg_price * token_delta as f64) as i64;
@@ -147,19 +140,30 @@ pub mod krunch {
             // if (token_delta<0){
             //     pnl = tbasis - abasis as i64;
             // }
+            let basis_adjustment = abasis * -1;
 
-            user_position.basis -= pnl as i64;
+            user_position.basis -= basis_adjustment as i64;
             user_position.pnl += pnl as i64;
 
-            user_account.basis -= pnl as i64;
+            user_account.basis -= basis_adjustment as i64;
             user_account.pnl += pnl as i64;
 
-            market.basis += pnl as i64;
+            market.basis += basis_adjustment as i64;
             market.pnl -= pnl as i64;
 
-            exchange.basis += pnl as i64;
+            exchange.basis += basis_adjustment as i64;
             exchange.pnl -= pnl as i64;
         }
+        
+        // update token basis
+        let position_increase = amount.abs() - token_delta.abs();
+        let basis_increase = (position_increase as i128 * current_price as i128) / 10i128.pow(price_decimals.into());
+
+        user_position.basis -= basis_increase as i64;
+        user_account.basis -= basis_increase as i64;
+        market.basis += basis_increase as i64;
+        exchange.basis += basis_increase as i64;
+    
 
         let exchange_total =
             exchange.pnl + exchange.fees + exchange.margin_used + exchange.collateral_value;
@@ -182,7 +186,6 @@ pub mod krunch {
         if user_total < 0 {
             return err!(KrunchErrors::UserMarginInsufficient);
         }
-
         Ok(())
     }
 

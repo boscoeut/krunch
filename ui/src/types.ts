@@ -9,6 +9,8 @@ export type Market = {
     fees?:number,
     currentPrice?:number,
     makerFee?:number,
+    pnl?:number,
+    price?:number,
     takerFee?:number,
     marginUsed?:number,
     tokenAmount?:number,

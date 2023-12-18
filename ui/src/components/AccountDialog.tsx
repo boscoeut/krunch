@@ -26,7 +26,7 @@ export interface AccountDialogProps {
 
 export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
   const [market, setMarket] = React.useState('USDC/USD');
-  const [amount, setAmount] = React.useState('100');
+  const [amount, setAmount] = React.useState('1000');
   const { getProgram, getProvider } = useProgram();
 
 
