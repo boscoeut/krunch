@@ -1,5 +1,5 @@
 import Box from '@mui/joy/Box';
-import Typography from '@mui/joy/Typography';
+import Table from '@mui/joy/Table';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 
 export default function ExchangeBalances() {
@@ -7,12 +7,22 @@ export default function ExchangeBalances() {
 
     return (
         <Box>
-              <Typography variant="outlined">Pool Balances</Typography>
-            <>
-                {exchangeBalances.map((market) => {
-                    return <div key={market.market} >{market.market}: {market.balance / (10 ** market.decimals)} </div>
-                })}
-            </>
+            <Table>
+                <thead>
+                    <tr>
+                        <th>Token</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {exchangeBalances.map(row => {
+                        return <tr key={row.market}>
+                            <td>{row.market}</td>
+                            <td>{row.balance / (10 ** row.decimals)}</td>
+                        </tr>
+                    })}
+                </tbody>
+            </Table>
         </Box>
     );
 }

@@ -5,12 +5,11 @@ import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
 import Table from '@mui/joy/Table';
 import { useState } from 'react';
-import { fetchAccount } from "utils/dist/utils";
+import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS } from 'utils/dist/constants';
 import '../App.css';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from "../hooks/useProgram";
 import { renderItem } from '../utils';
-import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS } from 'utils/dist/constants';
 
 export default function Markets() {
     const { getProgram } = useProgram();
