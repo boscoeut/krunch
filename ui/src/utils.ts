@@ -46,3 +46,7 @@ export const renderItem = (item: any, decimals = AMOUNT_DECIMALS) => {
     return `${item.toString()}`
   }
 }
+
+export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+};

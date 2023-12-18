@@ -1,12 +1,15 @@
-import * as anchor from "@coral-xyz/anchor"
+import * as anchor from "@coral-xyz/anchor";
+import { PythCluster, PythHttpClient, getPythClusterApiUrl, getPythProgramKeyForCluster } from '@pythnetwork/client';
 import type { } from '@redux-devtools/extension'; // required for devtools typing
-import { getAssociatedTokenAddress } from "@solana/spl-token"
-import { CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants'
-import { create } from 'zustand'
-import type { ExchangeBalance, Market, UserPosition } from '../types'
+import { getAssociatedTokenAddress } from "@solana/spl-token";
+import { Connection } from "@solana/web3.js";
+import { EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants';
+import { create } from 'zustand';
+import type { ExchangeBalance, Market, UserPosition } from '../types';
 
 interface KrunchState {
   program: any,
+  prices: Map<String, number>,
   provider: any,
   exchangeBalances: Array<ExchangeBalance>,
   userBalances: Array<ExchangeBalance>,
@@ -21,10 +24,31 @@ interface KrunchState {
   refreshPositions: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   refreshUserAccount: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   refreshPool: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
-  getPrice: (program: any, feedAddress: string) => Promise<number>,
+  getPrices: () => Promise<Map<String, Number>>
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  prices: new Map<String, number>(),
+  getPrices: async () => {
+    const PYTHNET_CLUSTER_NAME: PythCluster = 'pythnet'
+    const connection = new Connection(getPythClusterApiUrl(PYTHNET_CLUSTER_NAME))
+    const pythPublicKey = getPythProgramKeyForCluster(PYTHNET_CLUSTER_NAME)
+    const pythClient = new PythHttpClient(connection, pythPublicKey)
+    const data = await pythClient.getData()
+    console.log('data', data)
+
+    const tempPrices = new Map<String, number>()
+    for (const market of EXCHANGE_POSITIONS) {
+      const price = data.productPrice.get(`Crypto.${market.market}`)!
+      if (price && price.price) {
+        tempPrices.set(market.market, price.price)
+      }
+    }
+    set({
+      prices: tempPrices
+    })
+    return tempPrices
+  },
   initialize: (_program: any, _provider: any) => {
     set(() => ({
       program: _program,
@@ -45,8 +69,9 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     for (const market of get().markets) {
       try {
         const acct = await fetchAccount(get().program, 'market', ['market', market.marketIndex])
-        tempMarkets.push({ market: market.name, ...market, ...acct })
-      } catch (x:any) {
+        const price = get().prices.get(market.name)
+        tempMarkets.push({ market: market.name, ...market, ...acct, price })
+      } catch (x: any) {
         console.log(x.message)
         console.log('could not get market ' + market.name)
       }
@@ -65,7 +90,8 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
           userAccount: await findAddress(get().program, ['user_account', provider.wallet.publicKey]),
           market: await findAddress(get().program, ['market', market.marketIndex]),
         });
-      temp.push({ market: market.name, ...acct })
+      const price = get().prices.get(market.name)
+      temp.push({ market: market.name, ...acct, price })
     }
     set(() => ({ positions: temp }))
   },
@@ -90,17 +116,21 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       } catch (x) {
         console.log('could not get balance:' + item.market)
       }
+      const price = get().prices.get(item.market)
+      console.log('price *******', price)
       balances.push({
         market: item.market,
         mint: item.mint,
         balance,
-        decimals: item.decimals
+        decimals: item.decimals,
+        price
       })
     }
 
     set(() => ({ userAccount, userBalances: balances }))
   },
   refreshAll: (provider, fetchOrCreateAccount, findAddress) => {
+    get().getPrices()
     get().refreshMarkets(fetchOrCreateAccount)
     get().refreshPositions(provider, fetchOrCreateAccount, findAddress)
     get().refreshPool(provider, fetchOrCreateAccount, findAddress)
@@ -122,23 +152,18 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       } catch (x) {
         console.log('could not get balance:' + item.market)
       }
+      const price = get().prices.get(item.market)
       balances.push({
         market: item.market,
         mint: item.mint,
         balance,
-        decimals: item.decimals
+        decimals: item.decimals,
+        price
       })
     }
 
     const exchange: any = await fetchOrCreateAccount(get().program, 'exchange', ['exchange'], 'initializeExchange', []);
     set(() => ({ exchange, exchangeBalances: balances }))
   },
-  getPrice: async (program, feedAddress) => {
-    const tx = await program.methods.getPrice().accounts({
-      chainlinkFeed: feedAddress,
-      chainlinkProgram: CHAINLINK_PROGRAM
-    }).view();
-    console.log(tx.round.toNumber() / (10 ** tx.decimals))
-    return tx.round.toNumber() / (10 ** tx.decimals)
-  }
+
 }))

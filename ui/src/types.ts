@@ -20,6 +20,7 @@ export type ExchangeBalance = {
     market:string,
     balance:number,
     decimals:number,
+    price?:number,
 }
 
 export type UserPosition = {

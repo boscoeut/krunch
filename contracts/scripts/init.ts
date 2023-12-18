@@ -12,6 +12,7 @@ import {
     EXCHANGE_POSITIONS,
     FEE_DECIMALS,
     LEVERAGE_DECIMALS,
+    MARKETS,
     MARKET_WEIGHT_DECIMALS,
     SOL_MINT,
     SOL_USD_FEED,
@@ -27,16 +28,11 @@ const addMarkets = async function (provider: any, program: any) {
     const _makerFee = 0.1;
     const _leverage = 1;
     const _marketWeight = 0.1
-    const markets = [{
-        index: 1,
-        address: SOL_USD_FEED,
-    }, {
-        index: 2,
-        address: BTC_USD_FEED
-    }]
+    const markets = MARKETS
+
     for (const m of markets) {
-        const marketIndex = m.index;
-        const address = m.address;
+        const marketIndex = m.marketIndex;
+        const address = new PublicKey(m.feedAddress);
         const market: any = await fetchOrCreateAccount(
             program,
             'market',

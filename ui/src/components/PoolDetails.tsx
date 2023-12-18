@@ -10,7 +10,7 @@ export default function PoolDetails() {
         key:'Collateral Value',
         value: renderItem(exchange.collateralValue)
     },{
-        key:'Fees Paid',
+        key:'Fees Earned',
         value: renderItem(exchange.fees)
     },{
         key:'Margin Used',

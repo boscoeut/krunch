@@ -14,13 +14,7 @@ import { renderItem } from '../utils';
 export default function Markets() {
     const { getProgram } = useProgram();
     const markets = useKrunchStore(state => state.markets)
-    const getPrice = useKrunchStore(state => state.getPrice)
     const [open, setOpen] = useState(false);
-
-    async function checkPrice(feedAddress: string) {
-        const program = await getProgram()
-        getPrice(program, feedAddress)
-    }
 
     return (
         <Box>
@@ -53,9 +47,7 @@ export default function Markets() {
                             <td>{renderItem(row.takerFee, FEE_DECIMALS)}</td>
                             <td>{renderItem(row.marginUsed)}</td>
                             <td>{renderItem(row.tokenAmount)}</td>
-                            <td>
-                                <Button onClick={async () => checkPrice(row.feedAddress?.toString())}>{row.feedAddress?.toString().substring(0, 10)}</Button>
-                            </td>
+                            <td>{`${row.feedAddress}`}</td>
                         </tr>
                     })}
                 </tbody>

@@ -78,7 +78,15 @@ pub mod krunch {
             ctx.accounts.chainlink_feed.to_account_info(),
         )?;
 
-        let fbasis = (amount as i128 * round.answer as i128) / 10i128.pow(price_decimals.into());
+        // TODO: REMOVE
+        let mut current_price = round.answer;
+        let clock = Clock::get()?;
+        let current_unix_timestamp = clock.unix_timestamp;
+        let last_digit = current_unix_timestamp % 10;
+        current_price = (current_price as f64 * (1.0+(last_digit as f64)/100.0)) as i128;
+        // END TODO 
+
+        let fbasis = (amount as i128 * current_price as i128) / 10i128.pow(price_decimals.into());
         msg!("basis is {}", fbasis);
 
         let mut fee_rate: i64 = market.taker_fee.into();
@@ -111,7 +119,7 @@ pub mod krunch {
 
         // update collateral value
         let f_margin_basis =
-            (user_position.token_amount as i128 * round.answer as i128) / 10i128.pow(price_decimals.into());
+            (user_position.token_amount as i128 * current_price as i128) / 10i128.pow(price_decimals.into());
 
         let margin_used = ((f_margin_basis.abs() as i128 * market.leverage as i128)
             / LEVERAGE_DECIMALS as i128) as i64;
@@ -133,7 +141,7 @@ pub mod krunch {
             let abasis = (avg_price * token_delta as f64) as i64;
 
             let tbasis =
-                (token_delta.abs() as i128 * round.answer as i128) / 10i128.pow(price_decimals.into());
+                (token_delta.abs() as i128 * current_price as i128) / 10i128.pow(price_decimals.into());
 
             let pnl = abasis - tbasis as i64;
             // if (token_delta<0){
