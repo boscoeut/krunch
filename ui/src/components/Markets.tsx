@@ -44,7 +44,8 @@ export default function Markets() {
                         const tokenAmount = row.tokenAmount || 0
                         const entryPrice = Math.abs(tokenAmount === 0 ? 0 : basis / tokenAmount)
                         const currValue = tokenAmount / AMOUNT_DECIMALS * (row.price || 0)
-                        const unrealizedPnl = currValue + basis / AMOUNT_DECIMALS
+                        const unrealizedPnl = tokenAmount> 0 ? currValue + basis/ AMOUNT_DECIMALS:
+                            currValue - basis/ AMOUNT_DECIMALS
                         return <tr key={row.marketIndex}>
                             <td>{row.name}</td>
                             <td>{row.marketIndex}</td>
