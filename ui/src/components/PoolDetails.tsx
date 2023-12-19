@@ -1,23 +1,27 @@
 import Box from '@mui/joy/Box';
-import Typography from '@mui/joy/Typography';
-import { useKrunchStore } from "../hooks/useKrunchStore";
 import Table from '@mui/joy/Table';
+import { useKrunchStore } from "../hooks/useKrunchStore";
 import { renderItem } from '../utils';
-import { MARKET_WEIGHT_DECIMALS } from 'utils/dist/constants';
 export default function PoolDetails() {
     const exchange = useKrunchStore(state => state.exchange)
+    const total = Number(exchange.collateralValue)
+    +Number(exchange.fees)
+    +Number(exchange.pnl)
     const values = [{
+        key:'Curr Value',
+        value: renderItem(total)
+    },{
         key:'Collateral Value',
         value: renderItem(exchange.collateralValue)
     },{
         key:'Fees Earned',
         value: renderItem(exchange.fees)
     },{
-        key:'Margin Used',
-        value: renderItem(exchange.marginUsed)
-    },{
         key:'Pnl',
         value: renderItem(exchange.pnl)
+    },{
+        key:'Margin Used',
+        value: renderItem(exchange.marginUsed)
     },{
         key:'Basis',
         value: renderItem(exchange.basis)

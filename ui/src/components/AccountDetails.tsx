@@ -5,22 +5,28 @@ import Table from '@mui/joy/Table';
 
 export default function AccountDetails() {
     const userAccount = useKrunchStore(state => state.userAccount)
+    const total = Number(userAccount.collateralValue)
+        +Number(userAccount.fees)
+        +Number(userAccount.pnl)
     const values = [{
+        key:'Curr Value',
+        value: renderItem(total)
+    },{
         key:'Collateral Value',
         value: renderItem(userAccount.collateralValue)
     },{
         key:'Fees Paid',
         value: renderItem(userAccount.fees)
     },{
-        key:'Margin Used',
-        value: renderItem(userAccount.marginUsed)
-    },{
         key:'Pnl',
         value: renderItem(userAccount.pnl)
     },{
         key:'Basis',
         value: renderItem(userAccount.basis)
-    }]
+    },{
+        key:'Margin Used',
+        value: renderItem(userAccount.marginUsed)
+    },]
     return (
         <Box>
             <Table>
