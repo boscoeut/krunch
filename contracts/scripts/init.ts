@@ -7,17 +7,14 @@ import { PublicKey } from "@solana/web3.js";
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
 import {
     AMOUNT_DECIMALS,
-    BTC_USD_FEED,
     CHAINLINK_PROGRAM,
+    EXCHANGE_LEVERAGE,
     EXCHANGE_POSITIONS,
     FEE_DECIMALS,
     LEVERAGE_DECIMALS,
     MARKETS,
+    MARKET_LEVERAGE,
     MARKET_WEIGHT_DECIMALS,
-    SOL_MINT,
-    SOL_USD_FEED,
-    USDC_MINT,
-    USDC_USD_FEED
 } from 'utils/src/constants';
 import { Krunch } from "../target/types/krunch";
 const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = require("@solana/spl-token");
@@ -25,9 +22,8 @@ const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = 
 
 const addMarkets = async function (provider: any, program: any) {
     const _takerFee = 0.2;
-    const _makerFee = 0.1;
-    const _leverage = 1;
-    const _marketWeight = 0.1
+    const _makerFee = -0.1;
+    const _marketWeight = 1
     const markets = MARKETS
 
     for (const m of markets) {
@@ -41,7 +37,7 @@ const addMarkets = async function (provider: any, program: any) {
             marketIndex,
             new anchor.BN(_takerFee * FEE_DECIMALS),
             new anchor.BN(_makerFee * FEE_DECIMALS),
-            new anchor.BN(_leverage * LEVERAGE_DECIMALS),
+            new anchor.BN(MARKET_LEVERAGE * LEVERAGE_DECIMALS),
             new anchor.BN(_marketWeight * MARKET_WEIGHT_DECIMALS),
             address],
             {
@@ -85,7 +81,7 @@ const addExchangePositions = async function (provider: any, program: any) {
 
 
 const initializeKrunch = async function (provider: any, program: any) {
-    const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', [1*LEVERAGE_DECIMALS]);
+    const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', [EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS]);
     console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
     console.log("exchange", exchange.collateralValue.toString());
     await addMarkets(provider, program);
@@ -148,7 +144,7 @@ const deposit = async function (provider: any,
     program: any,
     mint: PublicKey,
     feed: PublicKey,
-    amount:number) {
+    amount: number) {
     const payer = (provider.wallet as anchor.Wallet).payer;
     let tokenAccount = await getOrCreateAssociatedTokenAccount(
         provider.connection, //connection
@@ -193,7 +189,7 @@ const deposit = async function (provider: any,
 const setupAccounts = async function (provider: any, program: any) {
     await mintTokens(provider);
     //await deposit(provider, program, USDC_MINT, USDC_USD_FEED, 100);
-  //  await deposit(provider, program, SOL_MINT, SOL_USD_FEED, 100);
+    //  await deposit(provider, program, SOL_MINT, SOL_USD_FEED, 100);
 };
 
 (async () => {

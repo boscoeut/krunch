@@ -16,7 +16,7 @@ const AMOUNT_NUM_DECIMALS: u8 = 9;
 pub mod krunch {
     use super::*;
 
-    pub fn initialize_exchange(ctx: Context<InitializeExchange>, leverage:u16) -> Result<()> {
+    pub fn initialize_exchange(ctx: Context<InitializeExchange>, leverage:u32) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.admin = ctx.accounts.admin.key.to_owned();
         exchange.margin_used = 0;
@@ -43,7 +43,7 @@ pub mod krunch {
         _market_index: u16,
         maker_fee: i16,
         taker_fee: i16,
-        leverage: u16,
+        leverage: u32,
         market_weight: u16,
     ) -> Result<()> {
         let market = &mut ctx.accounts.market;
@@ -86,7 +86,7 @@ pub mod krunch {
         msg!("basis is {}", fbasis);
 
         let mut fee_rate: i64 = market.taker_fee.into();
-        let fee_token_delta = market.token_amount + amount;
+        let fee_token_delta = market.token_amount + amount * -1; // market amounts are stored opposite user positions so flip the sign
         if fee_token_delta.abs() < market.token_amount.abs() {
             // maker
             fee_rate = market.maker_fee.into();
@@ -94,14 +94,14 @@ pub mod krunch {
         let fee = ((fbasis.abs() * fee_rate as i128) / FEE_DECIMALS as i128) as i64;
 
         // update fees
-        if fee > 0 {
+        if fee < 0 {
             exchange.rebates += fee;
             market.rebates += fee;
-            user_account.rebates += fee;
-            user_position.rebates += fee;
+            user_account.rebates += fee * -1;
+            user_position.rebates += fee * -1;
         } else {
             exchange.fees += fee;
-            market.rees += fee;
+            market.fees += fee;
             user_account.fees += fee * -1;
             user_position.fees += fee * -1;
         }
@@ -222,7 +222,7 @@ pub mod krunch {
         market_index: u16,
         taker_fee: i16,
         maker_fee: i16,
-        leverage: u16,
+        leverage: u32,
         market_weight: u16,
         feed_address: Pubkey,
     ) -> Result<()> {

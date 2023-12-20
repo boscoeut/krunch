@@ -33,7 +33,7 @@ export default function Positions({ positions }: { positions: Array<any> }) {
                         const entryPrice = Math.abs(row.tokenAmount === 0 ? 0 : row.basis / row.tokenAmount)
                         const currValue = (row.tokenAmount * (row.price || 0))/ AMOUNT_DECIMALS
                         const unrealizedPnl = row.tokenAmount> 0 ? currValue + row.basis/ AMOUNT_DECIMALS:
-                            currValue - row.basis/ AMOUNT_DECIMALS
+                            currValue + row.basis/ AMOUNT_DECIMALS
                         return <tr key={row.marketIndex}>
                             <td>{row.market}</td>
                             <td>{row.marketIndex}</td>

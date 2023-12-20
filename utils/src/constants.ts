@@ -19,6 +19,8 @@ export const FEE_DECIMALS = 10 ** 4;
 export const MARKET_WEIGHT_DECIMALS = 10 ** 4;
 export const AMOUNT_DECIMALS = 10 ** 9;
 export const LEVERAGE_DECIMALS = 10 ** 4;
+export const MARKET_LEVERAGE = 10;
+export const EXCHANGE_LEVERAGE = 10;    
 
 // export const ADMIN_ADDRESS="EDsmoWKuanmGubggz7XxTYX6qc3LtWgXj39qSikEqk7S" // codespaces
 export const ADMIN_ADDRESS="HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS" // local

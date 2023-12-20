@@ -24,7 +24,7 @@
       "args": [
         {
           "name": "leverage",
-          "type": "u16"
+          "type": "u32"
         }
       ]
     },
@@ -83,7 +83,7 @@
         },
         {
           "name": "leverage",
-          "type": "u16"
+          "type": "u32"
         },
         {
           "name": "marketWeight",
@@ -269,7 +269,7 @@
         },
         {
           "name": "leverage",
-          "type": "u16"
+          "type": "u32"
         },
         {
           "name": "marketWeight",
@@ -525,7 +525,11 @@
           },
           {
             "name": "leverage",
-            "type": "u16"
+            "type": "u32"
+          },
+          {
+            "name": "rebates",
+            "type": "i64"
           }
         ]
       }
@@ -597,7 +601,7 @@
           },
           {
             "name": "leverage",
-            "type": "u16"
+            "type": "u32"
           },
           {
             "name": "marginUsed",
@@ -606,6 +610,10 @@
           {
             "name": "feedAddress",
             "type": "publicKey"
+          },
+          {
+            "name": "rebates",
+            "type": "i64"
           }
         ]
       }
@@ -637,6 +645,10 @@
           },
           {
             "name": "fees",
+            "type": "i64"
+          },
+          {
+            "name": "rebates",
             "type": "i64"
           }
         ]
@@ -673,6 +685,10 @@
           },
           {
             "name": "marginUsed",
+            "type": "i64"
+          },
+          {
+            "name": "rebates",
             "type": "i64"
           }
         ]

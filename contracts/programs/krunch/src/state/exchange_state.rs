@@ -30,7 +30,7 @@ pub struct InitializeExchange<'info> {
                 + 8 // pnl:i64
                 + 8 // fees:i64
                 + 8 // collateral_value:i64
-                + 2 // leverage:u16
+                + 4 // leverage:u32
                 + 8 // rebates:i64
             )]
     pub exchange: Account<'info, Exchange>,
@@ -213,7 +213,7 @@ pub struct AddMarket<'info> {
                 + 8 // fees:i64
                 + 2 // taker_fee:i16
                 + 2 // maker_fee:i16
-                + 2 // leverage:u16
+                + 4 // leverage:u32
                 + 8 // margin_used:i64
                 + 32 // feed_address:Pubkey
                 + 8 // rebates:i64
@@ -314,7 +314,7 @@ pub struct Exchange {
     pub pnl: i64, 
     pub fees: i64,
     pub collateral_value: i64,
-    pub leverage: u16,
+    pub leverage: u32,
     pub rebates: i64,
 }
 
@@ -337,7 +337,7 @@ pub struct Market {
     pub fees: i64,
     pub taker_fee: i16,
     pub maker_fee: i16,
-    pub leverage: u16,
+    pub leverage: u32,
     pub margin_used: i64,
     pub feed_address: Pubkey,
     pub rebates: i64,
