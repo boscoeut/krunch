@@ -5,6 +5,7 @@ import { renderItem } from '../utils';
 import { LEVERAGE_DECIMALS } from 'utils/dist/constants';
 export default function PoolDetails() {
     const exchange = useKrunchStore(state => state.exchange)
+    const exchangeCollateral = useKrunchStore(state => state.exchangeCollateral)
     const total = Number(exchange.collateralValue)
     +Number(exchange.fees)
     +Number(exchange.pnl)
@@ -23,6 +24,9 @@ export default function PoolDetails() {
     },{
         key:'Margin Used',
         value: renderItem(exchange.marginUsed)
+    },{
+        key:'Margin Available',
+        value: renderItem(exchangeCollateral)
     },{
         key:'Basis',
         value: renderItem(exchange.basis)

@@ -17,9 +17,12 @@ interface KrunchState {
   positions: Array<UserPosition>,
   userAccount: any,
   exchange: any,
+  userCollateral: number,
+  marketCollateral: number,
+  exchangeCollateral: number,
   initialize: (program: any, provider: any) => void,
   refreshMarkets: (fetchAccount: any) => void,
-  refreshAll: (provider: any, fetchOrCreateAccount: any, findAddress: any,fetchAccount:any) => Promise<void>,
+  refreshAll: (provider: any, fetchOrCreateAccount: any, findAddress: any, fetchAccount: any) => Promise<void>,
   refreshPositions: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   refreshUserAccount: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   refreshPool: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
@@ -27,6 +30,9 @@ interface KrunchState {
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  userCollateral: 0,
+  marketCollateral: 0,
+  exchangeCollateral: 0,
   prices: new Map<String, number>(),
   getPrices: async () => {
     const PYTHNET_CLUSTER_NAME: PythCluster = 'pythnet'
@@ -128,7 +134,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     set(() => ({ userAccount, userBalances: balances }))
   },
-  refreshAll: async (provider, fetchOrCreateAccount, findAddress,fetchAccount) => {
+  refreshAll: async (provider, fetchOrCreateAccount, findAddress, fetchAccount) => {
     get().getPrices()
     get().refreshMarkets(fetchOrCreateAccount)
     get().refreshPositions(provider, fetchOrCreateAccount, findAddress)
@@ -144,22 +150,23 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     console.log('user_account', userAccount)
     const hardAmount = userAccount.pnl.toNumber() + userAccount.fees.toNumber() + userAccount.collateralValue.toNumber();
     let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
-    console.log('###uuserTotal', userTotal/AMOUNT_DECIMALS)  
+    console.log('###uuserTotal', userTotal / AMOUNT_DECIMALS)
     // exchnage total
     const exchangeTotal = (exchange.pnl.toNumber() + exchange.fees.toNumber() + exchange.collateralValue.toNumber())
-    * exchange.leverage
-    / LEVERAGE_DECIMALS
-    + exchange.marginUsed.toNumber()
-    console.log('###exchangeTotal', exchangeTotal/AMOUNT_DECIMALS) 
+      * exchange.leverage
+      / LEVERAGE_DECIMALS
+      + exchange.marginUsed.toNumber()
+    console.log('###exchangeTotal', exchangeTotal / AMOUNT_DECIMALS)
     // market total
-    const market = await fetchAccount(get().program, 'market', ['market',1])
+    const market = await fetchAccount(get().program, 'market', ['market', 1])
     const maxMarketCollateral =
-        (exchangeTotal  * market.marketWeight) / MARKET_WEIGHT_DECIMALS ;
-    let marketTotal = (market.pnl.toNumber() + market.fees.toNumber()) * market.leverage  
-        / LEVERAGE_DECIMALS
-        + maxMarketCollateral
-        + market.marginUsed.toNumber();
-        console.log('###marketTotal', marketTotal/AMOUNT_DECIMALS) 
+      (exchangeTotal * market.marketWeight) / MARKET_WEIGHT_DECIMALS;
+    let marketTotal = (market.pnl.toNumber() + market.fees.toNumber()) * market.leverage
+      / LEVERAGE_DECIMALS
+      + maxMarketCollateral
+      + market.marginUsed.toNumber();
+    console.log('###marketTotal', marketTotal / AMOUNT_DECIMALS)
+    set(() => ({ userCollateral: userTotal, marketCollateral: marketTotal, exchangeCollateral: exchangeTotal }))
   },
   refreshPool: async (provider, fetchOrCreateAccount, findAddress) => {
     const exchangeAddress = await findAddress(get().program, ['exchange'])

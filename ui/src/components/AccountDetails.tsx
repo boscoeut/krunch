@@ -5,6 +5,7 @@ import Table from '@mui/joy/Table';
 
 export default function AccountDetails() {
     const userAccount = useKrunchStore(state => state.userAccount)
+    const userCollateral = useKrunchStore(state => state.userCollateral)
     const total = Number(userAccount.collateralValue)
         +Number(userAccount.fees)
         +Number(userAccount.pnl)
@@ -26,7 +27,10 @@ export default function AccountDetails() {
     },{
         key:'Margin Used',
         value: renderItem(userAccount.marginUsed)
-    },]
+    },{
+        key:'Margin Available',
+        value: renderItem(userCollateral)
+    }]
     return (
         <Box>
             <Table>
