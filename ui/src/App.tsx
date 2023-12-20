@@ -84,7 +84,7 @@ export default function JoyOrderDashboardTemplate() {
                                 color="primary"
                                 startDecorator={<DownloadRoundedIcon />}
                                 size="sm"
-                                onClick={() => refresh()}
+                                onClick={() => setMarketDialogOpen(true)}
                             >
                                 Market
                             </Button>
