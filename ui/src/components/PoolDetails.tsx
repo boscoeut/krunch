@@ -2,6 +2,7 @@ import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { renderItem } from '../utils';
+import { LEVERAGE_DECIMALS } from 'utils/dist/constants';
 export default function PoolDetails() {
     const exchange = useKrunchStore(state => state.exchange)
     const total = Number(exchange.collateralValue)
@@ -28,6 +29,9 @@ export default function PoolDetails() {
     },{
         key:'# of Markets',
         value: exchange.numberOfMarkets
+    },{
+        key:'Leverage',
+        value: renderItem(exchange.leverage,LEVERAGE_DECIMALS)
     }]
     return (
         <Box>
