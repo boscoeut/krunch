@@ -33,7 +33,7 @@ export default function App() {
     const refreshAll = useKrunchStore(state => state.refreshAll)
     const refresh = async()=>{
         const program = await getProgram()
-        const provider = await getProvider()
+        const provider = await getProvider()        
         console.log("APP: program", program)
         console.log("APP: provider", provider)
         refreshAll()

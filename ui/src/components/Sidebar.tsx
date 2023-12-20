@@ -22,12 +22,14 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { closeSidebar } from '../utils';
 import ColorSchemeToggle from './ColorSchemeToggle';
+import { useKrunchStore } from "../hooks/useKrunchStore";
 
 export default function Sidebar() {
     const location = useLocation();
     const navigate = useNavigate();
     const wallet = useWallet();
     const walletState = useWalletModal();
+    const provider = useKrunchStore(state => state.provider)
     const toggleConnect = () => {
         if (wallet.connected) {
             wallet.disconnect();
@@ -176,10 +178,18 @@ export default function Sidebar() {
             </Box>
             <Divider />
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-
                 <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography level="title-sm">Acct Address</Typography>
-                    <Typography level="body-xs">Network: Local</Typography>
+                    {wallet.connected &&
+                        <>
+                        <Typography sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} level="title-sm">Account: {wallet.publicKey?.toString()}</Typography>
+                        <Typography sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} level="body-xs">RPC: {provider.connection?.rpcEndpoint}</Typography>
+                        </>
+                    }
+                    {!wallet.connected &&
+                        <>
+                        <Typography onClick={toggleConnect} level="body-xs">Connect to Wallet</Typography>
+                        </>
+                    }
                 </Box>
                 <IconButton onClick={toggleConnect} size="sm" variant="plain" color="neutral">
                     {!wallet.connected &&

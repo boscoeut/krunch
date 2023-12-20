@@ -14,13 +14,15 @@ export default function PoolDetails() {
     +Number(exchange.pnl)
     const values = [{
         key:'Curr Value',
-        value: renderItem(total)
+        value: renderItem(total),
+        indent: 0
     },{
         key:'Collateral Value',
         value: renderItem(exchange.collateralValue)
     },{
         key:'Fees Earned',
-        value: renderItem(exchange.fees)
+        value: renderItem(exchange.fees),
+        indent:1
     },{
         key:'Rebates Paid',
         value: renderItem(exchange.rebates)
@@ -61,7 +63,7 @@ export default function PoolDetails() {
                 <tbody>
                     {values.map(row => {
                         return <tr key={row.key}>
-                            <td>{row.key}</td>
+                            <td style={{paddingLeft:`${(row.indent || 0) * 25+6}px`}}>{row.key}</td>
                             <td>{row.value}</td>
                         </tr>
                     })}
