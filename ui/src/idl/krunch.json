@@ -21,7 +21,12 @@
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "leverage",
+          "type": "u16"
+        }
+      ]
     },
     {
       "name": "createUserAccount",
@@ -140,45 +145,6 @@
           "type": "i64"
         }
       ]
-    },
-    {
-      "name": "availableCollateral",
-      "accounts": [
-        {
-          "name": "owner",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "market",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userPosition",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "exchange",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "marketIndex",
-          "type": "u16"
-        }
-      ],
-      "returns": {
-        "defined": "AvailableCollateral"
-      }
     },
     {
       "name": "addExchangePosition",
@@ -556,6 +522,10 @@
           {
             "name": "collateralValue",
             "type": "i64"
+          },
+          {
+            "name": "leverage",
+            "type": "u16"
           }
         ]
       }

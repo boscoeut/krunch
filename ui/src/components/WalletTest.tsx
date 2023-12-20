@@ -138,24 +138,6 @@ export default function WalletTest() {
 
     }
 
-    const availableCollateral = async () => {
-        const provider = await getProvider();
-        try {
-            const program = await getProgram();
-            const tx = await program.methods.availableCollateral(_marketIndex).accounts({
-                exchange: await findAddress(program, ['exchange']),
-                market: await findAddress(program, ['market', _marketIndex]),
-                userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-                userPosition: await findAddress(program, ['user_position', provider.wallet.publicKey, _marketIndex]),
-            }).view();
-            console.log("exchangeCollateralAvailable", `${renderItem(tx.exchangeCollateralAvailable)}`);
-            console.log("marketCollateralAvailable", `${renderItem(tx.marketCollateralAvailable)}`);
-            console.log("maxMarketCollateralAvailable", `${renderItem(tx.maxMarketCollateralAvailable)}`);
-            console.log("userCollateralAvailable", `${renderItem(tx.userCollateralAvailable)}`);
-        } catch (err) {
-            console.log("availableCollateral error: ", err);
-        }
-    }
 
     const updateMarket = async (marketIndex: number, price: number, makerFee: number, takerFee: number, leverage: number, marketWeight: number) => {
         try {
@@ -496,10 +478,7 @@ export default function WalletTest() {
                                 <td>calculate</td>
                                 <td><Button size="sm" variant="soft" onClick={calculate}>Calculate</Button></td>
                             </tr>
-                            <tr>
-                                <td>availableCollateral</td>
-                                <td><Button size="sm" variant="soft" onClick={availableCollateral}>availableCollateral</Button></td>
-                            </tr>
+        
                             <tr>
                                 <td>initializeExchange</td>
                                 <td><Button size="sm" variant="soft" onClick={initializeExchange}>initializeExchange</Button></td>

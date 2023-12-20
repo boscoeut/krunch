@@ -85,7 +85,7 @@ const addExchangePositions = async function (provider: any, program: any) {
 
 
 const initializeKrunch = async function (provider: any, program: any) {
-    const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', []);
+    const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', [1*LEVERAGE_DECIMALS]);
     console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
     console.log("exchange", exchange.collateralValue.toString());
     await addMarkets(provider, program);

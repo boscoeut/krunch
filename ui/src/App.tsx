@@ -22,7 +22,7 @@ import AccountDialog from './components/AccountDialog';
 import { useKrunchStore } from "./hooks/useKrunchStore";
 import { useState } from 'react';
 import useProgram from './hooks/useProgram';  
-import { fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
+import { fetchOrCreateAccount, findAddress, fetchAccount } from 'utils/dist/utils';
 
 export default function JoyOrderDashboardTemplate() {
     const location = useLocation();
@@ -33,7 +33,7 @@ export default function JoyOrderDashboardTemplate() {
     const refreshAll = useKrunchStore(state => state.refreshAll)
     const refresh = async()=>{
         const provider = await getProvider()
-        refreshAll(provider, fetchOrCreateAccount, findAddress)
+        refreshAll(provider, fetchOrCreateAccount, findAddress, fetchAccount)
     }
     return (
         <CssVarsProvider disableTransitionOnChange>

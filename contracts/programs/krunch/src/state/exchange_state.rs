@@ -30,6 +30,7 @@ pub struct InitializeExchange<'info> {
                 + 8 // pnl:i64
                 + 8 // fees:i64
                 + 8 // collateral_value:i64
+                + 2 // leverage:u16
             )]
     pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
@@ -68,31 +69,6 @@ pub struct ExecuteTrade<'info> {
     pub chainlink_feed: AccountInfo<'info>,
     /// CHECK: This is the Chainlink program library
     pub chainlink_program: AccountInfo<'info>
-}
-
-#[derive(Accounts)]
-#[instruction(market_index: u16)]
-pub struct GetAvailableCollateral<'info> {
-    #[account()]
-    pub owner: Signer<'info>,
-    #[account(
-        seeds = [b"market".as_ref(), market_index.to_le_bytes().as_ref()],
-        bump
-    )]
-    pub market: Account<'info, Market>,
-    #[account(
-        seeds = [b"user_account".as_ref(),owner.key().as_ref()],
-        bump)]
-    pub user_account: Account<'info, UserAccount>,
-    #[account(
-        seeds = [b"user_position".as_ref(),owner.key().as_ref(),market_index.to_le_bytes().as_ref()],
-        bump)]
-    pub user_position: Account<'info, UserPosition>,
-    #[account(
-        seeds = [b"exchange".as_ref()],
-        bump
-    )]
-    pub exchange: Account<'info, Exchange>
 }
 
 // data validation
@@ -334,6 +310,7 @@ pub struct Exchange {
     pub pnl: i64, 
     pub fees: i64,
     pub collateral_value: i64,
+    pub leverage: u16,
 }
 
 #[account]

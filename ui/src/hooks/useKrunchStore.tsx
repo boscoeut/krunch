@@ -3,10 +3,9 @@ import { PythCluster, PythHttpClient, getPythClusterApiUrl, getPythProgramKeyFor
 import type { } from '@redux-devtools/extension'; // required for devtools typing
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { Connection } from "@solana/web3.js";
-import { EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants';
+import { EXCHANGE_POSITIONS, LEVERAGE_DECIMALS, MARKETS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { create } from 'zustand';
 import type { ExchangeBalance, Market, UserPosition } from '../types';
-
 interface KrunchState {
   program: any,
   prices: Map<String, number>,
@@ -20,7 +19,7 @@ interface KrunchState {
   exchange: any,
   initialize: (program: any, provider: any) => void,
   refreshMarkets: (fetchAccount: any) => void,
-  refreshAll: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
+  refreshAll: (provider: any, fetchOrCreateAccount: any, findAddress: any,fetchAccount:any) => Promise<void>,
   refreshPositions: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   refreshUserAccount: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
   refreshPool: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
@@ -129,12 +128,38 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     set(() => ({ userAccount, userBalances: balances }))
   },
-  refreshAll: (provider, fetchOrCreateAccount, findAddress) => {
+  refreshAll: async (provider, fetchOrCreateAccount, findAddress,fetchAccount) => {
     get().getPrices()
     get().refreshMarkets(fetchOrCreateAccount)
     get().refreshPositions(provider, fetchOrCreateAccount, findAddress)
     get().refreshPool(provider, fetchOrCreateAccount, findAddress)
     get().refreshUserAccount(provider, fetchOrCreateAccount, findAddress)
+    // user collateral
+    const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
+    console.log('exchange', exchange)
+    const userAccount: any = await fetchOrCreateAccount(get().program, 'userAccount',
+      ['user_account',
+        provider.wallet.publicKey],
+      'createUserAccount', []);
+    console.log('user_account', userAccount)
+    const hardAmount = userAccount.pnl.toNumber() + userAccount.fees.toNumber() + userAccount.collateralValue.toNumber();
+    let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
+    console.log('###uuserTotal', userTotal/AMOUNT_DECIMALS)  
+    // exchnage total
+    const exchangeTotal = (exchange.pnl.toNumber() + exchange.fees.toNumber() + exchange.collateralValue.toNumber())
+    * exchange.leverage
+    / LEVERAGE_DECIMALS
+    + exchange.marginUsed.toNumber()
+    console.log('###exchangeTotal', exchangeTotal/AMOUNT_DECIMALS) 
+    // market total
+    const market = await fetchAccount(get().program, 'market', ['market',1])
+    const maxMarketCollateral =
+        (exchangeTotal  * market.marketWeight) / MARKET_WEIGHT_DECIMALS ;
+    let marketTotal = (market.pnl.toNumber() + market.fees.toNumber()) * market.leverage  
+        / LEVERAGE_DECIMALS
+        + maxMarketCollateral
+        + market.marginUsed.toNumber();
+        console.log('###marketTotal', marketTotal/AMOUNT_DECIMALS) 
   },
   refreshPool: async (provider, fetchOrCreateAccount, findAddress) => {
     const exchangeAddress = await findAddress(get().program, ['exchange'])
