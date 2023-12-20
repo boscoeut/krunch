@@ -2,15 +2,6 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     token::{ Mint, Token, TokenAccount},
 };
-#[derive(Accounts)]
-pub struct Calculate<'info> {
-    system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct CalculateFee<'info> {
-    system_program: Program<'info, System>,
-}
 
 #[derive(Accounts)]
 pub struct InitializeExchange<'info> {
@@ -32,6 +23,8 @@ pub struct InitializeExchange<'info> {
                 + 8 // collateral_value:i64
                 + 4 // leverage:u32
                 + 8 // rebates:i64
+                + 8 // amount_withdrawn:i64
+                + 8 // amount_deposited:i64
             )]
     pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
@@ -52,6 +45,7 @@ pub struct ExecuteTrade<'info> {
     #[account(
         mut,
         seeds = [b"user_account".as_ref(),owner.key().as_ref()],
+        constraint = user_account.owner == owner.key(),
         bump)]
     pub user_account: Account<'info, UserAccount>,
     #[account(
@@ -84,6 +78,13 @@ pub struct UpdateMarket<'info> {
         bump
     )]
     pub market: Account<'info, Market>,
+    #[account(
+        mut, 
+        seeds = [b"exchange".as_ref()],
+        bump,
+        constraint = exchange.admin == owner.key(),
+    )]
+    pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
 }
 
@@ -100,10 +101,13 @@ pub struct Deposit<'info> {
     #[account(
         mut,
         seeds = [b"user_account".as_ref(),owner.key().as_ref()],
+        constraint = user_account.owner == owner.key(),
         bump)]
     pub user_account: Account<'info, UserAccount>,
     system_program: Program<'info, System>,
-    #[account(mut)]
+    #[account(mut,
+        constraint = user_token_account.owner == owner.key(),
+    )]
     pub user_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub mint: Account<'info, Mint>,
@@ -143,10 +147,55 @@ pub struct Withdraw<'info> {
     #[account(
         mut,
         seeds = [b"user_account".as_ref(),owner.key().as_ref()],
+        constraint = user_account.owner == owner.key(),
         bump)]
     pub user_account: Account<'info, UserAccount>,
     system_program: Program<'info, System>,
+    #[account(mut,
+        constraint = user_token_account.owner == owner.key(),
+    )]
+    pub user_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+    pub mint: Account<'info, Mint>,
+    #[account(
+        init_if_needed,
+        payer = owner,
+        seeds = [
+            exchange.key().as_ref(),
+            mint.key().as_ref()],
+        bump,
+        token::mint=mint,
+        token::authority=exchange,
+    )]
+    pub escrow_account: Account<'info, TokenAccount>,
+    #[account(
+        mut, 
+        seeds = [b"exchange_position".as_ref(), mint.key().as_ref()],
+        bump
+    )]
+    pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
+    /// CHECK: We're reading data from this chainlink feed account
+    pub chainlink_feed: AccountInfo<'info>,
+    /// CHECK: This is the Chainlink program library
+    pub chainlink_program: AccountInfo<'info>
+   
+}
+
+#[derive(Accounts)]
+pub struct ExchangeTransaction<'info> {
     #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        mut, 
+        seeds = [b"exchange".as_ref()],
+        constraint = exchange.admin == owner.key(),
+        bump
+    )]
+    pub exchange: Account<'info, Exchange>,
+    system_program: Program<'info, System>,
+    #[account(mut,
+        constraint = user_token_account.owner == owner.key(),
+    )]
     pub user_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub mint: Account<'info, Mint>,
@@ -225,7 +274,8 @@ pub struct AddMarket<'info> {
     #[account(
         mut, 
         seeds = [b"exchange".as_ref()],
-        bump
+        bump,
+        constraint = exchange.admin == admin.key(),
     )]
     pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
@@ -250,6 +300,13 @@ pub struct AddExchangeTreasuryPosition<'info> {
         bump
     )]
     pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
+    #[account(
+        mut, 
+        seeds = [b"exchange".as_ref()],
+        bump,
+        constraint = exchange.admin == admin.key(),
+    )]
+    pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
 }
 
@@ -264,6 +321,13 @@ pub struct UpdateExchangeTreasuryPosition<'info> {
         bump
     )]
     pub exchange_treasury_position: Account<'info, ExchangeTreasuryPosition>,
+    #[account(
+        mut, 
+        seeds = [b"exchange".as_ref()],
+        bump,
+        constraint = exchange.admin == owner.key(),
+    )]
+    pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
 }
 
@@ -316,6 +380,8 @@ pub struct Exchange {
     pub collateral_value: i64,
     pub leverage: u32,
     pub rebates: i64,
+    pub amount_withdrawn: i64,
+    pub amount_deposited: i64,
 }
 
 #[account]

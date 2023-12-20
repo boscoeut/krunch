@@ -76,6 +76,8 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
     const exchangeTotal = (exchange.pnl.toNumber() 
       + exchange.rebates.toNumber() 
+      + exchange.amountWithdrawn.toNumber() 
+      + exchange.amountDeposited.toNumber() 
       + exchange.fees.toNumber() + exchange.collateralValue.toNumber())
       * exchange.leverage
       / LEVERAGE_DECIMALS
@@ -174,7 +176,11 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   refreshExchangeCollateral: async () => {
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
     console.log('exchange', exchange)
-    const exchangeTotal = (exchange.pnl.toNumber() + exchange.fees.toNumber() 
+    const exchangeTotal = (
+      exchange.pnl.toNumber() 
+      + exchange.fees.toNumber() 
+      + exchange.amountWithdrawn.toNumber() 
+      + exchange.amountDeposited.toNumber() 
       + exchange.rebates.toNumber() + exchange.collateralValue.toNumber())
       * exchange.leverage
       / LEVERAGE_DECIMALS

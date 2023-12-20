@@ -18,6 +18,7 @@ import Sidebar from './components/Sidebar';
 import TradeDialog from './components/TradeDialog';
 import MarketDialog from './components/MarketDialog';
 import AccountDialog from './components/AccountDialog';
+import ExchangeDialog from './components/ExchangeDialog';
 import { useKrunchStore } from "./hooks/useKrunchStore";
 import { useState } from 'react';
 import useProgram from './hooks/useProgram';  
@@ -28,6 +29,7 @@ export default function App() {
     const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
     const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+    const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
     const refreshAll = useKrunchStore(state => state.refreshAll)
     const refresh = async()=>{
         const program = await getProgram()
@@ -108,6 +110,14 @@ export default function App() {
                             </Button>
                             <Button
                                 color="primary"
+                                startDecorator={<DownloadRoundedIcon />}
+                                size="sm"
+                                onClick={() => setExchangeDialogOpen(true)}
+                            >
+                                Exchange
+                            </Button>
+                            <Button
+                                color="primary"
                                 startDecorator={<RefreshRoundedIcon />}
                                 size="sm"
                                 onClick={() => refresh()}
@@ -136,6 +146,7 @@ export default function App() {
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
             <MarketDialog open={marketDialogOpen} setOpen={setMarketDialogOpen} />
             <AccountDialog open={accountDialogOpen} setOpen={setAccountDialogOpen} />
+            <ExchangeDialog open={exchangeDialogOpen} setOpen={setExchangeDialogOpen} />
         </CssVarsProvider>
     );
 }

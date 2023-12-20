@@ -61,6 +61,7 @@ const addExchangePositions = async function (provider: any, program: any) {
             ],
             {
                 admin: provider.wallet.publicKey,
+                exchange: await findAddress(program, ['exchange']),
             });
         console.log('exchangePosition', exchangePosition.tokenMint.toString());
 
@@ -73,6 +74,7 @@ const addExchangePositions = async function (provider: any, program: any) {
                 tokenMint.feedAddress).
             accounts({
                 exchangeTreasuryPosition: await findAddress(program, ['exchange_position', tokenMint.mint]),
+                exchange: await findAddress(program, ['exchange']),
                 owner: provider.wallet.publicKey,
             }).rpc();
     }
