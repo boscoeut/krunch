@@ -31,6 +31,7 @@ pub struct InitializeExchange<'info> {
                 + 8 // fees:i64
                 + 8 // collateral_value:i64
                 + 2 // leverage:u16
+                + 8 // rebates:i64
             )]
     pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
@@ -189,6 +190,7 @@ pub struct CreateUserAccount<'info> {
                 + 8 // basis:i64
                 + 8 // pnl:i64
                 + 8 // fees:i64
+                + 8 // rebates:i64
             )]
     pub user_account: Account<'info, UserAccount>,
     system_program: Program<'info, System>,
@@ -214,6 +216,7 @@ pub struct AddMarket<'info> {
                 + 2 // leverage:u16
                 + 8 // margin_used:i64
                 + 32 // feed_address:Pubkey
+                + 8 // rebates:i64
         ,
         seeds = [b"market".as_ref(), market_index.to_le_bytes().as_ref()],
         bump
@@ -280,6 +283,7 @@ pub struct AddUserPosition<'info> {
                 + 8 // pnl:i64
                 + 8 // fees:i64
                 + 8 // margin_used:i64
+                + 8 // rebates:i64
         ,
         seeds = [b"user_position".as_ref(),owner.key().as_ref(), market_index.to_le_bytes().as_ref()],
         bump
@@ -311,6 +315,7 @@ pub struct Exchange {
     pub fees: i64,
     pub collateral_value: i64,
     pub leverage: u16,
+    pub rebates: i64,
 }
 
 #[account]
@@ -335,6 +340,7 @@ pub struct Market {
     pub leverage: u16,
     pub margin_used: i64,
     pub feed_address: Pubkey,
+    pub rebates: i64,
 }
 
 #[account]
@@ -345,6 +351,7 @@ pub struct UserAccount {
     pub basis: i64,
     pub pnl: i64,
     pub fees: i64,
+    pub rebates: i64,
 }
 
 #[account]
@@ -356,5 +363,6 @@ pub struct UserPosition {
     pub pnl: i64,
     pub fees: i64,
     pub margin_used: i64,
+    pub rebates: i64,
 }
 

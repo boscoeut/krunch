@@ -8,6 +8,7 @@ export default function PoolDetails() {
     const exchangeCollateral = useKrunchStore(state => state.exchangeCollateral)
     const total = Number(exchange.collateralValue)
     +Number(exchange.fees)
+    +Number(exchange.rebates)
     +Number(exchange.pnl)
     const values = [{
         key:'Curr Value',
@@ -18,6 +19,9 @@ export default function PoolDetails() {
     },{
         key:'Fees Earned',
         value: renderItem(exchange.fees)
+    },{
+        key:'Rebates Paid',
+        value: renderItem(exchange.rebates)
     },{
         key:'Pnl',
         value: renderItem(exchange.pnl)

@@ -15,6 +15,8 @@ export type Market = {
     marginUsed?:number,
     tokenAmount?:number,
     feedAddress:string,
+    marketTotal?:number,
+    rebates?:number,
 }
 
 export type ExchangeBalance = {
@@ -33,4 +35,5 @@ export type UserPosition = {
     fees?:number,
     tokenAmount?:number,
     pnl?:number,
+    rebates?:number,
 }

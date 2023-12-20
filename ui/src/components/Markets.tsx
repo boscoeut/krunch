@@ -24,12 +24,14 @@ export default function Markets() {
                         <th>MarginUsed</th>
                         <th>Pnl</th>
                         <th>Fees</th>
+                        <th>Rebates</th>
                         <th>Basis</th>
                         <th>Token Amt</th>
                         <th>Entry Price</th>
                         <th>Price</th>
                         <th>Curr Value</th>
                         <th>Unrealized Pnl</th>
+                        <th>Collateral Available</th>
 
                         <th>Weight</th>
                         <th>Leverage</th>
@@ -52,12 +54,14 @@ export default function Markets() {
                             <td>{renderItem(row.marginUsed)}</td>
                             <td>{renderItem(row.pnl)}</td>
                             <td>{renderItem(row.fees)}</td>
+                            <td>{renderItem(row.rebates)}</td>
                             <td>{renderItem(row.basis)}</td>
                             <td>{renderItem(row.tokenAmount)}</td>
                             <td>{formatCurrency(entryPrice)}</td>
                             <td>{formatCurrency(row.price || 0)}</td>
                             <td>{formatCurrency(currValue)}</td>
                             <td>{formatCurrency(unrealizedPnl)}</td>
+                            <td>{renderItem(row.marketTotal || 0)}</td>
 
                             <td>{renderItem(row.marketWeight, MARKET_WEIGHT_DECIMALS)}</td>
                             <td>{renderItem(row.leverage, LEVERAGE_DECIMALS)}</td>

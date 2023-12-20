@@ -15,7 +15,6 @@ import Markets from './components/Markets';
 import Pool from './components/Pool';
 import Settings from './components/Settings';
 import Sidebar from './components/Sidebar';
-import WalletTest from './components/WalletTest';
 import TradeDialog from './components/TradeDialog';
 import MarketDialog from './components/MarketDialog';
 import AccountDialog from './components/AccountDialog';
@@ -127,7 +126,6 @@ export default function JoyOrderDashboardTemplate() {
                             <Route path="/settings" Component={Settings} />
                             <Route path="/documentation" Component={Documentation} />
                             <Route path="/markets" Component={Markets} />
-                            <Route path="/test" Component={WalletTest} />
                             <Route path="/" element={<Navigate replace to="/home" />} />
                         </Routes>
                     </Box>

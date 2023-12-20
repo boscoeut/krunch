@@ -19,6 +19,7 @@ export default function Positions({ positions }: { positions: Array<any> }) {
                         <th>MarginUsed</th>
                         <th>Pnl</th>
                         <th>Fees</th>
+                        <th>Rebates</th>
                         <th>Basis</th>
                         <th>Token Amt</th>
                         <th>Entry Price</th>
@@ -39,6 +40,7 @@ export default function Positions({ positions }: { positions: Array<any> }) {
                             <td>{renderItem(row.marginUsed)}</td>
                             <td>{renderItem(row.pnl)}</td>
                             <td>{renderItem(row.fees)}</td>
+                            <td>{renderItem(row.rebates)}</td>
                             <td>{renderItem(row.basis)}</td>
                             <td>{renderItem(row.tokenAmount)}</td>
                             <td>{formatCurrency(entryPrice)}</td>

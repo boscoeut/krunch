@@ -8,6 +8,7 @@ export default function AccountDetails() {
     const userCollateral = useKrunchStore(state => state.userCollateral)
     const total = Number(userAccount.collateralValue)
         +Number(userAccount.fees)
+        +Number(userAccount.rebates)
         +Number(userAccount.pnl)
     const values = [{
         key:'Curr Value',
@@ -18,6 +19,9 @@ export default function AccountDetails() {
     },{
         key:'Fees Paid',
         value: renderItem(userAccount.fees)
+    },{
+        key:'Rebates Earned',
+        value: renderItem(userAccount.rebates)
     },{
         key:'Pnl',
         value: renderItem(userAccount.pnl)

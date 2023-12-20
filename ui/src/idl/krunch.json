@@ -699,30 +699,6 @@
           }
         ]
       }
-    },
-    {
-      "name": "AvailableCollateral",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "userCollateralAvailable",
-            "type": "i64"
-          },
-          {
-            "name": "marketCollateralAvailable",
-            "type": "i64"
-          },
-          {
-            "name": "maxMarketCollateralAvailable",
-            "type": "i64"
-          },
-          {
-            "name": "exchangeCollateralAvailable",
-            "type": "i64"
-          }
-        ]
-      }
     }
   ],
   "errors": [

@@ -3,9 +3,7 @@ use anchor_spl::token::{transfer, Transfer as SplTransfer};
 use chainlink_solana as chainlink;
 
 pub mod state;
-pub mod utils;
 use state::*;
-use utils::*;
 
 // declare_id!("5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm"); // codespaces
 declare_id!("EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52"); // local
@@ -27,6 +25,7 @@ pub mod krunch {
         exchange.basis = 0;
         exchange.pnl = 0;
         exchange.fees = 0;
+        exchange.rebates = 0;
         exchange.leverage = leverage;
         exchange.collateral_value = 0;
         Ok(())
@@ -95,11 +94,18 @@ pub mod krunch {
         let fee = ((fbasis.abs() * fee_rate as i128) / FEE_DECIMALS as i128) as i64;
 
         // update fees
-        market.fees += fee;
-        exchange.fees += fee;
-        user_account.fees += fee * -1;
-        user_position.fees += fee * -1;
-
+        if fee > 0 {
+            exchange.rebates += fee;
+            market.rebates += fee;
+            user_account.rebates += fee;
+            user_position.rebates += fee;
+        } else {
+            exchange.fees += fee;
+            market.rees += fee;
+            user_account.fees += fee * -1;
+            user_position.fees += fee * -1;
+        }
+    
         // update balances
         let basis_before = user_position.basis;
         let token_amount_before = user_position.token_amount;
@@ -366,7 +372,7 @@ pub mod krunch {
     }
 }
 fn calculate_exchange_total(exchange: &Exchange) -> i128 {
-    let exchange_total = (exchange.pnl + exchange.fees + exchange.collateral_value) as i128
+    let exchange_total = (exchange.pnl + exchange.rebates + exchange.fees + exchange.collateral_value) as i128
     * exchange.leverage as i128
     / LEVERAGE_DECIMALS as i128
     + exchange.margin_used as i128;
@@ -376,14 +382,12 @@ fn calculate_market_total(exchange: &Exchange, market: &Market) -> i128 {
     let exchange_total = calculate_exchange_total(&exchange);
     let max_market_collateral =
         (exchange_total as i128 * market.market_weight as i128) / MARKET_WEIGHT_DECIMALS as i128;
-    let market_total = (market.pnl + market.fees) as i128 * market.leverage as i128
-        / LEVERAGE_DECIMALS as i128
-        + max_market_collateral as i128
+    let market_total =  max_market_collateral as i128
         + market.margin_used as i128;
     return market_total;
 }
 fn calculate_user_total(user_account: &UserAccount, leverage: i128) -> i128 {
-    let user_hard_amount = user_account.pnl + user_account.fees + user_account.collateral_value;
+    let user_hard_amount = user_account.pnl + user_account.fees + user_account.rebates + user_account.collateral_value;
     let user_total = user_hard_amount as i128
         * (leverage as i128 / LEVERAGE_DECIMALS as i128)
         + user_account.margin_used as i128;
