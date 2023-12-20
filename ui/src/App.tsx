@@ -21,18 +21,20 @@ import AccountDialog from './components/AccountDialog';
 import { useKrunchStore } from "./hooks/useKrunchStore";
 import { useState } from 'react';
 import useProgram from './hooks/useProgram';  
-import { fetchOrCreateAccount, findAddress, fetchAccount } from 'utils/dist/utils';
 
-export default function JoyOrderDashboardTemplate() {
+export default function App() {
     const location = useLocation();
-    const { getProvider } = useProgram();
+    const {getProgram, getProvider} = useProgram() // initialize the program (do not remove)
     const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
     const [accountDialogOpen, setAccountDialogOpen] = useState(false);
     const refreshAll = useKrunchStore(state => state.refreshAll)
     const refresh = async()=>{
+        const program = await getProgram()
         const provider = await getProvider()
-        refreshAll(provider, fetchOrCreateAccount, findAddress, fetchAccount)
+        console.log("APP: program", program)
+        console.log("APP: provider", provider)
+        refreshAll()
     }
     return (
         <CssVarsProvider disableTransitionOnChange>

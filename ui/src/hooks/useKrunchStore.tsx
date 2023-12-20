@@ -5,6 +5,7 @@ import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { Connection } from "@solana/web3.js";
 import { EXCHANGE_POSITIONS, LEVERAGE_DECIMALS, MARKETS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { create } from 'zustand';
+import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
 import type { ExchangeBalance, Market, UserPosition } from '../types';
 interface KrunchState {
   program: any,
@@ -18,20 +19,20 @@ interface KrunchState {
   userAccount: any,
   exchange: any,
   userCollateral: number,
-  marketCollateral: number,
   exchangeCollateral: number,
   initialize: (program: any, provider: any) => void,
-  refreshMarkets: (fetchAccount: any) => void,
-  refreshAll: (provider: any, fetchOrCreateAccount: any, findAddress: any, fetchAccount: any) => Promise<void>,
-  refreshPositions: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
-  refreshUserAccount: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
-  refreshPool: (provider: any, fetchOrCreateAccount: any, findAddress: any) => void,
+  refreshMarkets: () => void,
+  refreshAll: () => Promise<void>,
+  refreshPositions: () => void,
+  refreshUserAccount: () => void,
+  refreshPool: () => void,
   getPrices: () => Promise<Map<String, Number>>
+  refreshExchangeCollateral: () => Promise<Number>,
+  refreshUserCollateral: () => Promise<Number>,
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
   userCollateral: 0,
-  marketCollateral: 0,
   exchangeCollateral: 0,
   prices: new Map<String, number>(),
   getPrices: async () => {
@@ -69,7 +70,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   userBalances: [],
   userAccount: {},
   exchange: {},
-  refreshMarkets: async (fetchAccount) => {
+  refreshMarkets: async () => {
     let tempMarkets: Array<Market> = []
 
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
@@ -100,7 +101,8 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     }
     set(() => ({ markets: tempMarkets }))
   },
-  refreshPositions: async (provider, fetchOrCreateAccount, findAddress) => {
+  refreshPositions: async () => {
+    const provider = get().provider
     let temp: Array<UserPosition> = []
     for (const market of get().markets) {
       const acct: any = await fetchOrCreateAccount(get().program, 'userPosition',
@@ -117,7 +119,8 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     }
     set(() => ({ positions: temp }))
   },
-  refreshUserAccount: async (provider, fetchOrCreateAccount, findAddress) => {
+  refreshUserAccount: async () => {
+    const provider = get().provider
     const userAccount: any = await fetchOrCreateAccount(get().program, 'userAccount',
       ['user_account',
         provider.wallet.publicKey],
@@ -151,41 +154,46 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     set(() => ({ userAccount, userBalances: balances }))
   },
-  refreshAll: async (provider, fetchOrCreateAccount, findAddress, fetchAccount) => {
-    get().getPrices()
-    get().refreshMarkets(fetchOrCreateAccount)
-    get().refreshPositions(provider, fetchOrCreateAccount, findAddress)
-    get().refreshPool(provider, fetchOrCreateAccount, findAddress)
-    get().refreshUserAccount(provider, fetchOrCreateAccount, findAddress)
-    // user collateral
+  refreshUserCollateral: async () => {
+     // user collateral
+     const provider = get().provider
+     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
+     console.log('exchange', exchange)
+     const userAccount: any = await fetchOrCreateAccount(get().program, 'userAccount',
+       ['user_account',
+         provider.wallet.publicKey],
+       'createUserAccount', []);
+     console.log('user_account', userAccount)
+     const hardAmount = userAccount.pnl.toNumber() + userAccount.fees.toNumber()
+       + userAccount.rebates.toNumber() + userAccount.collateralValue.toNumber();
+     let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
+     console.log('###uuserTotal', userTotal / AMOUNT_DECIMALS)
+     set({ userCollateral: userTotal })
+     return userTotal
+  },
+  refreshExchangeCollateral: async () => {
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
     console.log('exchange', exchange)
-    const userAccount: any = await fetchOrCreateAccount(get().program, 'userAccount',
-      ['user_account',
-        provider.wallet.publicKey],
-      'createUserAccount', []);
-    console.log('user_account', userAccount)
-    const hardAmount = userAccount.pnl.toNumber() + userAccount.fees.toNumber()
-      + userAccount.rebates.toNumber() + userAccount.collateralValue.toNumber();
-    let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
-    console.log('###uuserTotal', userTotal / AMOUNT_DECIMALS)
-    // exchnage total
     const exchangeTotal = (exchange.pnl.toNumber() + exchange.fees.toNumber() 
       + exchange.rebates.toNumber() + exchange.collateralValue.toNumber())
       * exchange.leverage
       / LEVERAGE_DECIMALS
       + exchange.marginUsed.toNumber()
     console.log('###exchangeTotal', exchangeTotal / AMOUNT_DECIMALS)
-    // market total
-    const market = await fetchAccount(get().program, 'market', ['market', 1])
-    const maxMarketCollateral =
-      (exchangeTotal * market.marketWeight) / MARKET_WEIGHT_DECIMALS;
-    let marketTotal = maxMarketCollateral
-      + market.marginUsed.toNumber();
-    console.log('###marketTotal', marketTotal / AMOUNT_DECIMALS)
-    set(() => ({ userCollateral: userTotal, marketCollateral: marketTotal, exchangeCollateral: exchangeTotal }))
+    set({ exchangeCollateral: exchangeTotal })
+    return exchangeTotal
   },
-  refreshPool: async (provider, fetchOrCreateAccount, findAddress) => {
+  refreshAll: async () => {
+    get().getPrices()
+    get().refreshMarkets()
+    get().refreshPositions()
+    get().refreshPool()
+    get().refreshUserAccount()
+    get().refreshExchangeCollateral()
+    get().refreshUserCollateral() 
+  },
+  refreshPool: async () => {
+    const provider = get().provider
     const exchangeAddress = await findAddress(get().program, ['exchange'])
 
     const balances: Array<ExchangeBalance> = []

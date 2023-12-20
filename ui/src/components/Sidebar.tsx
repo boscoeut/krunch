@@ -1,12 +1,13 @@
 import BrightnessAutoRoundedIcon from '@mui/icons-material/BrightnessAutoRounded';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
+import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import SupportRoundedIcon from '@mui/icons-material/SupportRounded';
-import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
 import Box from '@mui/joy/Box';
+import Stack from '@mui/joy/Stack';
 import Divider from '@mui/joy/Divider';
 import GlobalStyles from '@mui/joy/GlobalStyles';
 import IconButton from '@mui/joy/IconButton';
@@ -90,10 +91,12 @@ export default function Sidebar() {
                 onClick={() => closeSidebar()}
             />
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <IconButton variant="soft" color="primary" size="sm">
-                    <BrightnessAutoRoundedIcon />
-                </IconButton>
-                <Typography level="title-lg">Krunch</Typography>
+                <Stack sx={{cursor:'pointer', pointerEvents: 'auto'}} onClick={() => navigate("/home")} alignContent={'center'} alignItems={'center'} spacing={1} direction={'row'}>
+                    <IconButton variant="soft" color="primary" size="sm">
+                        <BrightnessAutoRoundedIcon />
+                    </IconButton>
+                    <Typography level="title-lg">Krunch</Typography>
+                </Stack>
                 <ColorSchemeToggle sx={{ ml: 'auto' }} />
             </Box>
 
