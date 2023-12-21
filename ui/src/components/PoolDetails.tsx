@@ -8,6 +8,8 @@ export default function PoolDetails() {
     const exchangeCollateral = useKrunchStore(state => state.exchangeCollateral)
     const exchangeCurrentValue = useKrunchStore(state => state.exchangeCurrentValue)
     const exchangeUnrealizedPnl = useKrunchStore(state => state.exchangeUnrealizedPnl)
+    const exchangeRewardsAvailable = useKrunchStore(state => state.exchangeRewardsAvailable)
+    const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const total = Number(exchange.collateralValue)
         +Number(exchange.fees)
         +Number(exchange.amountWithdrawn)
@@ -16,6 +18,14 @@ export default function PoolDetails() {
         +Number(exchange.rewards)
         +Number(exchange.pnl)
     const values = [{
+        key:'User Rewards Available',
+        value: renderItem(userRewardsAvailable),
+        indent: 0
+    },{
+        key:'Rewards Available',
+        value: renderItem(exchangeRewardsAvailable),
+        indent: 0
+    },{
         key:'Pool Value',
         value: renderItem(total),
         indent: 0
@@ -76,6 +86,12 @@ export default function PoolDetails() {
     },{
         key:'# of Markets',
         value: exchange.numberOfMarkets
+    },{
+        key:'Last Rewards Claim',
+        value: renderItem(exchange.lastRewardsClaim,1)
+    },{
+        key:'Reward Frequency',
+        value: `${renderItem(exchange.rewardFrequency?.toNumber()/(24*60*60/(400/1000)),1)}x a day`
     }]
     return (
         <Box>

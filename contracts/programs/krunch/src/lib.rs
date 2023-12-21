@@ -16,7 +16,7 @@ const AMOUNT_NUM_DECIMALS: u8 = 9;
 pub mod krunch {
     use super::*;
 
-    pub fn initialize_exchange(ctx: Context<InitializeExchange>, leverage: u32) -> Result<()> {
+    pub fn initialize_exchange(ctx: Context<InitializeExchange>, leverage: u32, reward_frequency:u64) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.admin = ctx.accounts.admin.key.to_owned();
         exchange.margin_used = 0;
@@ -31,6 +31,7 @@ pub mod krunch {
         exchange.collateral_value = 0;
         exchange.amount_withdrawn = 0;
         exchange.amount_deposited = 0;
+        exchange.reward_frequency = reward_frequency;
         Ok(())
     }
 
@@ -245,6 +246,32 @@ pub mod krunch {
         let user_position = &mut ctx.accounts.user_position;
         user_position.market_index = market_index;
         user_position.token_amount = 0;
+        Ok(())
+    }
+
+    pub fn claim_rewards(ctx: Context<ClaimRewards>) -> Result<()> {
+        let user_account = &mut ctx.accounts.user_account;
+        let exchange = &mut ctx.accounts.exchange;
+        let clock = Clock::get()?;
+        let current_unix_timestamp = clock.unix_timestamp;
+
+        if user_account.last_rewards_claim + exchange.reward_frequency as i64 > current_unix_timestamp {
+            return err!(KrunchErrors::RewardsClaimUnavailable);
+        }
+
+        let user_total = calculate_user_total(&user_account, exchange.leverage.into());
+        let exchange_total = calculate_exchange_total(&exchange);
+        let exchange_rewards = exchange_rewards_available(&exchange);
+        // get % or rewards available
+        let amount = (exchange_rewards * user_total) / exchange_total;
+
+        if amount < 0 {
+            return err!(KrunchErrors::NoRewardsAvailable);
+        }
+        exchange.rewards -= amount as i64;
+        user_account.rewards += amount as i64;
+        exchange.last_rewards_claim = current_unix_timestamp;
+        user_account.last_rewards_claim = current_unix_timestamp;
         Ok(())
     }
 
@@ -477,19 +504,30 @@ fn calculate_exchange_balance_available(exchange: &Exchange) -> i128 {
     return exchange_total;
 }
 fn calculate_exchange_total(exchange: &Exchange) -> i128 {
-    let exchange_total = (
+    let exchange_hard_amount =
         exchange.amount_withdrawn
         + exchange.amount_deposited
         + exchange.pnl
         + exchange.rebates
         + exchange.rewards
         + exchange.fees
-        + exchange.collateral_value) as i128
+        + exchange.collateral_value;
+    let exchange_total = exchange_hard_amount as i128
         * exchange.leverage as i128
         / LEVERAGE_DECIMALS as i128
         + exchange.margin_used as i128;
     return exchange_total;
 }
+
+fn exchange_rewards_available(exchange: &Exchange) -> i128 {
+    let exchange_total = 
+        exchange.pnl
+        + exchange.rebates
+        + exchange.rewards
+        + exchange.fees;
+    return exchange_total as i128;
+}
+
 fn calculate_market_total(exchange: &Exchange, market: &Market) -> i128 {
     let exchange_total = calculate_exchange_total(&exchange);
     let max_market_collateral =
@@ -504,7 +542,9 @@ fn calculate_user_total(user_account: &UserAccount, leverage: i128) -> i128 {
         + user_account.rebates 
         + user_account.rewards 
         + user_account.collateral_value;
-    let user_total = user_hard_amount as i128 * (leverage as i128 / LEVERAGE_DECIMALS as i128)
+    let user_total = user_hard_amount as i128 
+        * leverage as i128 
+        / LEVERAGE_DECIMALS as i128
         + user_account.margin_used as i128;
     return user_total;
 }
@@ -523,4 +563,8 @@ pub enum KrunchErrors {
     ExchangeValueInsufficient,
     #[msg("User Account value is insufficient")]
     UserAccountValueInsufficient,
+    #[msg("Rewards Claim Unavailable")]
+    RewardsClaimUnavailable,
+    #[msg("No Rewards Available")]
+    NoRewardsAvailable,
 }

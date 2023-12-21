@@ -15,6 +15,7 @@ import {
     MARKETS,
     MARKET_LEVERAGE,
     MARKET_WEIGHT_DECIMALS,
+    REWARD_FREQUENCY,
 } from 'utils/src/constants';
 import { Krunch } from "../target/types/krunch";
 const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = require("@solana/spl-token");
@@ -83,7 +84,9 @@ const addExchangePositions = async function (provider: any, program: any) {
 
 
 const initializeKrunch = async function (provider: any, program: any) {
-    const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', [EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS]);
+    let slotsIn24Hours = REWARD_FREQUENCY; 
+    const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'],
+         'initializeExchange', [EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS, new anchor.BN(slotsIn24Hours)]);
     console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
     console.log("exchange", exchange.collateralValue.toString());
     await addMarkets(provider, program);

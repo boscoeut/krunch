@@ -8,6 +8,9 @@ import { create } from 'zustand';
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
 import type { ExchangeBalance, Market, UserPosition } from '../types';
 interface KrunchState {
+  refreshAwardsAvailable: () => Promise<void>,
+  exchangeRewardsAvailable: number,
+  userRewardsAvailable: number,
   program: any,
   prices: Map<String, number>,
   provider: any,
@@ -33,9 +36,27 @@ interface KrunchState {
   getPrices: () => Promise<Map<String, Number>>
   refreshExchangeCollateral: () => Promise<Number>,
   refreshUserCollateral: () => Promise<Number>,
+  claimRewards: () => Promise<void>,
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  exchangeRewardsAvailable: 0,
+  userRewardsAvailable: 0,
+  claimRewards: async () => {
+    const program = get().program
+    const provider = get().provider
+
+    const userAccount = await fetchOrCreateAccount(get().program, 'userAccount',
+      ['user_account',
+        provider.wallet.publicKey],
+      'createUserAccount', []);
+    console.log('user_account', userAccount)
+
+    await program.methods.claimRewards().accounts({
+      userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+      exchange: await findAddress(program, ['exchange'])
+    }).rpc();
+  },
   userUnrealizedPnl: 0,
   userCurrentValue: 0,
   exchangeUnrealizedPnl: 0,
@@ -93,7 +114,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       + exchange.marginUsed.toNumber()
 
     let accountCurrentValue = 0
-    let accountUnrealizedPnl = 0  
+    let accountUnrealizedPnl = 0
     for (const market of get().markets) {
       try {
         const acct = await fetchAccount(get().program, 'market', ['market', market.marketIndex])
@@ -110,7 +131,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
           currValue - acct.basis.toNumber() / AMOUNT_DECIMALS
         accountCurrentValue += currValue
         accountUnrealizedPnl += unrealizedPnl
-        tempMarkets.push({ market: market.name, ...market, ...acct, price, marketTotal,unrealizedPnl,currValue })
+        tempMarkets.push({ market: market.name, ...market, ...acct, price, marketTotal, unrealizedPnl, currValue })
       } catch (x: any) {
         console.log(x.message)
         console.log('could not get market ' + market.name)
@@ -189,11 +210,11 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         provider.wallet.publicKey],
       'createUserAccount', []);
     console.log('user_account', userAccount)
-    const hardAmount = 
-      userAccount.pnl.toNumber() 
+    const hardAmount =
+      userAccount.pnl.toNumber()
       + userAccount.fees.toNumber()
-      + userAccount.rebates.toNumber() 
-      + userAccount.rewards.toNumber() 
+      + userAccount.rebates.toNumber()
+      + userAccount.rewards.toNumber()
       + userAccount.collateralValue.toNumber();
     let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
     console.log('###uuserTotal', userTotal / AMOUNT_DECIMALS)
@@ -208,8 +229,8 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       + exchange.fees.toNumber()
       + exchange.amountWithdrawn.toNumber()
       + exchange.amountDeposited.toNumber()
-      + exchange.rebates.toNumber() 
-      + exchange.rewards.toNumber() 
+      + exchange.rebates.toNumber()
+      + exchange.rewards.toNumber()
       + exchange.collateralValue.toNumber())
       * exchange.leverage
       / LEVERAGE_DECIMALS
@@ -226,6 +247,31 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     get().refreshUserAccount()
     get().refreshExchangeCollateral()
     get().refreshUserCollateral()
+    get().refreshAwardsAvailable()
+  },
+  refreshAwardsAvailable: async () => {
+    const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
+
+    let userTotal = get().userCollateral;
+    let exchangeTotal = get().exchangeCollateral;
+    const exchangeRewards =
+      exchange.pnl.toNumber()
+      + exchange.rebates.toNumber()
+      + exchange.rewards.toNumber()
+      + exchange.fees.toNumber()
+    // get % or rewards available
+    let amount = (exchangeRewards * userTotal) / exchangeTotal;
+
+    console.log(`____
+      userPercent ${userTotal / exchangeTotal}  
+      exchangeRewards ${exchangeRewards} 
+      userTotal ${userTotal} 
+      exchangeTotal ${exchangeTotal} 
+      amount ${amount}`)
+    set({
+      exchangeRewardsAvailable: exchangeRewards,
+      userRewardsAvailable: amount,
+    })
   },
   refreshPool: async () => {
     const provider = get().provider

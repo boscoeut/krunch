@@ -27,6 +27,7 @@ pub struct InitializeExchange<'info> {
                 + 8 // amount_deposited:i64
                 + 8 // rewards:i64
                 + 8 // last_rewards_claim:i64
+                + 8 // reward_frequency:u64
             )]
     pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
@@ -134,6 +135,25 @@ pub struct Deposit<'info> {
     pub chainlink_feed: AccountInfo<'info>,
     /// CHECK: This is the Chainlink program library
     pub chainlink_program: AccountInfo<'info>
+}
+
+#[derive(Accounts)]
+pub struct ClaimRewards<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        mut, 
+        seeds = [b"exchange".as_ref()],
+        bump
+    )]
+    pub exchange: Account<'info, Exchange>,
+    #[account(
+        mut,
+        seeds = [b"user_account".as_ref(),owner.key().as_ref()],
+        constraint = user_account.owner == owner.key(),
+        bump)]
+    pub user_account: Account<'info, UserAccount>,
+    system_program: Program<'info, System>
 }
 
 #[derive(Accounts)]
@@ -388,6 +408,7 @@ pub struct Exchange {
     pub amount_deposited: i64,
     pub rewards: i64,
     pub last_rewards_claim: i64,
+    pub reward_frequency: u64,
 }
 
 #[account]

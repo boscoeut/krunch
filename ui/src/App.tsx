@@ -31,12 +31,16 @@ export default function App() {
     const [accountDialogOpen, setAccountDialogOpen] = useState(false);
     const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
     const refreshAll = useKrunchStore(state => state.refreshAll)
+    const claimRewards = useKrunchStore(state => state.claimRewards)
     const refresh = async()=>{
         const program = await getProgram()
         const provider = await getProvider()        
         console.log("APP: program", program)
         console.log("APP: provider", provider)
         refreshAll()
+    }
+    const claim = async()=>{
+        await claimRewards()
     }
     return (
         <CssVarsProvider disableTransitionOnChange>
@@ -115,6 +119,14 @@ export default function App() {
                                 onClick={() => setExchangeDialogOpen(true)}
                             >
                                 Exchange
+                            </Button>
+                            <Button
+                                color="primary"
+                                startDecorator={<RefreshRoundedIcon />}
+                                size="sm"
+                                onClick={() => claim()}
+                            >
+                                Claim
                             </Button>
                             <Button
                                 color="primary"

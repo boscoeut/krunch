@@ -25,6 +25,10 @@
         {
           "name": "leverage",
           "type": "u32"
+        },
+        {
+          "name": "rewardFrequency",
+          "type": "u64"
         }
       ]
     },
@@ -331,6 +335,32 @@
           "type": "u16"
         }
       ]
+    },
+    {
+      "name": "claimRewards",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "exchange",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
     },
     {
       "name": "deposit",
@@ -675,6 +705,18 @@
           {
             "name": "amountDeposited",
             "type": "i64"
+          },
+          {
+            "name": "rewards",
+            "type": "i64"
+          },
+          {
+            "name": "lastRewardsClaim",
+            "type": "i64"
+          },
+          {
+            "name": "rewardFrequency",
+            "type": "u64"
           }
         ]
       }
@@ -795,6 +837,14 @@
           {
             "name": "rebates",
             "type": "i64"
+          },
+          {
+            "name": "rewards",
+            "type": "i64"
+          },
+          {
+            "name": "lastRewardsClaim",
+            "type": "i64"
           }
         ]
       }
@@ -892,6 +942,16 @@
       "code": 6005,
       "name": "UserAccountValueInsufficient",
       "msg": "User Account value is insufficient"
+    },
+    {
+      "code": 6006,
+      "name": "RewardsClaimUnavailable",
+      "msg": "Rewards Claim Unavailable"
+    },
+    {
+      "code": 6007,
+      "name": "NoRewardsAvailable",
+      "msg": "No Rewards Available"
     }
   ],
   "metadata": {

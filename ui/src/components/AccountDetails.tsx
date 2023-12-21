@@ -8,6 +8,7 @@ export default function AccountDetails() {
     const userCollateral = useKrunchStore(state => state.userCollateral)
     const userCurrentValue = useKrunchStore(state => state.userCurrentValue)
     const userUnrealizedPnl = useKrunchStore(state => state.userUnrealizedPnl)
+    const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const total = Number(userAccount.collateralValue)
         +Number(userAccount.fees)
         +Number(userAccount.rebates)
@@ -15,6 +16,10 @@ export default function AccountDetails() {
         +Number(userAccount.pnl)
    
     const values = [{
+        key:'Rewards Available',
+        value: renderItem(userRewardsAvailable),
+        indent: 0
+    },{
         key:'Account Value',
         value: renderItem(total)
     },{

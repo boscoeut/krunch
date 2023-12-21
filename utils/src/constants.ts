@@ -11,6 +11,8 @@ export const USDT_USD_FEED = new PublicKey("8vAuuqC5wVZ9Z9oQUGGDSjYgudTfjmyqGU5V
 export const ETH_USD_FEED = new PublicKey("716hFAECqotxcXcj8Hs8nr7AG6q9dBw2oX3k3M8V7uGq")
 export const BTC_USD_FEED = new PublicKey("Cv4T27XbjVoKUYwP72NQQanvZeA7W4YF9L4EnYT9kx5o")
 export const CHAINLINK_PROGRAM="HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
+// export const REWARD_FREQUENCY = 86400 * 1000 / 400; // 1 week
+export const REWARD_FREQUENCY = 5; // 1 week
 // export const NETWORK_URL="https://shiny-halibut-7vpx9xx4wj2x579-3000.app.github.dev/" // codespaces
 export const NETWORK_URL = "http://localhost:8899";
 
