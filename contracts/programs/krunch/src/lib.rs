@@ -94,7 +94,12 @@ pub mod krunch {
         let fee_token_delta = market.token_amount + amount * -1; // market amounts are stored opposite user positions so flip the sign
         if fee_token_delta.abs() < market.token_amount.abs() && amount.abs() <= market.token_amount.abs() {
             // maker
-            fee_rate = market.maker_fee.into();
+            let temp_maker_fee:i64 = market.maker_fee.into();
+            let maker_fee= ((fbasis.abs() * temp_maker_fee as i128) / FEE_DECIMALS as i128) as i64;
+            let exchange_rewards = exchange_rewards_available(&exchange);
+            if maker_fee * -1 < exchange_rewards as i64 {
+                fee_rate = market.maker_fee.into();
+            }
         }
         let fee = ((fbasis.abs() * fee_rate as i128) / FEE_DECIMALS as i128) as i64;
 
