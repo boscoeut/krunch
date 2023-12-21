@@ -36,4 +36,5 @@ export type UserPosition = {
     tokenAmount?:number,
     pnl?:number,
     rebates?:number,
+    rewards?:number,
 }

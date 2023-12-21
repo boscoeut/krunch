@@ -84,6 +84,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
     const exchangeTotal = (exchange.pnl.toNumber()
       + exchange.rebates.toNumber()
+      + exchange.rewards.toNumber()
       + exchange.amountWithdrawn.toNumber()
       + exchange.amountDeposited.toNumber()
       + exchange.fees.toNumber() + exchange.collateralValue.toNumber())
@@ -188,8 +189,12 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         provider.wallet.publicKey],
       'createUserAccount', []);
     console.log('user_account', userAccount)
-    const hardAmount = userAccount.pnl.toNumber() + userAccount.fees.toNumber()
-      + userAccount.rebates.toNumber() + userAccount.collateralValue.toNumber();
+    const hardAmount = 
+      userAccount.pnl.toNumber() 
+      + userAccount.fees.toNumber()
+      + userAccount.rebates.toNumber() 
+      + userAccount.rewards.toNumber() 
+      + userAccount.collateralValue.toNumber();
     let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
     console.log('###uuserTotal', userTotal / AMOUNT_DECIMALS)
     set({ userCollateral: userTotal })
@@ -203,7 +208,9 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       + exchange.fees.toNumber()
       + exchange.amountWithdrawn.toNumber()
       + exchange.amountDeposited.toNumber()
-      + exchange.rebates.toNumber() + exchange.collateralValue.toNumber())
+      + exchange.rebates.toNumber() 
+      + exchange.rewards.toNumber() 
+      + exchange.collateralValue.toNumber())
       * exchange.leverage
       / LEVERAGE_DECIMALS
       + exchange.marginUsed.toNumber()

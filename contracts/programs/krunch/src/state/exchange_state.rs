@@ -25,6 +25,8 @@ pub struct InitializeExchange<'info> {
                 + 8 // rebates:i64
                 + 8 // amount_withdrawn:i64
                 + 8 // amount_deposited:i64
+                + 8 // rewards:i64
+                + 8 // last_rewards_claim:i64
             )]
     pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
@@ -240,6 +242,8 @@ pub struct CreateUserAccount<'info> {
                 + 8 // pnl:i64
                 + 8 // fees:i64
                 + 8 // rebates:i64
+                + 8 // rewards:i64
+                + 8 // last_rewards_claim:i64
             )]
     pub user_account: Account<'info, UserAccount>,
     system_program: Program<'info, System>,
@@ -382,6 +386,8 @@ pub struct Exchange {
     pub rebates: i64,
     pub amount_withdrawn: i64,
     pub amount_deposited: i64,
+    pub rewards: i64,
+    pub last_rewards_claim: i64,
 }
 
 #[account]
@@ -418,6 +424,8 @@ pub struct UserAccount {
     pub pnl: i64,
     pub fees: i64,
     pub rebates: i64,
+    pub rewards: i64,
+    pub last_rewards_claim: i64,
 }
 
 #[account]

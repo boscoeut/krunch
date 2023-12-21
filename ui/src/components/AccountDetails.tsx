@@ -11,6 +11,7 @@ export default function AccountDetails() {
     const total = Number(userAccount.collateralValue)
         +Number(userAccount.fees)
         +Number(userAccount.rebates)
+        +Number(userAccount.rewards)
         +Number(userAccount.pnl)
    
     const values = [{
@@ -27,6 +28,10 @@ export default function AccountDetails() {
     },{
         key:'+ Rebates Earned',
         value: renderItem(userAccount.rebates),
+        indent:1
+    },{
+        key:'+ Rewards Earned',
+        value: renderItem(userAccount.rewards),
         indent:1
     },{
         key:'- Fees Paid',

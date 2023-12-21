@@ -26,6 +26,7 @@ pub mod krunch {
         exchange.pnl = 0;
         exchange.fees = 0;
         exchange.rebates = 0;
+        exchange.rewards = 0;
         exchange.leverage = leverage;
         exchange.collateral_value = 0;
         exchange.amount_withdrawn = 0;
@@ -468,6 +469,7 @@ pub mod krunch {
 fn calculate_exchange_balance_available(exchange: &Exchange) -> i128 {
     let exchange_total = exchange.pnl as i128
         + exchange.rebates as i128
+        + exchange.rewards as i128
         + exchange.fees as i128
         + exchange.amount_withdrawn as i128
         + exchange.amount_deposited as i128
@@ -480,6 +482,7 @@ fn calculate_exchange_total(exchange: &Exchange) -> i128 {
         + exchange.amount_deposited
         + exchange.pnl
         + exchange.rebates
+        + exchange.rewards
         + exchange.fees
         + exchange.collateral_value) as i128
         * exchange.leverage as i128
@@ -496,7 +499,11 @@ fn calculate_market_total(exchange: &Exchange, market: &Market) -> i128 {
 }
 fn calculate_user_total(user_account: &UserAccount, leverage: i128) -> i128 {
     let user_hard_amount =
-        user_account.pnl + user_account.fees + user_account.rebates + user_account.collateral_value;
+        user_account.pnl 
+        + user_account.fees 
+        + user_account.rebates 
+        + user_account.rewards 
+        + user_account.collateral_value;
     let user_total = user_hard_amount as i128 * (leverage as i128 / LEVERAGE_DECIMALS as i128)
         + user_account.margin_used as i128;
     return user_total;

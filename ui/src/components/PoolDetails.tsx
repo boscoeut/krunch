@@ -13,6 +13,7 @@ export default function PoolDetails() {
         +Number(exchange.amountWithdrawn)
         +Number(exchange.amountDeposited)
         +Number(exchange.rebates)
+        +Number(exchange.rewards)
         +Number(exchange.pnl)
     const values = [{
         key:'Pool Value',
@@ -37,6 +38,10 @@ export default function PoolDetails() {
     },{
         key:'- Rebates Paid',
         value: renderItem(exchange.rebates),
+        indent: 1
+    },{
+        key:'- Rewards Paid',
+        value: renderItem(exchange.rewards),
         indent: 1
     },{
         key:'- Amount Withdrawn',
