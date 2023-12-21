@@ -88,8 +88,9 @@ pub mod krunch {
         msg!("basis is {}", fbasis);
 
         let mut fee_rate: i64 = market.taker_fee.into();
+
         let fee_token_delta = market.token_amount + amount * -1; // market amounts are stored opposite user positions so flip the sign
-        if fee_token_delta.abs() < market.token_amount.abs() {
+        if fee_token_delta.abs() < market.token_amount.abs() && amount.abs() <= market.token_amount.abs() {
             // maker
             fee_rate = market.maker_fee.into();
         }
