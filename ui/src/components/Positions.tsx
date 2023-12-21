@@ -4,7 +4,6 @@ import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import '../App.css';
 import { renderItem, formatCurrency } from '../utils';
-import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 
 export default function Positions({ positions }: { positions: Array<any> }) {
 
@@ -31,9 +30,6 @@ export default function Positions({ positions }: { positions: Array<any> }) {
                 <tbody>
                     {positions.map(row => {
                         const entryPrice = Math.abs(row.tokenAmount === 0 ? 0 : row.basis / row.tokenAmount)
-                        const currValue = (row.tokenAmount * (row.price || 0))/ AMOUNT_DECIMALS
-                        const unrealizedPnl = row.tokenAmount> 0 ? currValue + row.basis/ AMOUNT_DECIMALS:
-                            currValue + row.basis/ AMOUNT_DECIMALS
                         return <tr key={row.marketIndex}>
                             <td>{row.market}</td>
                             <td>{row.marketIndex}</td>
@@ -45,8 +41,8 @@ export default function Positions({ positions }: { positions: Array<any> }) {
                             <td>{renderItem(row.tokenAmount)}</td>
                             <td>{formatCurrency(entryPrice)}</td>
                             <td>{formatCurrency(row.price || 0)}</td>
-                            <td>{formatCurrency(currValue)}</td>
-                            <td>{formatCurrency(unrealizedPnl)}</td>
+                            <td>{formatCurrency(row.currValue)}</td>
+                            <td>{formatCurrency(row.unrealizedPnl)}</td>
                         </tr>
                     })}
                 </tbody>

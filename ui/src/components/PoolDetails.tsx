@@ -6,6 +6,8 @@ import { LEVERAGE_DECIMALS } from 'utils/dist/constants';
 export default function PoolDetails() {
     const exchange = useKrunchStore(state => state.exchange)
     const exchangeCollateral = useKrunchStore(state => state.exchangeCollateral)
+    const exchangeCurrentValue = useKrunchStore(state => state.exchangeCurrentValue)
+    const exchangeUnrealizedPnl = useKrunchStore(state => state.exchangeUnrealizedPnl)
     const total = Number(exchange.collateralValue)
     +Number(exchange.fees)
     +Number(exchange.amountWithdrawn)
@@ -13,43 +15,62 @@ export default function PoolDetails() {
     +Number(exchange.rebates)
     +Number(exchange.pnl)
     const values = [{
-        key:'Curr Value',
+        key:'Pool Value',
         value: renderItem(total),
         indent: 0
     },{
-        key:'Collateral Value',
-        value: renderItem(exchange.collateralValue)
+        key:'+ User Deposits',
+        value: renderItem(exchange.collateralValue),
+        indent: 1
     },{
-        key:'Fees Earned',
+        key:'+ Pnl',
+        value: renderItem(exchange.pnl),
+        indent: 1
+    },{
+        key:'+ Fees Earned',
         value: renderItem(exchange.fees),
         indent:1
     },{
-        key:'Rebates Paid',
-        value: renderItem(exchange.rebates)
+        key:'+ Amount Deposited',
+        value: renderItem(exchange.amountDeposited),
+        indent: 1
     },{
-        key:'Amount Withdrawn',
-        value: renderItem(exchange.amountWithdrawn)
+        key:'- Rebates Paid',
+        value: renderItem(exchange.rebates),
+        indent: 1
     },{
-        key:'Amount Deposited',
-        value: renderItem(exchange.amountDeposited)
+        key:'- Amount Withdrawn',
+        value: renderItem(exchange.amountWithdrawn),
+        indent: 1
     },{
-        key:'Pnl',
-        value: renderItem(exchange.pnl)
+        key:'Trading',
+        value: ''
+    },{
+        key:'Unrealized Pnl',
+        value: renderItem(exchangeUnrealizedPnl,1),
+        indent:1
+    },{
+        key:'+ Open Position Basis',
+        value: renderItem(exchange.basis),
+        indent:2
+    },{
+        key:'- Open Position Current Value',
+        value: renderItem(exchangeCurrentValue,1),
+        indent:2
     },{
         key:'Margin Used',
-        value: renderItem(exchange.marginUsed)
+        value: renderItem(exchange.marginUsed),
+        indent: 1
     },{
         key:'Margin Available',
-        value: renderItem(exchangeCollateral)
-    },{
-        key:'Basis',
-        value: renderItem(exchange.basis)
-    },{
-        key:'# of Markets',
-        value: exchange.numberOfMarkets
+        value: renderItem(exchangeCollateral),
+        indent: 1
     },{
         key:'Leverage',
         value: renderItem(exchange.leverage,LEVERAGE_DECIMALS)
+    },{
+        key:'# of Markets',
+        value: exchange.numberOfMarkets
     }]
     return (
         <Box>
