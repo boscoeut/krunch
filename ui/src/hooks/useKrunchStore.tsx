@@ -105,7 +105,6 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
           + acct.marginUsed.toNumber();
 
         const currValue = ((acct.tokenAmount.toNumber() * (price || 0)) / AMOUNT_DECIMALS) || 0
-        console.log("currValue", currValue)
         const unrealizedPnl = acct.tokenAmount.toNumber() > 0 ? currValue - acct.basis.toNumber() / AMOUNT_DECIMALS :
           currValue - acct.basis.toNumber() / AMOUNT_DECIMALS
         accountCurrentValue += currValue

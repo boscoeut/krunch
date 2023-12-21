@@ -9,11 +9,11 @@ export default function PoolDetails() {
     const exchangeCurrentValue = useKrunchStore(state => state.exchangeCurrentValue)
     const exchangeUnrealizedPnl = useKrunchStore(state => state.exchangeUnrealizedPnl)
     const total = Number(exchange.collateralValue)
-    +Number(exchange.fees)
-    +Number(exchange.amountWithdrawn)
-    +Number(exchange.amountDeposited)
-    +Number(exchange.rebates)
-    +Number(exchange.pnl)
+        +Number(exchange.fees)
+        +Number(exchange.amountWithdrawn)
+        +Number(exchange.amountDeposited)
+        +Number(exchange.rebates)
+        +Number(exchange.pnl)
     const values = [{
         key:'Pool Value',
         value: renderItem(total),
@@ -60,11 +60,11 @@ export default function PoolDetails() {
     },{
         key:'Margin Used',
         value: renderItem(exchange.marginUsed),
-        indent: 1
+        indent: 0
     },{
         key:'Margin Available',
         value: renderItem(exchangeCollateral),
-        indent: 1
+        indent: 0
     },{
         key:'Leverage',
         value: renderItem(exchange.leverage,LEVERAGE_DECIMALS)
