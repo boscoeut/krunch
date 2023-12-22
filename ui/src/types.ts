@@ -17,6 +17,9 @@ export type Market = {
     feedAddress:string,
     marketTotal?:number,
     rebates?:number,
+    currValue?:number,
+    unrealizedPnl?:number,
+    entryPrice?:number, 
 }
 
 export type ExchangeBalance = {
@@ -37,4 +40,8 @@ export type UserPosition = {
     pnl?:number,
     rebates?:number,
     rewards?:number,
+    currValue?:number,
+    unrealizedPnl?:number,
+    entryPrice?:number,
+
 }

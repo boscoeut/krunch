@@ -128,10 +128,12 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
         const currValue = ((acct.tokenAmount.toNumber() * (price || 0)) / AMOUNT_DECIMALS) || 0
         const unrealizedPnl = acct.tokenAmount.toNumber() > 0 ? currValue - acct.basis.toNumber() / AMOUNT_DECIMALS :
-          currValue - acct.basis.toNumber() / AMOUNT_DECIMALS
+          currValue + acct.basis.toNumber() / AMOUNT_DECIMALS
         accountCurrentValue += currValue
         accountUnrealizedPnl += unrealizedPnl
-        tempMarkets.push({ market: market.name, ...market, ...acct, price, marketTotal, unrealizedPnl, currValue })
+        const entryPrice = acct.tokenAmount.toNumber() === 0 ? 0 : acct.basis.toNumber() / acct.tokenAmount.toNumber() 
+
+        tempMarkets.push({ market: market.name, ...market, ...acct, price,entryPrice, marketTotal, unrealizedPnl, currValue })
       } catch (x: any) {
         console.log(x.message)
         console.log('could not get market ' + market.name)
@@ -157,11 +159,12 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       const price = get().prices.get(market.name)
       const currValue = ((acct.tokenAmount.toNumber() * (price || 0)) / AMOUNT_DECIMALS) || 0
       console.log("currValue", currValue)
-      const unrealizedPnl = acct.tokenAmount.toNumber() > 0 ? currValue - acct.basis.toNumber() / AMOUNT_DECIMALS :
+      const unrealizedPnl = acct.tokenAmount.toNumber() > 0 ? currValue + acct.basis.toNumber() / AMOUNT_DECIMALS :
         currValue - acct.basis.toNumber() / AMOUNT_DECIMALS
       accountCurrentValue += currValue
       accountUnrealizedPnl += unrealizedPnl
-      temp.push({ market: market.name, ...acct, price, currValue, unrealizedPnl })
+      const entryPrice = acct.tokenAmount.toNumber() === 0 ? 0 : acct.basis.toNumber() / acct.tokenAmount.toNumber() 
+      temp.push({ market: market.name, ...acct, price, currValue, unrealizedPnl, entryPrice })
     }
     set(() => ({ positions: temp, userCurrentValue: accountCurrentValue, userUnrealizedPnl: accountUnrealizedPnl }))
   },
@@ -251,8 +254,9 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   },
   refreshAwardsAvailable: async () => {
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
+    const userAccount = await fetchAccount(get().program, 'userAccount', ['user_account', get().provider.wallet.publicKey])
 
-    let userTotal = get().userCollateral;
+    let userTotal = get().userCollateral - userAccount.rewards.toNumber();
     let exchangeTotal = get().exchangeCollateral;
     const exchangeRewards =
       exchange.pnl.toNumber()

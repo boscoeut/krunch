@@ -42,12 +42,6 @@ export default function Markets() {
                 </thead>
                 <tbody>
                     {markets.map(row => {
-                        const basis = row.basis || 0
-                        const tokenAmount = row.tokenAmount || 0
-                        const entryPrice = Math.abs(tokenAmount === 0 ? 0 : basis / tokenAmount)
-                        const currValue = tokenAmount / AMOUNT_DECIMALS * (row.price || 0)
-                        const unrealizedPnl = tokenAmount> 0 ? currValue + basis/ AMOUNT_DECIMALS:
-                            currValue - basis/ AMOUNT_DECIMALS
                         return <tr key={row.marketIndex}>
                             <td>{row.name}</td>
                             <td>{row.marketIndex}</td>
@@ -57,10 +51,10 @@ export default function Markets() {
                             <td>{renderItem(row.rebates)}</td>
                             <td>{renderItem(row.basis)}</td>
                             <td>{renderItem(row.tokenAmount)}</td>
-                            <td>{formatCurrency(entryPrice)}</td>
+                            <td>{formatCurrency(row.entryPrice || 0)}</td>
                             <td>{formatCurrency(row.price || 0)}</td>
-                            <td>{formatCurrency(currValue)}</td>
-                            <td>{formatCurrency(unrealizedPnl)}</td>
+                            <td>{formatCurrency(row.currValue || 0)}</td>
+                            <td>{formatCurrency(row.unrealizedPnl || 0)}</td>
                             <td>{renderItem(row.marketTotal || 0)}</td>
 
                             <td>{renderItem(row.marketWeight, MARKET_WEIGHT_DECIMALS)}</td>

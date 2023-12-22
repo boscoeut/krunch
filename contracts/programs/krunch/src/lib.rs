@@ -264,7 +264,7 @@ pub mod krunch {
             return err!(KrunchErrors::RewardsClaimUnavailable);
         }
 
-        let user_total = calculate_user_total(&user_account, exchange.leverage.into());
+        let user_total = calculate_user_total(&user_account, exchange.leverage.into()) - user_account.rewards; // don't double count rewards
         let exchange_total = calculate_exchange_total(&exchange);
         let exchange_rewards = exchange_rewards_available(&exchange);
         // get % or rewards available

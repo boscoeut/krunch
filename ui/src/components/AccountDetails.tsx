@@ -9,6 +9,7 @@ export default function AccountDetails() {
     const userCurrentValue = useKrunchStore(state => state.userCurrentValue)
     const userUnrealizedPnl = useKrunchStore(state => state.userUnrealizedPnl)
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
+    const exchangeRewardsAvailable = useKrunchStore(state => state.exchangeRewardsAvailable)
     const total = Number(userAccount.collateralValue)
         +Number(userAccount.fees)
         +Number(userAccount.rebates)
@@ -16,9 +17,21 @@ export default function AccountDetails() {
         +Number(userAccount.pnl)
    
     const values = [{
-        key:'Rewards Available',
-        value: renderItem(userRewardsAvailable),
+        key:'Rewards',
+        value: '',
         indent: 0
+    },{
+        key:'User Rewards Available',
+        value: renderItem(userRewardsAvailable),
+        indent: 1
+    },{
+        key:'Total Rewards Available',
+        value: renderItem(exchangeRewardsAvailable),
+        indent: 1
+    },{
+        key:'Last User Rewards Claim',
+        value: `${new Date(userAccount.lastRewardsClaim?.toNumber()*1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber()*1000).toLocaleTimeString()}`,
+        indent:1
     },{
         key:'Account Value',
         value: renderItem(total)
