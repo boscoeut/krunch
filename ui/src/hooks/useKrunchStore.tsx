@@ -6,8 +6,23 @@ import { Connection } from "@solana/web3.js";
 import { EXCHANGE_POSITIONS, LEVERAGE_DECIMALS, MARKETS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { create } from 'zustand';
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
-import type { ExchangeBalance, Market, UserPosition } from '../types';
+import type { ExchangeBalance, Market, UserPosition, AppInfo } from '../types';
+
+export const defaultAppInfo: AppInfo = {
+  appTitle: "Krunch",
+  appSubTitle: "Defi",
+  logoColor:'#37c437',
+  docAppReference: "Krunch Defi",
+  appDescription: 'Decentralized Trading',
+  welcomeMessage: 'Welcome to Krunch Defi',
+  stableCoin: 'USDT',
+  protocolName: 'Krunch Defi',
+  pageTitle: 'Krunch Defi - Decentralized Trading',
+  pageDescription: 'Krunch Defi: Decentralized Trading for Equities, Crypto and Forex.   No liquidations.  Trade at 10x Leverage.  Earn fees rewards.'
+}
+
 interface KrunchState {
+  appInfo: AppInfo,
   refreshAwardsAvailable: () => Promise<void>,
   exchangeRewardsAvailable: number,
   userRewardsAvailable: number,
@@ -40,6 +55,7 @@ interface KrunchState {
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  appInfo: defaultAppInfo,
   exchangeRewardsAvailable: 0,
   userRewardsAvailable: 0,
   claimRewards: async () => {

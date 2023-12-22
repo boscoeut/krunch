@@ -45,3 +45,17 @@ export type UserPosition = {
     entryPrice?:number,
 
 }
+
+
+export type AppInfo = {
+    appTitle: string,
+    appSubTitle: string,
+    docAppReference: string,
+    appDescription: string,
+    welcomeMessage: string,
+    stableCoin: string,
+    protocolName:string,
+    pageTitle:string,
+    pageDescription:string,
+    logoColor:string
+  }

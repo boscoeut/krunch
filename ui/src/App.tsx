@@ -22,6 +22,7 @@ import ExchangeDialog from './components/ExchangeDialog';
 import { useKrunchStore } from "./hooks/useKrunchStore";
 import { useState } from 'react';
 import useProgram from './hooks/useProgram';  
+import PageHeader from './components/PageHeader';
 
 export default function App() {
     const location = useLocation();
@@ -86,7 +87,7 @@ export default function App() {
                             justifyContent: 'space-between',
                         }}
                     >
-                        <Typography level="h3">{location.pathname}</Typography>
+                        <PageHeader title={location.pathname} />
                         <Stack direction={"row"} spacing={1}>
                         <Button
                                 color="primary"

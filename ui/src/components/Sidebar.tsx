@@ -7,6 +7,7 @@ import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import SupportRoundedIcon from '@mui/icons-material/SupportRounded';
 import Box from '@mui/joy/Box';
+import Logo from './Logo';
 import Stack from '@mui/joy/Stack';
 import Divider from '@mui/joy/Divider';
 import GlobalStyles from '@mui/joy/GlobalStyles';
@@ -92,14 +93,8 @@ export default function Sidebar() {
                 }}
                 onClick={() => closeSidebar()}
             />
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Stack sx={{cursor:'pointer', pointerEvents: 'auto'}} onClick={() => navigate("/home")} alignContent={'center'} alignItems={'center'} spacing={1} direction={'row'}>
-                    <IconButton variant="soft" color="primary" size="sm">
-                        <BrightnessAutoRoundedIcon />
-                    </IconButton>
-                    <Typography level="title-lg">Krunch</Typography>
-                </Stack>
-                <ColorSchemeToggle sx={{ ml: 'auto' }} />
+            <Box onClick={()=>navigate('/home')} sx={{ cursor:'pointer', display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Logo/>
             </Box>
 
             <Box
@@ -178,6 +173,7 @@ export default function Sidebar() {
             </Box>
             <Divider />
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <ColorSchemeToggle sx={{ ml: 'auto' }} />
                 <Box sx={{ minWidth: 0, flex: 1 }}>
                     {wallet.connected &&
                         <>
@@ -191,14 +187,17 @@ export default function Sidebar() {
                         </>
                     }
                 </Box>
-                <IconButton onClick={toggleConnect} size="sm" variant="plain" color="neutral">
-                    {!wallet.connected &&
-                        <LogoutRoundedIcon />
-                    }
-                    {wallet.connected &&
-                        <LoginRoundedIcon />
-                    }
-                </IconButton>
+                <Stack direction={'row-reverse'}>
+                    <IconButton onClick={toggleConnect} size="sm" variant="plain" color="neutral">
+                        {!wallet.connected &&
+                            <LogoutRoundedIcon />
+                        }
+                        {wallet.connected &&
+                            <LoginRoundedIcon />
+                        }
+                    </IconButton>
+                    
+                </Stack>
             </Box>
         </Sheet>
     );
