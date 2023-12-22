@@ -73,11 +73,11 @@ export default function AccountDetails() {
     },{
         key:'Margin Used',
         value: renderItem(userAccount.marginUsed),
-        indent:0
+        indent:1
     },{
         key:'Margin Available',
         value: renderItem(userCollateral),
-        indent:0
+        indent:1
     }]
     return (
         <Box>

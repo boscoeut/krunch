@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { renderItem, formatCurrency } from '../utils';
 import '../App.css';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { AMOUNT_DECIMALS, MARKET_WEIGHT_DECIMALS, LEVERAGE_DECIMALS, FEE_DECIMALS } from 'utils/dist/constants';
+import { MARKET_WEIGHT_DECIMALS, LEVERAGE_DECIMALS, FEE_DECIMALS } from 'utils/dist/constants';
 
 export default function Markets() {
     const markets = useKrunchStore(state => state.markets)

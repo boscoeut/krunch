@@ -2,7 +2,7 @@ import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { renderItem } from '../utils';
-import { LEVERAGE_DECIMALS } from 'utils/dist/constants';
+import { LEVERAGE_DECIMALS, MARKETS } from 'utils/dist/constants';
 export default function PoolDetails() {
     const exchange = useKrunchStore(state => state.exchange)
     const exchangeCollateral = useKrunchStore(state => state.exchangeCollateral)
@@ -66,17 +66,19 @@ export default function PoolDetails() {
     },{
         key:'Margin Used',
         value: renderItem(exchange.marginUsed),
-        indent: 0
+        indent: 1
     },{
         key:'Margin Available',
         value: renderItem(exchangeCollateral),
-        indent: 0
+        indent: 1
     },{
         key:'Leverage',
-        value: renderItem(exchange.leverage,LEVERAGE_DECIMALS)
+        value: renderItem(exchange.leverage,LEVERAGE_DECIMALS),
+        indent: 1
     },{
         key:'# of Markets',
-        value: exchange.numberOfMarkets
+        indent: 1,
+        value: MARKETS.length
     },{
         key:'Rewards',
         value: ''
