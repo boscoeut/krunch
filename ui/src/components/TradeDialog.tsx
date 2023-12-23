@@ -5,6 +5,9 @@ import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
+
+import Select from '@mui/joy/Select';
+import Option from '@mui/joy/Option';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
 import ModalClose from '@mui/joy/ModalClose';
@@ -70,8 +73,8 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   };
 
   const properties = [
-    { label: 'Index', value: marketIndex, onChange: setMarketIndex },
-    { label: 'Amount', value: amount, onChange: setAmount },
+    { label: 'Index', value: marketIndex, onChange: setMarketIndex, type: 'markets' },
+    { label: 'Amount', value: amount, onChange: setAmount, type: 'number' },
   ]
 
   return (
@@ -90,10 +93,24 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
             <Stack spacing={2}>
               {properties.map((property) => {
                 return (
-                  <FormControl key={property.label}>
-                    <FormLabel>{property.label}</FormLabel>
-                    <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
-                  </FormControl>
+                  <>
+                    {property.type === 'markets' && <FormControl key={property.label}>
+                      <FormLabel>{property.label}</FormLabel>
+                      <Select value={`${property.value}`} onChange={(e: any, newValue: any) => {
+                        property.onChange(newValue)
+                      }}>
+                        {MARKETS.map((position) => {
+                          return <Option value={`${position.marketIndex}`} >{position.name}</Option>
+                        })}
+                      </Select>
+
+                    </FormControl>}
+                    {property.type === 'number' && <FormControl key={property.label}>
+                      <FormLabel>{property.label}</FormLabel>
+                      <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
+                    </FormControl>}
+                  </>
+
                 );
               })}
               <Button type="submit">Submit</Button>
