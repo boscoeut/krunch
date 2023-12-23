@@ -77,8 +77,7 @@ export default function App() {
                         gap: 1,
                     }}
                 >
-
-                    <Box
+                    {location.pathname !== '/welcome' && <Box
                         sx={{
                             display: 'flex',
                             my: 1,
@@ -88,6 +87,7 @@ export default function App() {
                             flexWrap: 'wrap',
                             justifyContent: 'space-between',
                         }}
+                        hidden={true}
                     >
                         <PageHeader title={location.pathname} />
                         <Stack direction={"row"} spacing={1}>
@@ -140,7 +140,7 @@ export default function App() {
                                 Refresh
                             </Button>
                         </Stack>
-                    </Box>
+                    </Box>}
                     <Box sx={{
                         display: 'flex',
                         flexDirection: 'column',

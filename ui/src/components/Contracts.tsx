@@ -17,7 +17,7 @@ export default function Contracts() {
         link: string
     }
 
-    const explorer = 'https://explorer.solana.com'
+    const explorer = 'https://explorer.solana.com/'
     const allContracts:Array<Contract> = MARKETS.map(map=> {return { 
         name: `${map.name}`,
         address: map.feedAddress,

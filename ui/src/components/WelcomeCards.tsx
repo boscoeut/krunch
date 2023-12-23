@@ -9,10 +9,16 @@ import ListItem from '@mui/joy/ListItem';
 import ListItemDecorator from '@mui/joy/ListItemDecorator';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
+import { useNavigate } from 'react-router-dom';
 import { useKrunchStore } from '../hooks/useKrunchStore';
 import AppTitle from './AppTitle';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 
 export default function WelcomeCards() {
+    const wallet = useWallet();
+    const walletState = useWalletModal();
+    const navigate = useNavigate();
     const {
         appInfo } = useKrunchStore((state) => ({
             appInfo: state.appInfo
@@ -20,11 +26,11 @@ export default function WelcomeCards() {
     const leverage = 10
 
     const learnMore = async () => {
-        //setActivePage('documentation')
+        navigate('/documentation')  
 
     }
     const startNow = async () => {
-        
+        walletState.setVisible(true);
     }
 
     return (
@@ -103,7 +109,7 @@ export default function WelcomeCards() {
                     <Button
                         onClick={startNow}
                         variant="soft"
-
+                        hidden={wallet.connected}
                         endDecorator={<LoginRoundedIcon />}
                     >
                         Start now

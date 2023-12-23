@@ -1,29 +1,35 @@
-import BrightnessAutoRoundedIcon from '@mui/icons-material/BrightnessAutoRounded';
+import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
+import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRounded';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
-import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
+import GavelIcon from '@mui/icons-material/Gavel';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import SupportRoundedIcon from '@mui/icons-material/SupportRounded';
+import WavesRoundedIcon from '@mui/icons-material/WavesRounded';
 import Box from '@mui/joy/Box';
-import Logo from './Logo';
-import Stack from '@mui/joy/Stack';
 import Divider from '@mui/joy/Divider';
 import GlobalStyles from '@mui/joy/GlobalStyles';
 import IconButton from '@mui/joy/IconButton';
 import List from '@mui/joy/List';
 import ListItem from '@mui/joy/ListItem';
+import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
+import LightModeIcon from '@mui/icons-material/LightMode';
+
 import ListItemButton, { listItemButtonClasses } from '@mui/joy/ListItemButton';
 import ListItemContent from '@mui/joy/ListItemContent';
 import Sheet from '@mui/joy/Sheet';
+import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useKrunchStore } from "../hooks/useKrunchStore";
 import { closeSidebar } from '../utils';
 import ColorSchemeToggle from './ColorSchemeToggle';
-import { useKrunchStore } from "../hooks/useKrunchStore";
+import Logo from './Logo';
+import * as React from 'react';
+import { useColorScheme } from '@mui/joy/styles';
 
 export default function Sidebar() {
     const location = useLocation();
@@ -31,6 +37,11 @@ export default function Sidebar() {
     const wallet = useWallet();
     const walletState = useWalletModal();
     const provider = useKrunchStore(state => state.provider)
+    const [mounted, setMounted] = React.useState(false);
+    const { mode, setMode } = useColorScheme();
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
     const toggleConnect = () => {
         if (wallet.connected) {
             wallet.disconnect();
@@ -43,29 +54,49 @@ export default function Sidebar() {
         path: '/welcome',
         name: 'Welcome',
         icon: <HomeRoundedIcon />,
+        onclick: () => navigate('/welcome')
     },{
         path: '/home',
         name: 'Account',
-        icon: <HomeRoundedIcon />,
+        icon: <DashboardRoundedIcon />,
+        onclick: () => navigate('/home')
     },{
         path: '/pool',
         name: 'Pool',
-        icon: <GroupRoundedIcon />,
+        icon: <WavesRoundedIcon />,
+        onclick: () => navigate('/pool')
+    },{
+        path: '/markets',
+        name: 'Markets',
+        icon: <CandlestickChartRoundedIcon />,
+        onclick: () => navigate('/markets')
     }]
 
     const bottomPages = [{
         path: '/contracts',
         name: 'Contracts',
-        icon: <SupportRoundedIcon />,
+        icon: <GavelIcon />,
+        onclick: () => navigate('/contracts')
     },{
         path: '/documentation',
         name: 'Documentation',
-        icon: <SupportRoundedIcon />,
-    },{
-        path: '/settings',
-        name: 'Settings',
-        icon: <SettingsRoundedIcon />,
+        icon: <ArticleRoundedIcon />,
+        onclick: () => navigate('/documentation')
     }]
+    if (mounted) {
+        bottomPages.push({
+            path: '/new-path',
+            name: mode === 'dark' ? 'Light Mode' : 'Dark Mode',
+            icon: mode === 'dark' ?  <LightModeIcon />: <DarkModeRoundedIcon /> ,
+            onclick: () => {
+                if (mode === 'light') {
+                    setMode('dark');
+                } else {
+                    setMode('light');
+                }
+            }
+        });
+    }
     return (
         <Sheet
             className="Sidebar"
@@ -147,7 +178,7 @@ export default function Sidebar() {
                 >
                     {pages.map((page) => ( <ListItem>
                         <ListItemButton selected={location.pathname.startsWith(page.path)} 
-                            onClick={() => navigate(page.path)}>
+                            onClick={page.onclick}>
                             {page.icon}
                             <ListItemContent>
                                 <Typography level="title-sm">{page.name}</Typography>
@@ -169,7 +200,7 @@ export default function Sidebar() {
 
                  {bottomPages.map((page) => ( <ListItem>
                         <ListItemButton selected={location.pathname.startsWith(page.path)} 
-                            onClick={() => navigate(page.path)}>
+                            onClick={page.onclick}>
                             {page.icon}
                             <ListItemContent>
                                 <Typography level="title-sm">{page.name}</Typography>
@@ -181,7 +212,6 @@ export default function Sidebar() {
             </Box>
             <Divider />
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <ColorSchemeToggle sx={{ ml: 'auto' }} />
                 <Box sx={{ minWidth: 0, flex: 1 }}>
                     {wallet.connected &&
                         <>
