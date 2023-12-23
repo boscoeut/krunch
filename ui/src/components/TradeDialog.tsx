@@ -29,46 +29,54 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const [marketIndex, setMarketIndex] = React.useState('1');
   const [amount, setAmount] = React.useState('0.5');
   const { getProgram, getProvider } = useProgram();
+  const [submitting, setSubmitting] = React.useState(false);
 
   const handleSubmit = async () => {
     const market = MARKETS.find((market) => market.marketIndex === Number(marketIndex))
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market?.name)
-    if (position) {
-      // Handle form submission here
-      const provider = await getProvider()
-      const program = await getProgram()
+    try {
+      setSubmitting(true)
+      if (position) {
+        // Handle form submission here
+        const provider = await getProvider()
+        const program = await getProgram()
 
-      const index = Number(marketIndex)
-      console.log('executeTrade', marketIndex)
+        const index = Number(marketIndex)
+        console.log('executeTrade', marketIndex)
 
-      await fetchOrCreateAccount(program, 'userPosition',
-        ['user_position',
-          provider.wallet.publicKey,
-          index],
-        'addUserPosition', [new anchor.BN(index)],
-        {
-          userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+        await fetchOrCreateAccount(program, 'userPosition',
+          ['user_position',
+            provider.wallet.publicKey,
+            index],
+          'addUserPosition', [new anchor.BN(index)],
+          {
+            userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+            market: await findAddress(program, ['market', index]),
+          });
+
+        await fetchOrCreateAccount(program, 'userAccount',
+          ['user_account',
+            provider.wallet.publicKey],
+          'createUserAccount', []);
+
+        const tx = await program.methods.executeTrade(
+          new anchor.BN(marketIndex),
+          new anchor.BN(Number(amount) * AMOUNT_DECIMALS)
+        ).accounts({
           market: await findAddress(program, ['market', index]),
-        });
-
-      await fetchOrCreateAccount(program, 'userAccount',
-        ['user_account',
-          provider.wallet.publicKey],
-        'createUserAccount', []);
-
-      const tx = await program.methods.executeTrade(
-        new anchor.BN(marketIndex),
-        new anchor.BN(Number(amount) * AMOUNT_DECIMALS)
-      ).accounts({
-        market: await findAddress(program, ['market', index]),
-        exchange: await findAddress(program, ['exchange']),
-        userPosition: await findAddress(program, ['user_position', provider.wallet.publicKey, index]),
-        userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-        chainlinkFeed: position.feedAddress,
-        chainlinkProgram: CHAINLINK_PROGRAM,
-      }).rpc();
-      console.log("executeTrade", tx);
-      setOpen(false)
+          exchange: await findAddress(program, ['exchange']),
+          userPosition: await findAddress(program, ['user_position', provider.wallet.publicKey, index]),
+          userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+          chainlinkFeed: position.feedAddress,
+          chainlinkProgram: CHAINLINK_PROGRAM,
+        }).rpc();
+        console.log("executeTrade", tx);
+        setOpen(false)
+      }
+    } catch (e) {
+      console.log("error", e);
+    } finally {
+      setSubmitting(false)
     }
   };
 
@@ -113,7 +121,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
 
                 );
               })}
-              <Button type="submit">Submit</Button>
+              <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
             </Stack>
           </form>
         </ModalDialog>

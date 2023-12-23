@@ -27,57 +27,63 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
   const [marketWeight, setMarketWeight] = React.useState('.1');
   const [leverage, setLeverage] = React.useState('1');
   const [takerFee, setTakerFee] = React.useState('0.2');
-  const [makerFee, setMakerFee] = React.useState('0.1'); 
+  const [makerFee, setMakerFee] = React.useState('0.1');
   const [feedAddress, setFeedAddress] = React.useState('716hFAECqotxcXcj8Hs8nr7AG6q9dBw2oX3k3M8V7uGq');
-  const {getProgram} = useProgram();
-
+  const { getProgram } = useProgram();
+  const [submitting, setSubmitting] = React.useState(false);
 
   const handleSubmit = async () => {
     // Handle form submission here
+    try {
+      setSubmitting(true)
+      let accountExists = false;
+      console.log('handleSubmit', marketIndex)
+      const program = await getProgram(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
 
-    let accountExists = false;
-    console.log('handleSubmit', marketIndex)
-    const program = await getProgram(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
-
-    try{
-      await fetchAccount(program,'market',['market', Number(marketIndex)])
-      accountExists = true;
-    }catch(x){
-      // create account
-    }
-    if (accountExists){
-      const tx = await program.methods.updateMarket(
-        new anchor.BN(marketIndex),
-        new anchor.BN(Number(makerFee) * FEE_DECIMALS),
-        new anchor.BN(Number(takerFee) * FEE_DECIMALS),
-        new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
-        new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
-      ).accounts({
-        market: await findAddress(program,['market', Number(marketIndex)]),
-        exchange: await findAddress(program,['exchange'])
-      }).rpc();
-      console.log("updateMarket", tx);
-      const acct: any = await fetchAccount(program,'market',
-        ['market',Number(marketIndex)]);
-      console.log('updateMarket', acct)
-      setOpen(false)
-    }else{
-      const tx = await program.methods.addMarket(
-        new anchor.BN(marketIndex),
-        new anchor.BN(Number(makerFee) * FEE_DECIMALS),
-        new anchor.BN(Number(takerFee) * FEE_DECIMALS),
-        new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
-        new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
-        new PublicKey(feedAddress), 
-      ).accounts({
-        market: await findAddress(program,['market', Number(marketIndex)]),
-        exchange: await findAddress(program,['exchange'])
-      }).rpc();
-      console.log("updateMarket", tx);
-      const acct: any = await fetchAccount(program,'market',
-        ['market',Number(marketIndex)]);
-      console.log('updateMarket', acct)
-      setOpen(false)
+      try {
+        await fetchAccount(program, 'market', ['market', Number(marketIndex)])
+        accountExists = true;
+      } catch (x) {
+        // create account
+      }
+      if (accountExists) {
+        const tx = await program.methods.updateMarket(
+          new anchor.BN(marketIndex),
+          new anchor.BN(Number(makerFee) * FEE_DECIMALS),
+          new anchor.BN(Number(takerFee) * FEE_DECIMALS),
+          new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
+          new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
+        ).accounts({
+          market: await findAddress(program, ['market', Number(marketIndex)]),
+          exchange: await findAddress(program, ['exchange'])
+        }).rpc();
+        console.log("updateMarket", tx);
+        const acct: any = await fetchAccount(program, 'market',
+          ['market', Number(marketIndex)]);
+        console.log('updateMarket', acct)
+        setOpen(false)
+      } else {
+        const tx = await program.methods.addMarket(
+          new anchor.BN(marketIndex),
+          new anchor.BN(Number(makerFee) * FEE_DECIMALS),
+          new anchor.BN(Number(takerFee) * FEE_DECIMALS),
+          new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
+          new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
+          new PublicKey(feedAddress),
+        ).accounts({
+          market: await findAddress(program, ['market', Number(marketIndex)]),
+          exchange: await findAddress(program, ['exchange'])
+        }).rpc();
+        console.log("updateMarket", tx);
+        const acct: any = await fetchAccount(program, 'market',
+          ['market', Number(marketIndex)]);
+        console.log('updateMarket', acct)
+        setOpen(false)
+      }
+    } catch (e) {
+      console.log("error", e);
+    } finally {
+      setSubmitting(false)
     }
   };
 
@@ -113,7 +119,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
                   </FormControl>
                 );
               })}
-              <Button type="submit">Submit</Button>
+              <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
             </Stack>
           </form>
         </ModalDialog>
