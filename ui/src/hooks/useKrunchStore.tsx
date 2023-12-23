@@ -273,13 +273,15 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
     const userAccount = await fetchAccount(get().program, 'userAccount', ['user_account', get().provider.wallet.publicKey])
 
+    console.log('userAccount', userAccount.rewards.toString())
+    console.log('userCollateral', get().userCollateral.toString())
     let userTotal = get().userCollateral - userAccount.rewards.toNumber();
     let exchangeTotal = get().exchangeCollateral;
     const exchangeRewards =
-      exchange.pnl.toNumber()
+      (exchange.pnl.toNumber()
       + exchange.rebates.toNumber()
       + exchange.rewards.toNumber()
-      + exchange.fees.toNumber()
+      + exchange.fees.toNumber()) * (exchange.rewardRate.toNumber()) / AMOUNT_DECIMALS;
     // get % or rewards available
     let amount = (exchangeRewards * userTotal) / exchangeTotal;
 

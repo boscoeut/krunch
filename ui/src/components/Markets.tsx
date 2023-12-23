@@ -29,7 +29,6 @@ export default function Markets() {
                         <th>Leverage</th>
                         <th>Maker Fee</th>
                         <th>Taker Fee</th>
-                        <th>Address</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -46,8 +45,6 @@ export default function Markets() {
                             <td>{renderItem(row.leverage, LEVERAGE_DECIMALS)}x</td>
                             <td>{renderItem(row.makerFee, FEE_DECIMALS)}</td>
                             <td>{renderItem(row.takerFee, FEE_DECIMALS)}</td>
-                            <td>{`${row.feedAddress}`}</td>
-
                         </tr>
 
 

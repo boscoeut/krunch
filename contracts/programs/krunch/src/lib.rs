@@ -11,12 +11,13 @@ const LEVERAGE_DECIMALS: u128 = 10u128.pow(4);
 const MARKET_WEIGHT_DECIMALS: u128 = 10u128.pow(4);
 const FEE_DECIMALS: u128 = 10u128.pow(4);
 const AMOUNT_NUM_DECIMALS: u8 = 9;
+const AMOUNT_DECIMALS: u128 = 10u128.pow(AMOUNT_NUM_DECIMALS as u32);
 
 #[program]
 pub mod krunch {
     use super::*;
 
-    pub fn initialize_exchange(ctx: Context<InitializeExchange>, leverage: u32, reward_frequency:u64) -> Result<()> {
+    pub fn initialize_exchange(ctx: Context<InitializeExchange>, leverage: u32, reward_frequency:u64, reward_rate:u64) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.admin = ctx.accounts.admin.key.to_owned();
         exchange.margin_used = 0;
@@ -32,6 +33,7 @@ pub mod krunch {
         exchange.amount_withdrawn = 0;
         exchange.amount_deposited = 0;
         exchange.reward_frequency = reward_frequency;
+        exchange.reward_rate = reward_rate; 
         Ok(())
     }
 
@@ -264,7 +266,7 @@ pub mod krunch {
             return err!(KrunchErrors::RewardsClaimUnavailable);
         }
 
-        let user_total = calculate_user_total(&user_account, exchange.leverage.into()) - user_account.rewards; // don't double count rewards
+        let user_total = calculate_user_total(&user_account, exchange.leverage.into()) - user_account.rewards as i128; // don't double count rewards
         let exchange_total = calculate_exchange_total(&exchange);
         let exchange_rewards = exchange_rewards_available(&exchange);
         // get % or rewards available
@@ -530,7 +532,7 @@ fn exchange_rewards_available(exchange: &Exchange) -> i128 {
         + exchange.rebates
         + exchange.rewards
         + exchange.fees;
-    return exchange_total as i128;
+    return (exchange_total as i128 * exchange.reward_rate as i128)/AMOUNT_DECIMALS as i128;
 }
 
 fn calculate_market_total(exchange: &Exchange, market: &Market) -> i128 {

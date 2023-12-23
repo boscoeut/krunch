@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EXCHANGE_POSITIONS = exports.MARKETS = exports.MARKET_TYPES = exports.KRUNCH = exports.ASSOCIATED_TOKEN_PROGRAM_ID = exports.TOKEN_PROGRAM_ID = exports.ADMIN_ADDRESS = exports.EXCHANGE_LEVERAGE = exports.MARKET_LEVERAGE = exports.LEVERAGE_DECIMALS = exports.AMOUNT_DECIMALS = exports.MARKET_WEIGHT_DECIMALS = exports.FEE_DECIMALS = exports.PRICE_DECIMALS = exports.NETWORK_URL = exports.REWARD_FREQUENCY = exports.CHAINLINK_PROGRAM = exports.BTC_USD_FEED = exports.ETH_USD_FEED = exports.USDT_USD_FEED = exports.USDC_USD_FEED = exports.SOL_USD_FEED = exports.ETH_MINT = exports.BTC_MINT = exports.USDT_MINT = exports.SOL_MINT = exports.USDC_MINT = void 0;
+exports.EXCHANGE_POSITIONS = exports.MARKETS = exports.MARKET_TYPES = exports.KRUNCH = exports.ASSOCIATED_TOKEN_PROGRAM_ID = exports.TOKEN_PROGRAM_ID = exports.ADMIN_ADDRESS = exports.REWARD_RATE = exports.EXCHANGE_LEVERAGE = exports.MARKET_LEVERAGE = exports.LEVERAGE_DECIMALS = exports.AMOUNT_DECIMALS = exports.MARKET_WEIGHT_DECIMALS = exports.FEE_DECIMALS = exports.PRICE_DECIMALS = exports.NETWORK_URL = exports.REWARD_FREQUENCY = exports.CHAINLINK_PROGRAM = exports.BTC_USD_FEED = exports.ETH_USD_FEED = exports.USDT_USD_FEED = exports.USDC_USD_FEED = exports.SOL_USD_FEED = exports.ETH_MINT = exports.BTC_MINT = exports.USDT_MINT = exports.SOL_MINT = exports.USDC_MINT = void 0;
 var web3_js_1 = require("@solana/web3.js");
 exports.USDC_MINT = new web3_js_1.PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 exports.SOL_MINT = new web3_js_1.PublicKey("Fx84E9SUstSvQN4pq56xcG4hXghkeAMoL6W6ajCnZjyt");
@@ -24,6 +24,7 @@ exports.AMOUNT_DECIMALS = Math.pow(10, 9);
 exports.LEVERAGE_DECIMALS = Math.pow(10, 4);
 exports.MARKET_LEVERAGE = 10;
 exports.EXCHANGE_LEVERAGE = 10;
+exports.REWARD_RATE = 0.5 * exports.AMOUNT_DECIMALS;
 // export const ADMIN_ADDRESS="EDsmoWKuanmGubggz7XxTYX6qc3LtWgXj39qSikEqk7S" // codespaces
 exports.ADMIN_ADDRESS = "HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS"; // local
 exports.TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";

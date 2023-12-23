@@ -28,6 +28,7 @@ pub struct InitializeExchange<'info> {
                 + 8 // rewards:i64
                 + 8 // last_rewards_claim:i64
                 + 8 // reward_frequency:u64
+                + 8 // reward_rate:u64
             )]
     pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
@@ -409,6 +410,7 @@ pub struct Exchange {
     pub rewards: i64,
     pub last_rewards_claim: i64,
     pub reward_frequency: u64,
+    pub reward_rate: u64,
 }
 
 #[account]

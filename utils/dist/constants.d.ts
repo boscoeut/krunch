@@ -19,6 +19,7 @@ export declare const AMOUNT_DECIMALS: number;
 export declare const LEVERAGE_DECIMALS: number;
 export declare const MARKET_LEVERAGE = 10;
 export declare const EXCHANGE_LEVERAGE = 10;
+export declare const REWARD_RATE: number;
 export declare const ADMIN_ADDRESS = "HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS";
 export declare const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 export declare const ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";

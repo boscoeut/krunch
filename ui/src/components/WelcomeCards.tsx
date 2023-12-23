@@ -97,7 +97,6 @@ export default function WelcomeCards() {
                 </List>
                 <Divider inset="none" />
                 <CardActions>
-
                     <Button
                         onClick={learnMore}
                         sx={{ mr: 'auto' }}

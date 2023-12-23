@@ -24,6 +24,7 @@ export const LEVERAGE_DECIMALS = 10 ** 4;
 export const MARKET_LEVERAGE = 10;
 export const EXCHANGE_LEVERAGE = 10;    
 
+export const REWARD_RATE = 0.5 * AMOUNT_DECIMALS;
 // export const ADMIN_ADDRESS="EDsmoWKuanmGubggz7XxTYX6qc3LtWgXj39qSikEqk7S" // codespaces
 export const ADMIN_ADDRESS="HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS" // local
 export const TOKEN_PROGRAM_ID="TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"

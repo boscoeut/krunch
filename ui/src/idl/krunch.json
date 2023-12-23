@@ -29,6 +29,10 @@
         {
           "name": "rewardFrequency",
           "type": "u64"
+        },
+        {
+          "name": "rewardRate",
+          "type": "u64"
         }
       ]
     },
@@ -716,6 +720,10 @@
           },
           {
             "name": "rewardFrequency",
+            "type": "u64"
+          },
+          {
+            "name": "rewardRate",
             "type": "u64"
           }
         ]
