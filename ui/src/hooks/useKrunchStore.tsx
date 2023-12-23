@@ -12,6 +12,7 @@ export const defaultAppInfo: AppInfo = {
   appTitle: "Krunch",
   appSubTitle: "Defi",
   logoColor:'#37c437',
+  leverage: 10,
   docAppReference: "Krunch Defi",
   appDescription: 'Decentralized Trading',
   welcomeMessage: 'Welcome to Krunch Defi',

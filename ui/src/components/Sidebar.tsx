@@ -38,6 +38,34 @@ export default function Sidebar() {
             walletState.setVisible(true);
         }
     }
+
+    const pages = [{
+        path: '/welcome',
+        name: 'Welcome',
+        icon: <HomeRoundedIcon />,
+    },{
+        path: '/home',
+        name: 'Account',
+        icon: <HomeRoundedIcon />,
+    },{
+        path: '/pool',
+        name: 'Pool',
+        icon: <GroupRoundedIcon />,
+    }]
+
+    const bottomPages = [{
+        path: '/contracts',
+        name: 'Contracts',
+        icon: <SupportRoundedIcon />,
+    },{
+        path: '/documentation',
+        name: 'Documentation',
+        icon: <SupportRoundedIcon />,
+    },{
+        path: '/settings',
+        name: 'Settings',
+        icon: <SettingsRoundedIcon />,
+    }]
     return (
         <Sheet
             className="Sidebar"
@@ -117,34 +145,15 @@ export default function Sidebar() {
                         '--ListItem-radius': (theme) => theme.vars.radius.sm,
                     }}
                 >
-                    <ListItem>
-                        <ListItemButton selected={location.pathname.startsWith('/home')} onClick={() => navigate("/home")}>
-                            <HomeRoundedIcon />
+                    {pages.map((page) => ( <ListItem>
+                        <ListItemButton selected={location.pathname.startsWith(page.path)} 
+                            onClick={() => navigate(page.path)}>
+                            {page.icon}
                             <ListItemContent>
-                                <Typography level="title-sm">Account</Typography>
+                                <Typography level="title-sm">{page.name}</Typography>
                             </ListItemContent>
                         </ListItemButton>
-                    </ListItem>
-
-
-                    <ListItem>
-                        <ListItemButton selected={location.pathname.startsWith('/markets')} onClick={() => navigate("/markets")}>
-                            <DashboardRoundedIcon />
-                            <ListItemContent>
-                                <Typography level="title-sm">Markets</Typography>
-                            </ListItemContent>
-                        </ListItemButton>
-                    </ListItem>
-
-                    <ListItem>
-                        <ListItemButton selected={location.pathname.startsWith('/pool')} onClick={() => navigate("/pool")}>
-                            <GroupRoundedIcon />
-                            <ListItemContent>
-                                <Typography level="title-sm">Pool</Typography>
-                            </ListItemContent>
-                        </ListItemButton>
-                    </ListItem>
-
+                    </ListItem> ))}
                 </List>
 
                 <List
@@ -157,18 +166,17 @@ export default function Sidebar() {
                         mb: 2,
                     }}
                 >
-                    <ListItem>
-                        <ListItemButton selected={location.pathname.startsWith('/documentation')} onClick={() => navigate("/documentation")}>
-                            <SupportRoundedIcon />
-                            Documentation
+
+                 {bottomPages.map((page) => ( <ListItem>
+                        <ListItemButton selected={location.pathname.startsWith(page.path)} 
+                            onClick={() => navigate(page.path)}>
+                            {page.icon}
+                            <ListItemContent>
+                                <Typography level="title-sm">{page.name}</Typography>
+                            </ListItemContent>
                         </ListItemButton>
-                    </ListItem>
-                    <ListItem>
-                        <ListItemButton selected={location.pathname.startsWith('/settings')} onClick={() => navigate("/settings")}>
-                            <SettingsRoundedIcon />
-                            Settings
-                        </ListItemButton>
-                    </ListItem>
+                    </ListItem> ))}
+                  
                 </List>
             </Box>
             <Divider />

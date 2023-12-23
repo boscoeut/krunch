@@ -12,6 +12,7 @@ import Account from './components/Account';
 import Documentation from './components/Documentation';
 import Header from './components/Header';
 import Markets from './components/Markets';
+import Welcome from './components/Welcome';
 import Pool from './components/Pool';
 import Settings from './components/Settings';
 import Sidebar from './components/Sidebar';
@@ -23,6 +24,7 @@ import { useKrunchStore } from "./hooks/useKrunchStore";
 import { useState } from 'react';
 import useProgram from './hooks/useProgram';  
 import PageHeader from './components/PageHeader';
+import Contracts from './components/Contracts'; 
 
 export default function App() {
     const location = useLocation();
@@ -146,10 +148,12 @@ export default function App() {
                         overflowY: 'auto',
                     }}>
                         <Routes >
+                            <Route path="/welcome" Component={Welcome} />
                             <Route path="/home" Component={Account} />
                             <Route path="/pool" Component={Pool} />
                             <Route path="/settings" Component={Settings} />
                             <Route path="/documentation" Component={Documentation} />
+                            <Route path="/contracts" Component={Contracts} />
                             <Route path="/markets" Component={Markets} />
                             <Route path="/" element={<Navigate replace to="/home" />} />
                         </Routes>

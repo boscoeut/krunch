@@ -57,5 +57,6 @@ export type AppInfo = {
     protocolName:string,
     pageTitle:string,
     pageDescription:string,
-    logoColor:string
+    logoColor:string,
+    leverage:number,
   }
