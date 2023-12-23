@@ -20,6 +20,8 @@ export type Market = {
     currValue?:number,
     unrealizedPnl?:number,
     entryPrice?:number, 
+    marketTypeId?:number,
+    marketType?:string,  
 }
 
 export type ExchangeBalance = {

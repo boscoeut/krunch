@@ -3,7 +3,7 @@ import { PythCluster, PythHttpClient, getPythClusterApiUrl, getPythProgramKeyFor
 import type { } from '@redux-devtools/extension'; // required for devtools typing
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { Connection } from "@solana/web3.js";
-import { EXCHANGE_POSITIONS, LEVERAGE_DECIMALS, MARKETS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS } from 'utils/dist/constants';
+import { EXCHANGE_POSITIONS, LEVERAGE_DECIMALS, MARKETS, MARKET_WEIGHT_DECIMALS, AMOUNT_DECIMALS, MARKET_TYPES } from 'utils/dist/constants';
 import { create } from 'zustand';
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
 import type { ExchangeBalance, Market, UserPosition, AppInfo } from '../types';
@@ -149,8 +149,8 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         accountCurrentValue += currValue
         accountUnrealizedPnl += unrealizedPnl
         const entryPrice = acct.tokenAmount.toNumber() === 0 ? 0 : acct.basis.toNumber() / acct.tokenAmount.toNumber() 
-
-        tempMarkets.push({ market: market.name, ...market, ...acct, price,entryPrice, marketTotal, unrealizedPnl, currValue })
+        const marketType = MARKET_TYPES.find((x:any) => x.id === market.marketTypeId ||1)
+        tempMarkets.push({ market: market.name, ...market, ...acct, price,entryPrice, marketTotal, unrealizedPnl, currValue,marketType:marketType?.name })
       } catch (x: any) {
         console.log(x.message)
         console.log('could not get market ' + market.name)

@@ -31,18 +31,32 @@ export const ASSOCIATED_TOKEN_PROGRAM_ID="ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsL
 // export const KRUNCH="5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm" // codespaces
 export const KRUNCH="EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52" // local address
 
+export const MARKET_TYPES = [{
+    id: 1,
+    name:'Crypto'
+},{ 
+    id:2,
+    name:'Stocks'
+},{
+    id:3,
+    name:'Forex'
+}]
+
 export const MARKETS= [{
     name:"SOL/USD",
     feedAddress:SOL_USD_FEED.toString(),
-    marketIndex:1
+    marketIndex:1,
+    marketTypeId:1
 },{
     name:"BTC/USD",
     feedAddress:BTC_USD_FEED.toString(),
-    marketIndex:2
+    marketIndex:2,
+    marketTypeId:1
 },{
     name:"ETH/USD",
     feedAddress:ETH_USD_FEED.toString(),
-    marketIndex:3
+    marketIndex:3,
+    marketTypeId:1
 }]
 
 export const EXCHANGE_POSITIONS = [{

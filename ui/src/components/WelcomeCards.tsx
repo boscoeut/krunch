@@ -109,7 +109,7 @@ export default function WelcomeCards() {
                     <Button
                         onClick={startNow}
                         variant="soft"
-                        hidden={wallet.connected}
+                        sx={{display:wallet.connected ? 'none' : 'inline'}}
                         endDecorator={<LoginRoundedIcon />}
                     >
                         Start now
