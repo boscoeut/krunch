@@ -29,49 +29,57 @@ export interface AccountDialogProps {
 export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
   const [market, setMarket] = React.useState('USDC/USD');
   const [amount, setAmount] = React.useState('1000');
+  const [submitting, setSubmitting] = React.useState(false);
   const { getProgram, getProvider } = useProgram();
 
 
   const handleSubmit = async () => {
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
 
-    if (position) {
-      console.log("position", position);
-      const program = await getProgram(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
-      const provider = await getProvider(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
+    try {
+      setSubmitting(true)
+      if (position) {
+        console.log("position", position);
+        const program = await getProgram(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
+        const provider = await getProvider(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
 
-      let tokenAccount = await getOrCreateAssociatedTokenAccount(
-        provider.connection, //connection
-        provider.wallet.publicKey, //payer
-        position.mint, //mint
-        provider.wallet.publicKey, //owner
-      )
+        let tokenAccount = await getOrCreateAssociatedTokenAccount(
+          provider.connection, //connection
+          provider.wallet.publicKey, //payer
+          position.mint, //mint
+          provider.wallet.publicKey, //owner
+        )
 
-      const exchangeAddress = await findAddress(program, ['exchange'])
-      const escrowAccount = await findAddress(program, [
-        exchangeAddress,
-        position.mint])
+        const exchangeAddress = await findAddress(program, ['exchange'])
+        const escrowAccount = await findAddress(program, [
+          exchangeAddress,
+          position.mint])
 
-      const transactionAmount = Number(amount) * AMOUNT_DECIMALS
-      console.log("transactionAmount", transactionAmount);
+        const transactionAmount = Number(amount) * AMOUNT_DECIMALS
+        console.log("transactionAmount", transactionAmount);
 
-      const method = transactionAmount > 0 ? 'deposit' : 'withdraw'
+        const method = transactionAmount > 0 ? 'deposit' : 'withdraw'
 
-      const tx = await program.methods[method](
-        new anchor.BN(Math.abs(transactionAmount))
-      ).accounts({
-        userTokenAccount: new PublicKey(tokenAccount.address.toString()),
-        mint: position.mint,
-        exchange: exchangeAddress,
-        escrowAccount,
-        userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-        exchangeTreasuryPosition: await findAddress(program, ['exchange_position', position.mint]),
-        owner: provider.wallet.publicKey,
-        chainlinkFeed: position.feedAddress,
-        chainlinkProgram: CHAINLINK_PROGRAM,
-      }).rpc();
-      console.log("transactionAmount tx", tx);
-      setOpen(false)
+        const tx = await program.methods[method](
+          new anchor.BN(Math.abs(transactionAmount))
+        ).accounts({
+          userTokenAccount: new PublicKey(tokenAccount.address.toString()),
+          mint: position.mint,
+          exchange: exchangeAddress,
+          escrowAccount,
+          userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+          exchangeTreasuryPosition: await findAddress(program, ['exchange_position', position.mint]),
+          owner: provider.wallet.publicKey,
+          chainlinkFeed: position.feedAddress,
+          chainlinkProgram: CHAINLINK_PROGRAM,
+        }).rpc();
+        console.log("transactionAmount tx", tx);
+        setOpen(false)
+      }
+    } catch (e) {
+      console.log("error", e);
+    } finally {
+      setSubmitting(false)
     }
   };
 
@@ -99,8 +107,9 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
                   <>
                     {property.type === 'markets' && <FormControl key={property.label}>
                       <FormLabel>{property.label}</FormLabel>
-                      <Select value={property.value} onChange={(e: any,newValue:any) => { 
-                          property.onChange(newValue)}}>
+                      <Select value={property.value} onChange={(e: any, newValue: any) => {
+                        property.onChange(newValue)
+                      }}>
                         {EXCHANGE_POSITIONS.map((position) => {
                           return <Option value={position.market} >{position.market}</Option>
                         })}
@@ -114,7 +123,7 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
                   </>
                 );
               })}
-              <Button type="submit">Submit</Button>
+              <Button disabled={submitting} type="submit">{submitting?'Submitting...':'Submit'}</Button>
             </Stack>
           </form>
         </ModalDialog>
