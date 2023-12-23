@@ -5,6 +5,8 @@ import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
+import Select from '@mui/joy/Select';
+import Option from '@mui/joy/Option';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
 import ModalClose from '@mui/joy/ModalClose';
@@ -12,7 +14,7 @@ import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
 import { PublicKey } from "@solana/web3.js";
 import * as React from 'react';
-import { CHAINLINK_PROGRAM, EXCHANGE_POSITIONS,AMOUNT_DECIMALS } from "utils/dist/constants";
+import { CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, AMOUNT_DECIMALS } from "utils/dist/constants";
 import { findAddress } from "utils/dist/utils";
 import useProgram from '../hooks/useProgram';
 const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
@@ -32,12 +34,12 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
 
   const handleSubmit = async () => {
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
-    
+
     if (position) {
       console.log("position", position);
       const program = await getProgram(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
       const provider = await getProvider(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
-  
+
       let tokenAccount = await getOrCreateAssociatedTokenAccount(
         provider.connection, //connection
         provider.wallet.publicKey, //payer
@@ -74,8 +76,8 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
   };
 
   const properties = [
-    { label: 'Amount', value: amount, onChange: setAmount },
-    { label: 'Market', value: market, onChange: setMarket },
+    { label: 'Amount', value: amount, onChange: setAmount, type: 'number' },
+    { label: 'Market', value: market, onChange: setMarket, type: 'markets' },
   ]
 
   return (
@@ -94,10 +96,22 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
             <Stack spacing={2}>
               {properties.map((property) => {
                 return (
-                  <FormControl key={property.label}>
-                    <FormLabel>{property.label}</FormLabel>
-                    <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
-                  </FormControl>
+                  <>
+                    {property.type === 'markets' && <FormControl key={property.label}>
+                      <FormLabel>{property.label}</FormLabel>
+                      <Select value={property.value} onChange={(e: any,newValue:any) => { 
+                          property.onChange(newValue)}}>
+                        {EXCHANGE_POSITIONS.map((position) => {
+                          return <Option value={position.market} >{position.market}</Option>
+                        })}
+                      </Select>
+
+                    </FormControl>}
+                    {property.type === 'number' && <FormControl key={property.label}>
+                      <FormLabel>{property.label}</FormLabel>
+                      <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
+                    </FormControl>}
+                  </>
                 );
               })}
               <Button type="submit">Submit</Button>
