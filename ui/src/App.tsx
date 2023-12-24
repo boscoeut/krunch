@@ -26,28 +26,32 @@ import AccountDialog from './components/AccountDialog';
 import ExchangeDialog from './components/ExchangeDialog';
 import { useKrunchStore } from "./hooks/useKrunchStore";
 import { useState } from 'react';
-import useProgram from './hooks/useProgram';  
+import useProgram from './hooks/useProgram';
 import PageHeader from './components/PageHeader';
-import Contracts from './components/Contracts'; 
+import Contracts from './components/Contracts';
 
 export default function App() {
     const location = useLocation();
-    const {getProgram, getProvider} = useProgram() // initialize the program (do not remove)
+    const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
     const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
     const [accountDialogOpen, setAccountDialogOpen] = useState(false);
     const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
     const refreshAll = useKrunchStore(state => state.refreshAll)
     const claimRewards = useKrunchStore(state => state.claimRewards)
-    const refresh = async()=>{
+    const refresh = async () => {
         const program = await getProgram()
-        const provider = await getProvider()        
+        const provider = await getProvider()
         console.log("APP: program", program)
         console.log("APP: provider", provider)
         refreshAll()
     }
-    const claim = async()=>{
-        await claimRewards()
+    const claim = async () => {
+        try {
+            await claimRewards()
+        } catch (e) {
+            console.log("claim error", e)
+        }
     }
     return (
         <CssVarsProvider disableTransitionOnChange>
@@ -95,7 +99,7 @@ export default function App() {
                     >
                         <PageHeader title={location.pathname} />
                         <Stack direction={"row"} spacing={1}>
-                        <Button
+                            <Button
                                 color="primary"
                                 startDecorator={<CandlestickChartRoundedIcon />}
                                 size="sm"

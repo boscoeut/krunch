@@ -15,6 +15,11 @@ export default function AccountDetails() {
         +Number(userAccount.rebates)
         +Number(userAccount.rewards)
         +Number(userAccount.pnl)
+
+        let lastRewardsClaimed = 'Never'
+        if (userAccount.lastRewardsClaimed) {
+            lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber()*1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber()*1000).toLocaleTimeString()}`
+        }
    
     const values = [{
         key:'Rewards',
@@ -30,7 +35,7 @@ export default function AccountDetails() {
         indent: 1
     },{
         key:'Last User Rewards Claim',
-        value: `${new Date(userAccount.lastRewardsClaim?.toNumber()*1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber()*1000).toLocaleTimeString()}`,
+        value: lastRewardsClaimed,
         indent:1
     },{
         key:'Account Value',

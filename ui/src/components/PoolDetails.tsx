@@ -16,6 +16,11 @@ export default function PoolDetails() {
         +Number(exchange.rebates)
         +Number(exchange.rewards)
         +Number(exchange.pnl)
+
+    let lastRewardsClaimed = 'Never'
+    if (exchange.lastRewardsClaimed) {
+        lastRewardsClaimed = `${new Date(exchange.lastRewardsClaim?.toNumber()*1000).toLocaleDateString()} ${new Date(exchange.lastRewardsClaim?.toNumber()*1000).toLocaleTimeString()}`
+    }
     const values = [{
         key:'Pool Value',
         value: renderItem(total),
@@ -88,7 +93,7 @@ export default function PoolDetails() {
         indent: 1
     },{
         key:'Last Rewards Claim',
-        value: `${new Date(exchange.lastRewardsClaim?.toNumber()*1000).toLocaleDateString()} ${new Date(exchange.lastRewardsClaim?.toNumber()*1000).toLocaleTimeString()}`,
+        value: lastRewardsClaimed,
         indent:1
     },{
         key:'Reward Frequency',
