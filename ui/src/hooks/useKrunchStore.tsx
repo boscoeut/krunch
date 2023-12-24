@@ -23,6 +23,7 @@ export const defaultAppInfo: AppInfo = {
 }
 
 interface KrunchState {
+  isAdmin:boolean,
   appInfo: AppInfo,
   refreshAwardsAvailable: () => Promise<void>,
   exchangeRewardsAvailable: number,
@@ -56,6 +57,7 @@ interface KrunchState {
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  isAdmin:false,
   appInfo: defaultAppInfo,
   exchangeRewardsAvailable: 0,
   userRewardsAvailable: 0,

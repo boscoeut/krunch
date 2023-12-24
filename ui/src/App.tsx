@@ -1,58 +1,23 @@
 import Box from '@mui/joy/Box';
-import Button from '@mui/joy/Button';
 import CssBaseline from '@mui/joy/CssBaseline';
-import Stack from '@mui/joy/Stack';
-import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRounded';
 import { CssVarsProvider } from '@mui/joy/styles';
 // icons
-import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
-import AccountBalanceRounded from '@mui/icons-material/AccountBalanceRounded';
-import EmojiEventsRounded from '@mui/icons-material/EmojiEventsRounded';
-import CurrencyExchangeRounded from '@mui/icons-material/CurrencyExchangeRounded';
-import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
-import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import { useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Account from './components/Account';
+import Contracts from './components/Contracts';
 import Documentation from './components/Documentation';
 import Header from './components/Header';
 import Markets from './components/Markets';
-import Welcome from './components/Welcome';
+import PageHeader from './components/PageHeader';
 import Pool from './components/Pool';
 import Settings from './components/Settings';
 import Sidebar from './components/Sidebar';
-import TradeDialog from './components/TradeDialog';
-import MarketDialog from './components/MarketDialog';
-import AccountDialog from './components/AccountDialog';
-import ExchangeDialog from './components/ExchangeDialog';
-import { useKrunchStore } from "./hooks/useKrunchStore";
-import { useState } from 'react';
-import useProgram from './hooks/useProgram';
-import PageHeader from './components/PageHeader';
-import Contracts from './components/Contracts';
+import Toolbar from './components/Toolbar';
+import Welcome from './components/Welcome';
 
 export default function App() {
     const location = useLocation();
-    const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
-    const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
-    const [marketDialogOpen, setMarketDialogOpen] = useState(false);
-    const [accountDialogOpen, setAccountDialogOpen] = useState(false);
-    const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
-    const refreshAll = useKrunchStore(state => state.refreshAll)
-    const claimRewards = useKrunchStore(state => state.claimRewards)
-    const refresh = async () => {
-        const program = await getProgram()
-        const provider = await getProvider()
-        console.log("APP: program", program)
-        console.log("APP: provider", provider)
-        refreshAll()
-    }
-    const claim = async () => {
-        try {
-            await claimRewards()
-        } catch (e) {
-            console.log("claim error", e)
-        }
-    }
     return (
         <CssVarsProvider disableTransitionOnChange>
             <CssBaseline />
@@ -98,56 +63,8 @@ export default function App() {
                         hidden={true}
                     >
                         <PageHeader title={location.pathname} />
-                        <Stack direction={"row"} spacing={1}>
-                            <Button
-                                color="primary"
-                                startDecorator={<CandlestickChartRoundedIcon />}
-                                size="sm"
-                                onClick={() => setMarketDialogOpen(true)}
-                            >
-                                Market
-                            </Button>
-                            <Button
-                                color="primary"
-                                startDecorator={<QueryStatsRounded />}
-                                size="sm"
-                                onClick={() => setTradeDialogOpen(true)}
-                            >
-                                Trade
-                            </Button>
-                            <Button
-                                color="primary"
-                                startDecorator={<AccountBalanceRounded />}
-                                size="sm"
-                                onClick={() => setAccountDialogOpen(true)}
-                            >
-                                Deposit
-                            </Button>
-                            <Button
-                                color="primary"
-                                startDecorator={<CurrencyExchangeRounded />}
-                                size="sm"
-                                onClick={() => setExchangeDialogOpen(true)}
-                            >
-                                Exchange
-                            </Button>
-                            <Button
-                                color="primary"
-                                startDecorator={<EmojiEventsRounded />}
-                                size="sm"
-                                onClick={() => claim()}
-                            >
-                                Claim
-                            </Button>
-                            <Button
-                                color="primary"
-                                startDecorator={<RefreshRoundedIcon />}
-                                size="sm"
-                                onClick={() => refresh()}
-                            >
-                                Refresh
-                            </Button>
-                        </Stack>
+                        <Toolbar />
+                        
                     </Box>}
                     <Box sx={{
                         display: 'flex',
@@ -167,11 +84,7 @@ export default function App() {
                         </Routes>
                     </Box>
                 </Box>
-            </Box>
-            <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
-            <MarketDialog open={marketDialogOpen} setOpen={setMarketDialogOpen} />
-            <AccountDialog open={accountDialogOpen} setOpen={setAccountDialogOpen} />
-            <ExchangeDialog open={exchangeDialogOpen} setOpen={setExchangeDialogOpen} />
+            </Box>    
         </CssVarsProvider>
     );
 }

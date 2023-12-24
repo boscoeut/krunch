@@ -25,7 +25,6 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { closeSidebar } from '../utils';
-import ColorSchemeToggle from './ColorSchemeToggle';
 import Logo from './Logo';
 import * as React from 'react';
 import { useColorScheme } from '@mui/joy/styles';
