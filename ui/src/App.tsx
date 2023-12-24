@@ -1,8 +1,6 @@
 import Box from '@mui/joy/Box';
 import CssBaseline from '@mui/joy/CssBaseline';
-import { CssVarsProvider } from '@mui/joy/styles';
-// icons
-import { useState } from 'react';
+import { CssVarsProvider, extendTheme } from '@mui/joy/styles';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Account from './components/Account';
 import Contracts from './components/Contracts';
@@ -16,10 +14,32 @@ import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import Welcome from './components/Welcome';
 
+const theme = extendTheme({
+    colorSchemes: {
+      dark: {
+        palette: {
+          background: {
+           // body: '#3b3a3a',
+            // surface:'#2f2e2e',
+          },
+          danger: {
+            //mainChannel: '#440808', // Change this to the color you want for errors in dark mode
+            // 50:'#440808',
+            // 100:'#440808',
+            // 200:'#440808',
+            // 300:'#440808',
+            // 400:'#440808',
+            // 500:'#440808',
+          },
+        }
+      }
+    }
+  });
+
 export default function App() {
     const location = useLocation();
     return (
-        <CssVarsProvider disableTransitionOnChange>
+        <CssVarsProvider disableTransitionOnChange theme={theme}>
             <CssBaseline />
             <Box sx={{ display: 'flex', minHeight: '100vh' }}>
                 <Header />
