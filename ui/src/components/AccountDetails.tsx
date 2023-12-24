@@ -17,7 +17,7 @@ export default function AccountDetails() {
         +Number(userAccount.pnl)
 
         let lastRewardsClaimed = 'Never'
-        if (userAccount.lastRewardsClaimed) {
+        if (userAccount.lastRewardsClaim) {
             lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber()*1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber()*1000).toLocaleTimeString()}`
         }
    

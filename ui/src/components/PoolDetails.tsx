@@ -18,7 +18,7 @@ export default function PoolDetails() {
         +Number(exchange.pnl)
 
     let lastRewardsClaimed = 'Never'
-    if (exchange.lastRewardsClaimed) {
+    if (exchange.lastRewardsClaim) {
         lastRewardsClaimed = `${new Date(exchange.lastRewardsClaim?.toNumber()*1000).toLocaleDateString()} ${new Date(exchange.lastRewardsClaim?.toNumber()*1000).toLocaleTimeString()}`
     }
     const values = [{
