@@ -2,7 +2,7 @@ import Box from '@mui/joy/Box';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import ExchangeBalances from './ExchangeBalances';
 import PoolDetails from './PoolDetails';
-import Positions from './Positions';
+import PoolPositions from './PoolPositions';
 
 export default function Pool() {
     const markets = useKrunchStore(state => state.markets)
@@ -10,7 +10,7 @@ export default function Pool() {
     return (
         <Box>
             <PoolDetails />
-            <Positions positions={markets} />
+            <PoolPositions positions={markets} />
             <ExchangeBalances />
         </Box>
     );
