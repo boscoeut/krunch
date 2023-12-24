@@ -29,6 +29,15 @@ export const toggleSidebar = () => {
   }
 };
 
+export const formatPercent = (item: any, decimals=2) => {
+  return `${(item * 100).toFixed(decimals)}%`
+}
+
+export const formatNumber = (item: any, decimals=2) => {
+  return `${(item * 1).toFixed(decimals)}`
+}
+
+
 export const renderItem = (item: any, decimals = AMOUNT_DECIMALS) => {
   if (!item) {
     return ""
