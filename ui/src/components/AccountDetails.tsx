@@ -1,7 +1,9 @@
+import { Stack } from '@mui/joy';
 import Box from '@mui/joy/Box';
-import { useKrunchStore } from "../hooks/useKrunchStore";
-import { renderItem } from '../utils';
 import Table from '@mui/joy/Table';
+import { AMOUNT_DECIMALS } from 'utils/dist/constants';
+import { useKrunchStore } from "../hooks/useKrunchStore";
+import { formatCurrency, renderItem } from '../utils';
 
 export default function AccountDetails() {
     const userAccount = useKrunchStore(state => state.userAccount)
@@ -11,97 +13,82 @@ export default function AccountDetails() {
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const exchangeRewardsAvailable = useKrunchStore(state => state.exchangeRewardsAvailable)
     const total = Number(userAccount.collateralValue)
-        +Number(userAccount.fees)
-        +Number(userAccount.rebates)
-        +Number(userAccount.rewards)
-        +Number(userAccount.pnl)
+        + Number(userAccount.fees)
+        + Number(userAccount.rebates)
+        + Number(userAccount.rewards)
+        + Number(userAccount.pnl)
 
-        let lastRewardsClaimed = 'Never'
-        if (userAccount.lastRewardsClaim) {
-            lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber()*1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber()*1000).toLocaleTimeString()}`
-        }
-   
-    const values = [{
-        key:'Rewards',
-        value: '',
-        indent: 0
-    },{
-        key:'User Rewards Available',
-        value: renderItem(userRewardsAvailable),
-        indent: 1
-    },{
-        key:'Total Rewards Available',
-        value: renderItem(exchangeRewardsAvailable),
-        indent: 1
-    },{
-        key:'Last User Rewards Claim',
-        value: lastRewardsClaimed,
-        indent:1
-    },{
-        key:'Account Value',
-        value: renderItem(total)
-    },{
-        key:'+ Amount Deposited',
-        value: renderItem(userAccount.collateralValue),
-        indent:1
-    },{
-        key:'+ Pnl',
-        value: renderItem(userAccount.pnl),
-        indent:1
-    },{
-        key:'+ Rebates Earned',
-        value: renderItem(userAccount.rebates),
-        indent:1
-    },{
-        key:'+ Rewards Earned',
-        value: renderItem(userAccount.rewards),
-        indent:1
-    },{
-        key:'- Fees Paid',
-        value: renderItem(userAccount.fees),
-        indent:1
-    },{
-        key:'Trading',
-        value: ''
-    },{
-        key:'Unrealized Pnl',
-        value: renderItem(userUnrealizedPnl,1),
-        indent:1
-    },{
-        key:'+ Open Position Current Value',
-        value: renderItem(userCurrentValue,1),
-        indent:2
-    },{
-        key:'- Open Position Basis',
-        value: renderItem(userAccount.basis),
-        indent:2
-    },{
-        key:'Margin Used',
-        value: renderItem(userAccount.marginUsed),
-        indent:1
-    },{
-        key:'Margin Available',
-        value: renderItem(userCollateral),
-        indent:1
-    }]
+    let lastRewardsClaimed = 'Never'
+    if (userAccount.lastRewardsClaim) {
+        lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
+    }
+
+
     return (
         <Box>
-            <Table>
-                <thead>
-                    <tr>
-                        <th>Account Details</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {values.map(row => {
-                        return <tr key={row.key}>
-                            <td style={{paddingLeft:`${(row.indent || 0) * 25+6}px`}}>{row.key}</td>
-                            <td>{row.value}</td>
+            <Stack direction="column" spacing={2}>
+                <Table>
+                    <thead>
+                        <tr>
+                            <th>Rewards Earned</th>
+                            <th>Rewards Available</th>
+                            <th>Total Available</th>
+                            <th>Last Claim Date</th>
                         </tr>
-                    })}
-                </tbody>
-            </Table>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{renderItem(userAccount.rewards)}</td>
+                            <td>{renderItem(userRewardsAvailable)}</td>
+                            <td>{renderItem(exchangeRewardsAvailable)}</td>
+                            <td>{lastRewardsClaimed}</td>
+                        </tr>
+                    </tbody>
+                </Table>
+                <Table>
+                    <thead>
+                        <tr>
+                            <th>Account Value</th>
+                            <th>+ Amount Deposited</th>
+                            <th>+ Pnl</th>
+                            <th>+ Rebates Earned</th>
+                            <th>+ Rewards Earned</th>
+                            <th>- Fees</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{renderItem(total)}</td>
+                            <td>{renderItem(userAccount.collateralValue)}</td>
+                            <td>{renderItem(userAccount.pnl)}</td>
+                            <td>{renderItem(userAccount.rebates)}</td>
+                            <td>{renderItem(userAccount.rewards)}</td>
+                            <td>{renderItem(userAccount.fees)}</td>
+
+                        </tr>
+                    </tbody>
+                </Table>
+                <Table>
+                    <thead>
+                        <tr>
+                            <th>Unrealized Pnl</th>
+                            <th>Open Position Current Value</th>
+                            <th>Open Position Basis</th>
+                            <th>Margin Used</th>
+                            <th>Margin Available</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{renderItem(userUnrealizedPnl)}</td>
+                            <td>{renderItem(userCurrentValue)}</td>
+                            <td>{renderItem(userAccount.basis)}</td>
+                            <td>{formatCurrency(userAccount.marginUsed / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(userCollateral / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                    </tbody>
+                </Table>
+            </Stack>
         </Box>
     );
 }
