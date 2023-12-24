@@ -2,9 +2,13 @@ import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
 import CssBaseline from '@mui/joy/CssBaseline';
 import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
+import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRounded';
 import { CssVarsProvider } from '@mui/joy/styles';
 // icons
+import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
+import AccountBalanceRounded from '@mui/icons-material/AccountBalanceRounded';
+import EmojiEventsRounded from '@mui/icons-material/EmojiEventsRounded';
+import CurrencyExchangeRounded from '@mui/icons-material/CurrencyExchangeRounded';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
@@ -93,7 +97,7 @@ export default function App() {
                         <Stack direction={"row"} spacing={1}>
                         <Button
                                 color="primary"
-                                startDecorator={<DownloadRoundedIcon />}
+                                startDecorator={<CandlestickChartRoundedIcon />}
                                 size="sm"
                                 onClick={() => setMarketDialogOpen(true)}
                             >
@@ -101,7 +105,7 @@ export default function App() {
                             </Button>
                             <Button
                                 color="primary"
-                                startDecorator={<DownloadRoundedIcon />}
+                                startDecorator={<QueryStatsRounded />}
                                 size="sm"
                                 onClick={() => setTradeDialogOpen(true)}
                             >
@@ -109,7 +113,7 @@ export default function App() {
                             </Button>
                             <Button
                                 color="primary"
-                                startDecorator={<DownloadRoundedIcon />}
+                                startDecorator={<AccountBalanceRounded />}
                                 size="sm"
                                 onClick={() => setAccountDialogOpen(true)}
                             >
@@ -117,7 +121,7 @@ export default function App() {
                             </Button>
                             <Button
                                 color="primary"
-                                startDecorator={<DownloadRoundedIcon />}
+                                startDecorator={<CurrencyExchangeRounded />}
                                 size="sm"
                                 onClick={() => setExchangeDialogOpen(true)}
                             >
@@ -125,7 +129,7 @@ export default function App() {
                             </Button>
                             <Button
                                 color="primary"
-                                startDecorator={<RefreshRoundedIcon />}
+                                startDecorator={<EmojiEventsRounded />}
                                 size="sm"
                                 onClick={() => claim()}
                             >

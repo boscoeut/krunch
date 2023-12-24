@@ -5,7 +5,6 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import WavesRoundedIcon from '@mui/icons-material/WavesRounded';
 import Box from '@mui/joy/Box';
 import Divider from '@mui/joy/Divider';
