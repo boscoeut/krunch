@@ -1,29 +1,42 @@
 import Box from '@mui/joy/Box';
-import Table from '@mui/joy/Table';
 import Link from '@mui/joy/Link';
+import Table from '@mui/joy/Table';
+import { EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants';
+import { useKrunchStore } from '../hooks/useKrunchStore';
+import idl from '../idl/krunch.json';
 import KSheet from './KSheet';
-import PageHeader from './PageHeader';
-import {useKrunchStore} from '../hooks/useKrunchStore';
-import { MARKETS } from 'utils/dist/constants';
 export default function Contracts() {
 
-    const {  } = useKrunchStore((state) => ({
-        
-    }))
+    const appInfo = useKrunchStore(state => state.appInfo)
 
     type Contract = {
         name: string,
         address: string,
-        link: string
+        link: string,
+        type:string,
     }
 
     const explorer = 'https://explorer.solana.com/'
-    const allContracts:Array<Contract> = MARKETS.map(map=> {return { 
+    const marketContracts:Array<Contract> = MARKETS.map(map=> {return { 
         name: `${map.name}`,
         address: map.feedAddress,
+        type:'Oracle Pride Feed',
         link: `${explorer}address/${map.feedAddress}`
        }})
    
+    const exchangeContracts:Array<Contract> = EXCHANGE_POSITIONS.map(map=> {return { 
+        name: `${map.market}`,
+        address: map.mint.toString(),
+        type:'Token',
+        link: `${explorer}address/${map.mint.toString()}`
+       }})
+
+    const allContracts=[{
+        name:appInfo.appTitle,
+        address: idl.metadata.address,    
+        type:'Protocol',
+        link: `${explorer}address/${idl.metadata.address}`
+    },...marketContracts,...exchangeContracts]
 
     return (
         <Box
@@ -37,6 +50,7 @@ export default function Contracts() {
                 <Table aria-label="basic table">
                     <thead>
                         <tr>
+                            <th>Name</th>
                             <th>Type</th>
                             <th>Address</th>
                         </tr>
@@ -45,6 +59,7 @@ export default function Contracts() {
                         {allContracts.map(c => {
                             return <tr key={c.name}>
                                 <td>{c.name}</td>
+                                <td>{c.type}</td>
                                 <td style={{
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
