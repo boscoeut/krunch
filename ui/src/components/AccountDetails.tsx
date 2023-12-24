@@ -23,7 +23,6 @@ export default function AccountDetails() {
         lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
     }
 
-
     return (
         <Box>
             <Stack direction="column" spacing={2}>
@@ -35,7 +34,7 @@ export default function AccountDetails() {
                             <th>Total Available</th>
                             <th>Last Claim Date</th>
                         </tr>
-                    </thead>
+                </thead>
                     <tbody>
                         <tr>
                             <td>{renderItem(userAccount.rewards)}</td>

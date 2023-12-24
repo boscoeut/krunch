@@ -6,11 +6,12 @@ import WalletBalances from './WalletBalances';
 
 export default function Account() {
     const positions = useKrunchStore(state => state.positions)
+    const isAdmin = useKrunchStore(state => state.isAdmin)
     return (
         <Box>
             <AccountDetails />
             <Positions positions={positions} />
-            <WalletBalances/>
+            {!isAdmin && <WalletBalances/>}
         </Box>
     );
 }

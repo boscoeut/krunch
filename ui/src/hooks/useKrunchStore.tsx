@@ -245,6 +245,8 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   },
   refreshExchangeCollateral: async () => {
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
+    const currentUser = get().provider.wallet.publicKey
+    const isAdmin = currentUser?.toString() === exchange.admin.toString()
     console.log('exchange', exchange)
     const exchangeTotal = (
       exchange.pnl.toNumber()
@@ -258,7 +260,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       / LEVERAGE_DECIMALS
       + exchange.marginUsed.toNumber()
     console.log('###exchangeTotal', exchangeTotal / AMOUNT_DECIMALS)
-    set({ exchangeCollateral: exchangeTotal })
+    set({ exchangeCollateral: exchangeTotal, isAdmin })
     return exchangeTotal
   },
   refreshAll: async () => {
