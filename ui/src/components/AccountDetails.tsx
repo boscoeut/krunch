@@ -31,7 +31,7 @@ export default function AccountDetails() {
         <Box>
             <Stack direction={"row"} >
                 <Stat title="Account Value" value={total / AMOUNT_DECIMALS} />
-                <Stat title="Rewards" value={userRewardsAvailable / AMOUNT_DECIMALS} />
+                <Stat title="Pending Rewards" value={userRewardsAvailable / AMOUNT_DECIMALS} />
                 <Stat title="Unrealized Pnl" value={userUnrealizedPnl} />
 
             </Stack>

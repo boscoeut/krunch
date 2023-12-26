@@ -30,7 +30,7 @@ export default function PoolDetails() {
         <Box>
             <Stack direction={"row"} >
                 <Stat title="Pool Value" value={total / AMOUNT_DECIMALS} />
-                <Stat title="Rewards" value={exchangeRewardsAvailable / AMOUNT_DECIMALS} />
+                <Stat title="Pending Rewards" value={exchangeRewardsAvailable / AMOUNT_DECIMALS} />
                 <Stat title="Unrealized Pnl" value={exchangeUnrealizedPnl} />
             </Stack>
             <Table>
