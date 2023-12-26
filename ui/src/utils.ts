@@ -57,5 +57,5 @@ export const renderItem = (item: any, decimals = AMOUNT_DECIMALS) => {
 }
 
 export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(amount.toFixed(2)));
 };

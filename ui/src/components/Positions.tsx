@@ -7,10 +7,8 @@ import { renderItem, formatCurrency } from '../utils';
 import SectionHeader from './SectionHeader';
 
 export default function Positions({ positions }: { positions: Array<any> }) {
-    console.log('positions', positions)
     const openPositions = positions.filter(p=>p.tokenAmount?.toNumber()!=0)
-    console.log('openPositions', openPositions)
-
+    
     return (
         <Box>
             <Table>

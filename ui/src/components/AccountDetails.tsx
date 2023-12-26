@@ -21,9 +21,12 @@ export default function AccountDetails() {
         + Number(userAccount.pnl)
 
     let lastRewardsClaimed = 'Never'
-    if (userAccount.lastRewardsClaim) {
+    if (userAccount.lastRewardsClaim.toNumber() > 0) {
+        console.log('userAccount.lastRewardsClaim',userAccount.lastRewardsClaim.toNumber())
         lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
     }
+
+    console.log('userUnrealizedPnl / AMOUNT_DECIMALS',userUnrealizedPnl / AMOUNT_DECIMALS)
 
     return (
         <Box>
