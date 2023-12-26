@@ -4,7 +4,7 @@ import { useKrunchStore } from "../hooks/useKrunchStore";
 import { LEVERAGE_DECIMALS, MARKETS, AMOUNT_DECIMALS } from 'utils/dist/constants';
 import Stat from './Stat';
 import { Stack } from '@mui/joy';
-import { formatCurrency, renderItem, formatNumber } from '../utils';
+import { formatCurrency, renderItem, formatNumber, formatPercent } from '../utils';
 import SectionHeader from './SectionHeader';
 
 export default function PoolDetails() {
@@ -91,6 +91,11 @@ export default function PoolDetails() {
                     <tr>
                         <td>Reward Frequency</td>
                         <td>{`${renderItem(exchange.rewardFrequency?.toNumber() / (24 * 60 * 60 / (400 / 1000)), 1)}x a day`}</td>
+                    </tr>
+
+                    <tr>
+                        <td>Reward Rate</td>
+                        <td>{`${formatPercent(exchange.rewardRate?.toNumber() / AMOUNT_DECIMALS)}`}</td>
                     </tr>
                 </tbody>
             </Table>
