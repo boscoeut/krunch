@@ -7,7 +7,6 @@ import Contracts from './components/Contracts';
 import Documentation from './components/Documentation';
 import Header from './components/Header';
 import Markets from './components/Markets';
-import PageHeader from './components/PageHeader';
 import Pool from './components/Pool';
 import Settings from './components/Settings';
 import Sidebar from './components/Sidebar';

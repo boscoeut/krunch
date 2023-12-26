@@ -13,7 +13,9 @@ import useProgram from '../hooks/useProgram';
 import AccountDialog from './AccountDialog';
 import ExchangeDialog from './ExchangeDialog';
 import MarketDialog from './MarketDialog';
+import { formatCurrency } from '../utils';
 import TradeDialog from './TradeDialog';
+import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 
 export default function Toolbar() {
     const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
@@ -24,11 +26,10 @@ export default function Toolbar() {
     const refreshAll = useKrunchStore((state: any) => state.refreshAll)
     const claimRewards = useKrunchStore((state: any) => state.claimRewards)
     const isAdmin = useKrunchStore((state: any) => state.isAdmin)
+    const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const refresh = async () => {
         const program = await getProgram()
         const provider = await getProvider()
-        console.log("APP: program", program)
-        console.log("APP: provider", provider)
         refreshAll()
     }
     const claim = async () => {
@@ -73,7 +74,7 @@ export default function Toolbar() {
                     size="sm"
                     onClick={() => setAccountDialogOpen(true)}
                 >
-                    Deposit
+                    Wallet
                 </Button>
 
                 <Button
@@ -82,7 +83,7 @@ export default function Toolbar() {
                     size="sm"
                     onClick={() => claim()}
                 >
-                    Claim
+                    {`Claim ${formatCurrency(userRewardsAvailable/AMOUNT_DECIMALS)}`}
                 </Button>
                 <Button
                     color="primary"
