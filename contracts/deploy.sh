@@ -1,6 +1,6 @@
 echo "Deploying krunch"
 # call the command anchor deploy
-#copy the file target/idl/krunch.json to the folder /Users/eberma/Documents/BitBucket/krunch_solana_ui/idl/krunch.json
+#copy the file target/idl/krunch.json to the folder /Users/mebert/Documents/BitBucket/krunch_solana_ui/idl/krunch.json
 echo "building krunch"
 anchor build
 echo "deploying krunch"

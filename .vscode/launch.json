@@ -10,7 +10,7 @@
             "request": "launch",
             "cwd": "${workspaceRoot}/ui",
             "console": "integratedTerminal",
-            "runtimeExecutable": "npm",
+            "runtimeExecutable": "/Users/mebert/.nvm/versions/node/v21.5.0/bin/npm",
             "runtimeArgs": [
                 "run-script", 
                 "start"

@@ -18,7 +18,7 @@ export declare const LEVERAGE_DECIMALS: number;
 export declare const ADMIN_ADDRESS = "EDsmoWKuanmGubggz7XxTYX6qc3LtWgXj39qSikEqk7S";
 export declare const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 export declare const ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
-export declare const KRUNCH = "EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52";
+export declare const KRUNCH = "6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5";
 export declare const MARKETS: {
     name: string;
     feedAddress: string;

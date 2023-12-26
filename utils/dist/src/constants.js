@@ -21,7 +21,7 @@ exports.LEVERAGE_DECIMALS = Math.pow(10, 4);
 exports.ADMIN_ADDRESS = "EDsmoWKuanmGubggz7XxTYX6qc3LtWgXj39qSikEqk7S";
 exports.TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 exports.ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
-exports.KRUNCH = "EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52";
+exports.KRUNCH = "6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5";
 exports.MARKETS = [{
         name: "SOL/USD",
         feedAddress: exports.SOL_USD_FEED.toString(),

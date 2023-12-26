@@ -29,8 +29,8 @@ export const REWARD_RATE = 0.5 * AMOUNT_DECIMALS;
 export const ADMIN_ADDRESS="HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS" // local
 export const TOKEN_PROGRAM_ID="TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 export const ASSOCIATED_TOKEN_PROGRAM_ID="ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-// export const KRUNCH="5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm" // codespaces
-export const KRUNCH="EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52" // local address
+// export const KRUNCH="6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5" // codespaces
+export const KRUNCH="6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5" // local address
 
 export const MARKET_TYPES = [{
     id: 1,

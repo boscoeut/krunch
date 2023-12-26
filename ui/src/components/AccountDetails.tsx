@@ -29,24 +29,6 @@ export default function AccountDetails() {
                 <Table>
                     <thead>
                         <tr>
-                            <th>Rewards Earned</th>
-                            <th>Rewards Available</th>
-                            <th>Total Available</th>
-                            <th>Last Claim Date</th>
-                        </tr>
-                </thead>
-                    <tbody>
-                        <tr>
-                            <td>{renderItem(userAccount.rewards)}</td>
-                            <td>{renderItem(userRewardsAvailable)}</td>
-                            <td>{renderItem(exchangeRewardsAvailable)}</td>
-                            <td>{lastRewardsClaimed}</td>
-                        </tr>
-                    </tbody>
-                </Table>
-                <Table>
-                    <thead>
-                        <tr>
                             <th>Account Value</th>
                             <th>+ Amount Deposited</th>
                             <th>+ Pnl</th>
@@ -67,6 +49,25 @@ export default function AccountDetails() {
                         </tr>
                     </tbody>
                 </Table>
+                <Table>
+                    <thead>
+                        <tr>
+                            <th>Rewards Earned</th>
+                            <th>Rewards Available</th>
+                            <th>Total Available</th>
+                            <th>Last Claim Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{renderItem(userAccount.rewards)}</td>
+                            <td>{renderItem(userRewardsAvailable)}</td>
+                            <td>{renderItem(exchangeRewardsAvailable)}</td>
+                            <td>{lastRewardsClaimed}</td>
+                        </tr>
+                    </tbody>
+                </Table>
+
                 <Table>
                     <thead>
                         <tr>

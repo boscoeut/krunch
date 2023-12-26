@@ -29,8 +29,8 @@ exports.REWARD_RATE = 0.5 * exports.AMOUNT_DECIMALS;
 exports.ADMIN_ADDRESS = "HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS"; // local
 exports.TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 exports.ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
-// export const KRUNCH="5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm" // codespaces
-exports.KRUNCH = "EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52"; // local address
+// export const KRUNCH="6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5" // codespaces
+exports.KRUNCH = "6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5"; // local address
 exports.MARKET_TYPES = [{
         id: 1,
         name: 'Crypto'

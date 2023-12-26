@@ -5,9 +5,9 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-krunch = "EnZBKfVmLQre1x8K42DJtEzNe8AbRHoWacxkLMf3fr52" 
+krunch = "6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5" 
 # codespaces
-# krunch = "5DLAQZJ4hPpgur3XAyot61xCHuykBeDhVVyopWtcWNkm" 
+# krunch = "6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5" 
 
 [registry]
 url = "https://api.apr.dev"
@@ -15,7 +15,7 @@ url = "https://api.apr.dev"
 [provider]
 cluster = "Localnet"
 # local
-wallet = "/Users/eberma/.config/solana/id.json"
+wallet = "/Users/mebert/.config/solana/id.json"
 # codespace
 # wallet = "/home/codespace/.config/solana/id.json"
 
