@@ -25,6 +25,11 @@ export default function AccountDetails() {
 
     return (
         <Box>
+            <Stack direction={"row"}>
+                <Box flex={1} display="flex" justifyContent="space-between">ACCOUNT VALUE</Box>
+                <Box flex={1} display="flex" justifyContent="space-between">ACCOUNT VALUE</Box>
+                <Box flex={1} display="flex" justifyContent="space-between">ACCOUNT VALUE</Box>
+            </Stack>
             <Stack direction="column" spacing={2}>
                 <Table>
                     <thead>
@@ -39,12 +44,12 @@ export default function AccountDetails() {
                     </thead>
                     <tbody>
                         <tr>
-                            <td>{renderItem(total)}</td>
-                            <td>{renderItem(userAccount.collateralValue)}</td>
-                            <td>{renderItem(userAccount.pnl)}</td>
-                            <td>{renderItem(userAccount.rebates)}</td>
-                            <td>{renderItem(userAccount.rewards)}</td>
-                            <td>{renderItem(userAccount.fees)}</td>
+                            <td>{formatCurrency(total / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(userAccount.collateralValue / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(userAccount.pnl / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(userAccount.rebates / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(userAccount.rewards / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(userAccount.fees / AMOUNT_DECIMALS)}</td>
 
                         </tr>
                     </tbody>
@@ -60,9 +65,9 @@ export default function AccountDetails() {
                     </thead>
                     <tbody>
                         <tr>
-                            <td>{renderItem(userAccount.rewards)}</td>
-                            <td>{renderItem(userRewardsAvailable)}</td>
-                            <td>{renderItem(exchangeRewardsAvailable)}</td>
+                            <td>{formatCurrency(userAccount.rewards / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(exchangeRewardsAvailable / AMOUNT_DECIMALS)}</td>
                             <td>{lastRewardsClaimed}</td>
                         </tr>
                     </tbody>
@@ -80,9 +85,9 @@ export default function AccountDetails() {
                     </thead>
                     <tbody>
                         <tr>
-                            <td>{renderItem(userUnrealizedPnl)}</td>
-                            <td>{renderItem(userCurrentValue)}</td>
-                            <td>{renderItem(userAccount.basis)}</td>
+                            <td>{formatCurrency(userUnrealizedPnl / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(userCurrentValue / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(userAccount.basis / AMOUNT_DECIMALS)}</td>
                             <td>{formatCurrency(userAccount.marginUsed / AMOUNT_DECIMALS)}</td>
                             <td>{formatCurrency(userCollateral / AMOUNT_DECIMALS)}</td>
                         </tr>
