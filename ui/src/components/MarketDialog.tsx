@@ -11,7 +11,7 @@ import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
 import * as React from 'react';
-import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS, PRICE_DECIMALS } from 'utils/dist/constants';
+import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS, PRICE_DECIMALS, SOL_USD_FEED } from 'utils/dist/constants';
 import { fetchAccount, findAddress } from "utils/dist/utils";
 import useProgram from '../hooks/useProgram';
 import { PublicKey } from "@solana/web3.js";
@@ -24,11 +24,11 @@ export interface MarketDialogProps {
 export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
   const [name, setName] = React.useState('SOL');
   const [marketIndex, setMarketIndex] = React.useState('1');
-  const [marketWeight, setMarketWeight] = React.useState('.1');
-  const [leverage, setLeverage] = React.useState('1');
-  const [takerFee, setTakerFee] = React.useState('0.2');
-  const [makerFee, setMakerFee] = React.useState('0.1');
-  const [feedAddress, setFeedAddress] = React.useState('716hFAECqotxcXcj8Hs8nr7AG6q9dBw2oX3k3M8V7uGq');
+  const [marketWeight, setMarketWeight] = React.useState('1');
+  const [leverage, setLeverage] = React.useState('10');
+  const [takerFee, setTakerFee] = React.useState('0.02');
+  const [makerFee, setMakerFee] = React.useState('0.01');
+  const [feedAddress, setFeedAddress] = React.useState(SOL_USD_FEED.toString());
   const { getProgram } = useProgram();
   const [submitting, setSubmitting] = React.useState(false);
 

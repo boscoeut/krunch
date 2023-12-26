@@ -71,7 +71,6 @@ export default function Toolbar() {
 
 
                 <Button
-                    sx={{ flex: 1 }}
                     color="success"
                     startDecorator={<RefreshRoundedIcon />}
                     size="sm"
@@ -83,6 +82,7 @@ export default function Toolbar() {
                 {isAdmin && <><Button
                     startDecorator={<CandlestickChartRoundedIcon />}
                     size="sm"
+                    color="danger"
                     onClick={() => setMarketDialogOpen(true)}
                 >
                     Market
@@ -90,6 +90,7 @@ export default function Toolbar() {
                     <Button
                         startDecorator={<CurrencyExchangeRounded />}
                         size="sm"
+                        color="danger"
                         onClick={() => setExchangeDialogOpen(true)}
                     >
                         Exchange
