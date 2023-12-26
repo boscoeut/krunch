@@ -4,6 +4,7 @@ import Table from '@mui/joy/Table';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, renderItem } from '../utils';
+import Stat from './Stat';
 
 export default function AccountDetails() {
     const userAccount = useKrunchStore(state => state.userAccount)
@@ -26,6 +27,7 @@ export default function AccountDetails() {
     return (
         <Box>
             <Stack direction={"row"}>
+                <Stat title="Account Value" />
                 <Box flex={1} display="flex" justifyContent="space-between">ACCOUNT VALUE</Box>
                 <Box flex={1} display="flex" justifyContent="space-between">ACCOUNT VALUE</Box>
                 <Box flex={1} display="flex" justifyContent="space-between">ACCOUNT VALUE</Box>
