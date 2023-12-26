@@ -4,6 +4,7 @@ import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import '../App.css';
 import { renderItem, formatCurrency } from '../utils';
+import SectionHeader from './SectionHeader';
 
 export default function Positions({ positions }: { positions: Array<any> }) {
     console.log('positions', positions)
@@ -14,6 +15,9 @@ export default function Positions({ positions }: { positions: Array<any> }) {
         <Box>
             <Table>
                 <thead>
+                    <tr>
+                            <th colSpan={7}><SectionHeader title="Open Positions" /></th>
+                        </tr>
                     <tr>
                         <th>Market</th>
                         <th>Amount</th>

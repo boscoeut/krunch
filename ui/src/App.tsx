@@ -82,7 +82,7 @@ export default function App() {
                         }}
                         hidden={true}
                     >
-                        <PageHeader title={location.pathname} />
+                        {/* <PageHeader title={location.pathname} />*/}
                         <Toolbar />
                         
                     </Box>}

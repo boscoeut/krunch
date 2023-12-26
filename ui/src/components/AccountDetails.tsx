@@ -4,6 +4,7 @@ import Table from '@mui/joy/Table';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, renderItem } from '../utils';
+import SectionHeader from './SectionHeader';
 import Stat from './Stat';
 
 export default function AccountDetails() {
@@ -36,15 +37,11 @@ export default function AccountDetails() {
                 <Table>
                     <thead>
                         <tr>
-                            <th style={{ width: 225 }}>Account Details</th>
-                            <th></th>
+                            <th style={{ width: 225 }}><SectionHeader title="Account Value" /></th>
+                            <th><SectionHeader title={formatCurrency(total / AMOUNT_DECIMALS)} /></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>Account Value</td>
-                            <td>{formatCurrency(total / AMOUNT_DECIMALS)}</td>
-                        </tr>
                         <tr>
                             <td>+ Amount Deposited</td>
                             <td>{formatCurrency(userAccount.collateralValue / AMOUNT_DECIMALS)}</td>
@@ -73,8 +70,8 @@ export default function AccountDetails() {
                 <Table>
                     <thead>
                         <tr>
-                            <th style={{ width: 225 }}>Rewards</th>
-                            <th></th>
+                            <th style={{ width: 225 }}><SectionHeader title="Rewards Earned" /></th>
+                            <th><SectionHeader title={formatCurrency(userAccount.rewards / AMOUNT_DECIMALS)} /></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -99,16 +96,12 @@ export default function AccountDetails() {
 
                 <Table>
                     <thead>
-                        <tr >
-                            <th style={{ width: 225 }}>Trading</th>
-                            <th></th>
+                        <tr>
+                            <th style={{ width: 225 }}><SectionHeader title="Unrealized Pnl" /></th>
+                            <th><SectionHeader title={formatCurrency(userUnrealizedPnl / AMOUNT_DECIMALS)} /></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>Unrealized Pnl</td>
-                            <td>{formatCurrency(userUnrealizedPnl / AMOUNT_DECIMALS)}</td>
-                        </tr>
                         <tr>
                             <td>Open Position Current Value</td>
                             <td>{formatCurrency(userCurrentValue / AMOUNT_DECIMALS)}</td>
