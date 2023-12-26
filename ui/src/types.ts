@@ -60,5 +60,6 @@ export type AppInfo = {
     pageTitle:string,
     pageDescription:string,
     logoColor:string,
+    dangerColor:string,
     leverage:number,
   }
