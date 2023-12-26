@@ -1,6 +1,7 @@
 import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRounded';
 import Button from '@mui/joy/Button';
 import Stack from '@mui/joy/Stack';
+import Box from '@mui/joy/Box';
 // icons
 import AccountBalanceRounded from '@mui/icons-material/AccountBalanceRounded';
 import CurrencyExchangeRounded from '@mui/icons-material/CurrencyExchangeRounded';
@@ -41,25 +42,16 @@ export default function Toolbar() {
     }
     return (
         <>
-            <Stack direction={"row"} spacing={1}>
-                {isAdmin && <><Button
+            <Stack direction={"row"} spacing={1} >
+                
+                <Button
                     color="primary"
-                    startDecorator={<CandlestickChartRoundedIcon />}
+                    startDecorator={<EmojiEventsRounded />}
                     size="sm"
-                    onClick={() => setMarketDialogOpen(true)}
+                    onClick={() => claim()}
                 >
-                    Market
+                    {`Claim ${formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}`}
                 </Button>
-                    <Button
-                        color="primary"
-                        startDecorator={<CurrencyExchangeRounded />}
-                        size="sm"
-                        onClick={() => setExchangeDialogOpen(true)}
-                    >
-                        Exchange
-                    </Button>
-                </>}
-
                 <Button
                     color="primary"
                     startDecorator={<QueryStatsRounded />}
@@ -77,15 +69,9 @@ export default function Toolbar() {
                     Wallet
                 </Button>
 
+
                 <Button
-                    color="primary"
-                    startDecorator={<EmojiEventsRounded />}
-                    size="sm"
-                    onClick={() => claim()}
-                >
-                    {`Claim ${formatCurrency(userRewardsAvailable/AMOUNT_DECIMALS)}`}
-                </Button>
-                <Button
+                    sx={{flex:1}}
                     color="primary"
                     startDecorator={<RefreshRoundedIcon />}
                     size="sm"
@@ -93,6 +79,24 @@ export default function Toolbar() {
                 >
                     Refresh
                 </Button>
+
+               
+                {isAdmin && <><Button
+                    startDecorator={<CandlestickChartRoundedIcon />}
+                    size="sm"
+                    onClick={() => setMarketDialogOpen(true)}
+                >
+                    Market
+                </Button>
+                    <Button
+                        startDecorator={<CurrencyExchangeRounded />}
+                        size="sm"
+                        onClick={() => setExchangeDialogOpen(true)}
+                    >
+                        Exchange
+                    </Button>
+                </>}
+
             </Stack>
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
             <MarketDialog open={marketDialogOpen} setOpen={setMarketDialogOpen} />

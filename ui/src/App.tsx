@@ -15,25 +15,28 @@ import Welcome from './components/Welcome';
 
 const theme = extendTheme({
     colorSchemes: {
-      dark: {
-        palette: {
-          background: {
-           // body: '#3b3a3a',
-            // surface:'#2f2e2e',
-          },
-          danger: {
-            //mainChannel: '#440808', // Change this to the color you want for errors in dark mode
-            // 50:'#440808',
-            // 100:'#440808',
-            // 200:'#440808',
-            // 300:'#440808',
-            // 400:'#440808',
-            // 500:'#440808',
-          },
+        dark: {
+            palette: {
+                background: {
+                    // body: '#3b3a3a',
+                    // surface:'#2f2e2e',
+                },
+                primary: {
+                    // mainChannel: 'red', // Change this to the color you want for primary in dark mode
+                },
+                danger: {
+                    //mainChannel: '#440808', // Change this to the color you want for errors in dark mode
+                    // 50:'#440808',
+                    // 100:'#440808',
+                    // 200:'#440808',
+                    // 300:'#440808',
+                    // 400:'#440808',
+                    // 500:'#440808',
+                },
+            }
         }
-      }
     }
-  });
+});
 
 export default function App() {
     const location = useLocation();
@@ -83,7 +86,7 @@ export default function App() {
                     >
                         {/* <PageHeader title={location.pathname} />*/}
                         <Toolbar />
-                        
+
                     </Box>}
                     <Box sx={{
                         display: 'flex',
@@ -103,7 +106,7 @@ export default function App() {
                         </Routes>
                     </Box>
                 </Box>
-            </Box>    
+            </Box>
         </CssVarsProvider>
     );
 }
