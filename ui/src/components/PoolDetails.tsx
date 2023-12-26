@@ -4,7 +4,7 @@ import { useKrunchStore } from "../hooks/useKrunchStore";
 import { LEVERAGE_DECIMALS, MARKETS, AMOUNT_DECIMALS } from 'utils/dist/constants';
 import Stat from './Stat';
 import { Stack } from '@mui/joy';
-import { formatCurrency, renderItem } from '../utils';
+import { formatCurrency, renderItem, formatNumber } from '../utils';
 import SectionHeader from './SectionHeader';
 
 export default function PoolDetails() {
@@ -22,7 +22,7 @@ export default function PoolDetails() {
         + Number(exchange.pnl)
 
     let lastRewardsClaimed = 'Never'
-    if (exchange.lastRewardsClaim.toNumber() > 0) {
+    if (exchange.lastRewardsClaim?.toNumber() > 0) {
         lastRewardsClaimed = `${new Date(exchange.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(exchange.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
     }
 
@@ -31,7 +31,7 @@ export default function PoolDetails() {
             <Stack direction={"row"} >
                 <Stat title="Pool Value" value={total / AMOUNT_DECIMALS} />
                 <Stat title="Rewards" value={exchangeRewardsAvailable / AMOUNT_DECIMALS} />
-                <Stat title="Unrealized Pnl" value={exchangeUnrealizedPnl / AMOUNT_DECIMALS} />
+                <Stat title="Unrealized Pnl" value={exchangeUnrealizedPnl} />
             </Stack>
             <Table>
                 <thead>
@@ -94,7 +94,7 @@ export default function PoolDetails() {
                     </tr>
                 </tbody>
             </Table>
-            
+
             <Table>
                 <thead>
                     <tr>
@@ -121,7 +121,7 @@ export default function PoolDetails() {
                     </tr>
                     <tr>
                         <td>Leverage</td>
-                        <td>{formatCurrency(exchange.leverage / LEVERAGE_DECIMALS)}</td>
+                        <td>{formatNumber(exchange.leverage / LEVERAGE_DECIMALS, 0)}x</td>
                     </tr>
                     <tr>
                         <td># of Markets</td>

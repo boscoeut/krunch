@@ -182,6 +182,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       const unrealizedPnl = acct.tokenAmount.toNumber() > 0 ? currValue + acct.basis.toNumber() / AMOUNT_DECIMALS :
         currValue - acct.basis.toNumber() / AMOUNT_DECIMALS
       accountCurrentValue += currValue
+      console.log("******unrealizedPnl", unrealizedPnl, accountCurrentValue)
       accountUnrealizedPnl += unrealizedPnl
       const entryPrice = acct.tokenAmount.toNumber() === 0 ? 0 : acct.basis.toNumber() / acct.tokenAmount.toNumber() 
       temp.push({ market: market.name, ...acct, price, currValue, unrealizedPnl, entryPrice })

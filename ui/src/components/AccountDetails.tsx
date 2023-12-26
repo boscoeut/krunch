@@ -21,7 +21,7 @@ export default function AccountDetails() {
         + Number(userAccount.pnl)
 
     let lastRewardsClaimed = 'Never'
-    if (userAccount.lastRewardsClaim.toNumber() > 0) {
+    if (userAccount.lastRewardsClaim?.toNumber() > 0) {
         lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
     }
 
@@ -32,7 +32,7 @@ export default function AccountDetails() {
             <Stack direction={"row"} >
                 <Stat title="Account Value" value={total / AMOUNT_DECIMALS} />
                 <Stat title="Rewards" value={userRewardsAvailable / AMOUNT_DECIMALS} />
-                <Stat title="Unrealized Pnl" value={userUnrealizedPnl / AMOUNT_DECIMALS} />
+                <Stat title="Unrealized Pnl" value={userUnrealizedPnl} />
 
             </Stack>
             <Stack direction="column" spacing={2}>
