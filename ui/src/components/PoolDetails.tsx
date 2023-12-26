@@ -2,7 +2,10 @@ import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { renderItem } from '../utils';
-import { LEVERAGE_DECIMALS, MARKETS } from 'utils/dist/constants';
+import { LEVERAGE_DECIMALS, MARKETS, AMOUNT_DECIMALS } from 'utils/dist/constants';
+import Stat from './Stat';
+import { Stack } from '@mui/joy';
+
 export default function PoolDetails() {
     const exchange = useKrunchStore(state => state.exchange)
     const exchangeCollateral = useKrunchStore(state => state.exchangeCollateral)
@@ -101,11 +104,16 @@ export default function PoolDetails() {
         indent:1
     }]
     return (
-        <Box>
+        <Box><Stack direction={"row"} >
+        <Stat title="Pool Value" value={total / AMOUNT_DECIMALS} />
+        <Stat title="Rewards" value={exchangeRewardsAvailable / AMOUNT_DECIMALS} />
+        <Stat title="Unrealized Pnl" value={exchangeUnrealizedPnl / AMOUNT_DECIMALS} />
+
+    </Stack>
              <Table>
                 <thead>
                     <tr>
-                        <th>Account Details</th>
+                        <th style={{width:225}}>Pool Details</th>
                         <th></th>
                     </tr>
                 </thead>

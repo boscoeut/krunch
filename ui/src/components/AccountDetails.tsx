@@ -36,7 +36,7 @@ export default function AccountDetails() {
                 <Table>
                     <thead>
                         <tr>
-                            <th>Account Details</th>
+                            <th style={{ width: 225 }}>Account Details</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -73,7 +73,7 @@ export default function AccountDetails() {
                 <Table>
                     <thead>
                         <tr>
-                            <th>Rewards</th>
+                            <th style={{ width: 225 }}>Rewards</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -99,8 +99,8 @@ export default function AccountDetails() {
 
                 <Table>
                     <thead>
-                        <tr>
-                            <th>Trading</th>
+                        <tr >
+                            <th style={{ width: 225 }}>Trading</th>
                             <th></th>
                         </tr>
                     </thead>
