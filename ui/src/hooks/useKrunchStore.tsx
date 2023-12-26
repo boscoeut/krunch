@@ -7,12 +7,13 @@ import { EXCHANGE_POSITIONS, LEVERAGE_DECIMALS, MARKETS, MARKET_WEIGHT_DECIMALS,
 import { create } from 'zustand';
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
 import type { ExchangeBalance, Market, UserPosition, AppInfo } from '../types';
+import { colors } from "../utils";
 
 export const defaultAppInfo: AppInfo = {
   appTitle: "Krunch",
   appSubTitle: "Defi",
-  logoColor:'#37c437',
-  dangerColor:'red',
+  logoColor:colors.logoColor,
+  dangerColor:colors.dangerColor,
   leverage: 10,
   docAppReference: "Krunch Defi",
   appDescription: 'Decentralized Trading',

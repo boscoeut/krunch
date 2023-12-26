@@ -42,10 +42,10 @@ export default function Toolbar() {
     }
     return (
         <>
-            <Stack direction={"row"} spacing={1} >
-                
+            <Box gap={1} flex={1} display={'flex'}>
+
                 <Button
-                    color="primary"
+                    color="success"
                     startDecorator={<EmojiEventsRounded />}
                     size="sm"
                     onClick={() => claim()}
@@ -53,7 +53,7 @@ export default function Toolbar() {
                     {`Claim ${formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}`}
                 </Button>
                 <Button
-                    color="primary"
+                    color="success"
                     startDecorator={<QueryStatsRounded />}
                     size="sm"
                     onClick={() => setTradeDialogOpen(true)}
@@ -61,7 +61,7 @@ export default function Toolbar() {
                     Trade
                 </Button>
                 <Button
-                    color="primary"
+                    color="success"
                     startDecorator={<AccountBalanceRounded />}
                     size="sm"
                     onClick={() => setAccountDialogOpen(true)}
@@ -71,16 +71,15 @@ export default function Toolbar() {
 
 
                 <Button
-                    sx={{flex:1}}
-                    color="primary"
+                    sx={{ flex: 1 }}
+                    color="success"
                     startDecorator={<RefreshRoundedIcon />}
                     size="sm"
                     onClick={() => refresh()}
-                >
-                    Refresh
-                </Button>
+                >Refresh</Button>
 
-               
+                <Box flex={1}></Box>
+
                 {isAdmin && <><Button
                     startDecorator={<CandlestickChartRoundedIcon />}
                     size="sm"
@@ -97,7 +96,7 @@ export default function Toolbar() {
                     </Button>
                 </>}
 
-            </Stack>
+            </Box>
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
             <MarketDialog open={marketDialogOpen} setOpen={setMarketDialogOpen} />
             <AccountDialog open={accountDialogOpen} setOpen={setAccountDialogOpen} />

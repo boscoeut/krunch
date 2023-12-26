@@ -12,6 +12,7 @@ import Settings from './components/Settings';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import Welcome from './components/Welcome';
+import { colors } from './utils';
 
 const theme = extendTheme({
     colorSchemes: {
@@ -23,6 +24,17 @@ const theme = extendTheme({
                 },
                 primary: {
                     // mainChannel: 'red', // Change this to the color you want for primary in dark mode
+                },
+                success: {
+                    mainChannel:colors.logoColor,
+                    500:colors.logoColor
+                    // mainChannel: '#440808', // Change this to the color you want for errors in dark mode
+                    // 50:'#440808',
+                    // 100:'#440808',
+                    // 200:'#440808',
+                    // 300:'#440808',
+                    // 400:'#440808',
+                    // 500:'#440808', // Replace '#123456' with the color you want for success in dark mode
                 },
                 danger: {
                     //mainChannel: '#440808', // Change this to the color you want for errors in dark mode
