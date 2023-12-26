@@ -26,32 +26,46 @@ export default function AccountDetails() {
 
     return (
         <Box>
-            <Stack direction={"row"}>
-                <Stat title="Account Value" />
-                <Box flex={1} display="flex" justifyContent="space-between">ACCOUNT VALUE</Box>
-                <Box flex={1} display="flex" justifyContent="space-between">ACCOUNT VALUE</Box>
-                <Box flex={1} display="flex" justifyContent="space-between">ACCOUNT VALUE</Box>
+            <Stack direction={"row"} >
+                <Stat title="Account Value" value={total / AMOUNT_DECIMALS} />
+                <Stat title="Rewards" value={userRewardsAvailable / AMOUNT_DECIMALS} />
+                <Stat title="Unrealized Pnl" value={userUnrealizedPnl / AMOUNT_DECIMALS} />
+
             </Stack>
             <Stack direction="column" spacing={2}>
                 <Table>
                     <thead>
                         <tr>
-                            <th>Account Value</th>
-                            <th>+ Amount Deposited</th>
-                            <th>+ Pnl</th>
-                            <th>+ Rebates Earned</th>
-                            <th>+ Rewards Earned</th>
-                            <th>- Fees</th>
+                            <th>Account Details</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
+                            <td>Account Value</td>
                             <td>{formatCurrency(total / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>+ Amount Deposited</td>
                             <td>{formatCurrency(userAccount.collateralValue / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>+ Pnl</td>
                             <td>{formatCurrency(userAccount.pnl / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>+ Rebates Earned</td>
                             <td>{formatCurrency(userAccount.rebates / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>+ Rewards Earned</td>
                             <td>{formatCurrency(userAccount.rewards / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>- Fees</td>
                             <td>{formatCurrency(userAccount.fees / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
 
                         </tr>
                     </tbody>
@@ -59,17 +73,25 @@ export default function AccountDetails() {
                 <Table>
                     <thead>
                         <tr>
-                            <th>Rewards Earned</th>
-                            <th>Rewards Available</th>
-                            <th>Total Available</th>
-                            <th>Last Claim Date</th>
+                            <th>Rewards</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
+                            <td>Rewards Earned</td>
                             <td>{formatCurrency(userAccount.rewards / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>Rewards Available</td>
                             <td>{formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>Total Available</td>
                             <td>{formatCurrency(exchangeRewardsAvailable / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>Last Claim Date</td>
                             <td>{lastRewardsClaimed}</td>
                         </tr>
                     </tbody>
@@ -78,19 +100,29 @@ export default function AccountDetails() {
                 <Table>
                     <thead>
                         <tr>
-                            <th>Unrealized Pnl</th>
-                            <th>Open Position Current Value</th>
-                            <th>Open Position Basis</th>
-                            <th>Margin Used</th>
-                            <th>Margin Available</th>
+                            <th>Trading</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
+                            <td>Unrealized Pnl</td>
                             <td>{formatCurrency(userUnrealizedPnl / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>Open Position Current Value</td>
                             <td>{formatCurrency(userCurrentValue / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>Open Position Basis</td>
                             <td>{formatCurrency(userAccount.basis / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>Margin Used</td>
                             <td>{formatCurrency(userAccount.marginUsed / AMOUNT_DECIMALS)}</td>
+                        </tr>
+                        <tr>
+                            <td>Margin Available</td>
                             <td>{formatCurrency(userCollateral / AMOUNT_DECIMALS)}</td>
                         </tr>
                     </tbody>
