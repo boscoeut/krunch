@@ -4,16 +4,18 @@ import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import '../App.css';
 import { renderItem, formatCurrency } from '../utils';
+import SectionHeader from './SectionHeader';
 
 export default function PoolPositions({ positions }: { positions: Array<any> }) {
-    console.log('positions', positions)
-    const openPositions = positions.filter(p=>p.tokenAmount?.toNumber()!=0)
-    console.log('openPositions', openPositions)
+    const openPositions = positions.filter(p => p.tokenAmount?.toNumber() != 0)
 
     return (
         <Box>
             <Table>
                 <thead>
+                    <tr>
+                        <th colSpan={11}><SectionHeader title="Open Positions" /></th>
+                    </tr>
                     <tr>
                         <th>Market</th>
                         <th>MarginUsed</th>
@@ -45,7 +47,7 @@ export default function PoolPositions({ positions }: { positions: Array<any> }) 
                             <td>{formatCurrency(row.unrealizedPnl)}</td>
                         </tr>
                     })}
-                    {openPositions.length === 0 && <tr><td colSpan={11}>No Positions</td></tr>  }
+                    {openPositions.length === 0 && <tr><td colSpan={11}>No Positions</td></tr>}
                 </tbody>
             </Table>
         </Box>

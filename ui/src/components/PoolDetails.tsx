@@ -1,10 +1,11 @@
 import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { renderItem } from '../utils';
 import { LEVERAGE_DECIMALS, MARKETS, AMOUNT_DECIMALS } from 'utils/dist/constants';
 import Stat from './Stat';
 import { Stack } from '@mui/joy';
+import { formatCurrency, renderItem } from '../utils';
+import SectionHeader from './SectionHeader';
 
 export default function PoolDetails() {
     const exchange = useKrunchStore(state => state.exchange)
@@ -13,119 +14,123 @@ export default function PoolDetails() {
     const exchangeUnrealizedPnl = useKrunchStore(state => state.exchangeUnrealizedPnl)
     const exchangeRewardsAvailable = useKrunchStore(state => state.exchangeRewardsAvailable)
     const total = Number(exchange.collateralValue)
-        +Number(exchange.fees)
-        +Number(exchange.amountWithdrawn)
-        +Number(exchange.amountDeposited)
-        +Number(exchange.rebates)
-        +Number(exchange.rewards)
-        +Number(exchange.pnl)
+        + Number(exchange.fees)
+        + Number(exchange.amountWithdrawn)
+        + Number(exchange.amountDeposited)
+        + Number(exchange.rebates)
+        + Number(exchange.rewards)
+        + Number(exchange.pnl)
 
     let lastRewardsClaimed = 'Never'
-    if (exchange.lastRewardsClaim) {
-        lastRewardsClaimed = `${new Date(exchange.lastRewardsClaim?.toNumber()*1000).toLocaleDateString()} ${new Date(exchange.lastRewardsClaim?.toNumber()*1000).toLocaleTimeString()}`
+    if (exchange.lastRewardsClaim.toNumber() > 0) {
+        lastRewardsClaimed = `${new Date(exchange.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(exchange.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
     }
-    const values = [{
-        key:'Pool Value',
-        value: renderItem(total),
-        indent: 0
-    },{
-        key:'+ User Deposits',
-        value: renderItem(exchange.collateralValue),
-        indent: 1
-    },{
-        key:'+ Pnl',
-        value: renderItem(exchange.pnl),
-        indent: 1
-    },{
-        key:'+ Fees Earned',
-        value: renderItem(exchange.fees),
-        indent:1
-    },{
-        key:'+ Amount Deposited',
-        value: renderItem(exchange.amountDeposited),
-        indent: 1
-    },{
-        key:'- Rebates Paid',
-        value: renderItem(exchange.rebates),
-        indent: 1
-    },{
-        key:'- Rewards Paid',
-        value: renderItem(exchange.rewards),
-        indent: 1
-    },{
-        key:'- Amount Withdrawn',
-        value: renderItem(exchange.amountWithdrawn),
-        indent: 1
-    },{
-        key:'Trading',
-        value: ''
-    },{
-        key:'Unrealized Pnl',
-        value: renderItem(exchangeUnrealizedPnl,1),
-        indent:1
-    },{
-        key:'+ Open Position Basis',
-        value: renderItem(exchange.basis),
-        indent:2
-    },{
-        key:'- Open Position Current Value',
-        value: renderItem(exchangeCurrentValue,1),
-        indent:2
-    },{
-        key:'Margin Used',
-        value: renderItem(exchange.marginUsed),
-        indent: 1
-    },{
-        key:'Margin Available',
-        value: renderItem(exchangeCollateral),
-        indent: 1
-    },{
-        key:'Leverage',
-        value: renderItem(exchange.leverage,LEVERAGE_DECIMALS),
-        indent: 1
-    },{
-        key:'# of Markets',
-        indent: 1,
-        value: MARKETS.length
-    },{
-        key:'Rewards',
-        value: ''
-    },{
-        key:'Total Rewards Available',
-        value: renderItem(exchangeRewardsAvailable),
-        indent: 1
-    },{
-        key:'Last Rewards Claim',
-        value: lastRewardsClaimed,
-        indent:1
-    },{
-        key:'Reward Frequency',
-        value: `${renderItem(exchange.rewardFrequency?.toNumber()/(24*60*60/(400/1000)),1)}x a day`,
-        indent:1
-    }]
-    return (
-        <Box><Stack direction={"row"} >
-        <Stat title="Pool Value" value={total / AMOUNT_DECIMALS} />
-        <Stat title="Rewards" value={exchangeRewardsAvailable / AMOUNT_DECIMALS} />
-        <Stat title="Unrealized Pnl" value={exchangeUnrealizedPnl / AMOUNT_DECIMALS} />
 
-    </Stack>
-             <Table>
+    return (
+        <Box>
+            <Stack direction={"row"} >
+                <Stat title="Pool Value" value={total / AMOUNT_DECIMALS} />
+                <Stat title="Rewards" value={exchangeRewardsAvailable / AMOUNT_DECIMALS} />
+                <Stat title="Unrealized Pnl" value={exchangeUnrealizedPnl / AMOUNT_DECIMALS} />
+            </Stack>
+            <Table>
                 <thead>
                     <tr>
-                        <th style={{width:225}}>Pool Details</th>
-                        <th></th>
+                        <th style={{ width: 225 }}><SectionHeader title="Pool Value" /></th>
+                        <th><SectionHeader title={formatCurrency(total / AMOUNT_DECIMALS)} /></th>
                     </tr>
                 </thead>
                 <tbody>
-                    {values.map(row => {
-                        return <tr key={row.key}>
-                            <td style={{paddingLeft:`${(row.indent || 0) * 25+6}px`}}>{row.key}</td>
-                            <td>{row.value}</td>
-                        </tr>
-                    })}
+                    <tr>
+                        <td>+ User Deposits</td>
+                        <td>{formatCurrency(exchange.collateralValue / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>+ Pnl</td>
+                        <td>{formatCurrency(exchange.pnl / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>+ Fees Earned</td>
+                        <td>{formatCurrency(exchange.fees / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>+ Amount Deposited</td>
+                        <td>{formatCurrency(exchange.amountDeposited / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>- Rebates Paid</td>
+                        <td>{formatCurrency(exchange.rebates / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>- Rewards Paid</td>
+                        <td>{formatCurrency(exchange.rewards / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>- Amount Withdrawn</td>
+                        <td>{formatCurrency(exchange.amountWithdrawn / AMOUNT_DECIMALS)}</td>
+                    </tr>
                 </tbody>
             </Table>
+
+            <Table>
+                <thead>
+                    <tr>
+                        <th style={{ width: 225 }}><SectionHeader title="Total Rewards Paid" /></th>
+                        <th><SectionHeader title={formatCurrency(exchange.rewards / AMOUNT_DECIMALS)} /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Rewards Available</td>
+                        <td>{formatCurrency(exchangeRewardsAvailable / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>Last Rewards Claim</td>
+                        <td>{lastRewardsClaimed}</td>
+                    </tr>
+                    <tr>
+                        <td>Reward Frequency</td>
+                        <td>{`${renderItem(exchange.rewardFrequency?.toNumber() / (24 * 60 * 60 / (400 / 1000)), 1)}x a day`}</td>
+                    </tr>
+                </tbody>
+            </Table>
+            
+            <Table>
+                <thead>
+                    <tr>
+                        <th style={{ width: 225 }}><SectionHeader title="Unrealized Pnl" /></th>
+                        <th><SectionHeader title={formatCurrency(exchangeUnrealizedPnl / AMOUNT_DECIMALS)} /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>+ Open Position Basis</td>
+                        <td>{formatCurrency(exchange.basis / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>- Open Position Current Value</td>
+                        <td>{formatCurrency(exchangeCurrentValue / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>Margin Used</td>
+                        <td>{formatCurrency(exchange.marginUsed / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>Margin Available</td>
+                        <td>{formatCurrency(exchangeCollateral / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td>Leverage</td>
+                        <td>{formatCurrency(exchange.leverage / LEVERAGE_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                        <td># of Markets</td>
+                        <td>{MARKETS.length}</td>
+                    </tr>
+                </tbody>
+            </Table>
+
+          
         </Box>
     );
 }

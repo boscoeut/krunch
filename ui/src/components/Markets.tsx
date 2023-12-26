@@ -8,6 +8,7 @@ import { AMOUNT_DECIMALS, FEE_DECIMALS, LEVERAGE_DECIMALS } from 'utils/dist/con
 import '../App.css';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, formatNumber, formatPercent, renderItem } from '../utils';
+import SectionHeader from './SectionHeader';
 
 export default function Markets() {
     const markets = useKrunchStore(state => state.markets)
@@ -17,6 +18,9 @@ export default function Markets() {
         <Box>
             <Table>
                 <thead>
+                <tr>
+                        <th colSpan={4}><SectionHeader title="Available Markets" /></th>
+                    </tr>
                     <tr>
                         <th style={{ width: '100px' }}>Market</th>
                         <th style={{ width: '75px' }}>Index</th>

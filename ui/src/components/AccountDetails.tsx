@@ -22,7 +22,6 @@ export default function AccountDetails() {
 
     let lastRewardsClaimed = 'Never'
     if (userAccount.lastRewardsClaim.toNumber() > 0) {
-        console.log('userAccount.lastRewardsClaim',userAccount.lastRewardsClaim.toNumber())
         lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
     }
 
