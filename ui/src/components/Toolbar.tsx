@@ -17,10 +17,12 @@ import MarketDialog from './MarketDialog';
 import { formatCurrency } from '../utils';
 import TradeDialog from './TradeDialog';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
+import ClaimDialog from './ClaimDialog';
 
 export default function Toolbar() {
     const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
     const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
+    const [claimDialogOpen, setClaimDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
     const [accountDialogOpen, setAccountDialogOpen] = useState(false);
     const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
@@ -32,7 +34,7 @@ export default function Toolbar() {
         const program = await getProgram()
         const provider = await getProvider()
         refreshAll()
-    }
+}
     const claim = async () => {
         try {
             await claimRewards()
@@ -48,7 +50,7 @@ export default function Toolbar() {
                     color="success"
                     startDecorator={<EmojiEventsRounded />}
                     size="sm"
-                    onClick={() => claim()}
+                    onClick={() => setClaimDialogOpen(true)}
                 >
                     {`Claim ${formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}`}
                 </Button>
@@ -102,6 +104,7 @@ export default function Toolbar() {
             <MarketDialog open={marketDialogOpen} setOpen={setMarketDialogOpen} />
             <AccountDialog open={accountDialogOpen} setOpen={setAccountDialogOpen} />
             <ExchangeDialog open={exchangeDialogOpen} setOpen={setExchangeDialogOpen} />
+            <ClaimDialog open={claimDialogOpen} setOpen={setClaimDialogOpen} />
         </>
     );
 }

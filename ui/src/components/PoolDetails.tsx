@@ -104,7 +104,7 @@ export default function PoolDetails() {
                 <thead>
                     <tr>
                         <th style={{ width: 225 }}><SectionHeader title="Unrealized Pnl" /></th>
-                        <th><SectionHeader title={formatCurrency(exchangeUnrealizedPnl / AMOUNT_DECIMALS)} /></th>
+                        <th><SectionHeader title={formatCurrency(exchangeUnrealizedPnl)} /></th>
                     </tr>
                 </thead>
                 <tbody>

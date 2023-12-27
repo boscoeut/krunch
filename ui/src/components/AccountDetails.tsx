@@ -26,6 +26,7 @@ export default function AccountDetails() {
     }
 
     console.log('userUnrealizedPnl / AMOUNT_DECIMALS',userUnrealizedPnl / AMOUNT_DECIMALS)
+    console.log('userUnrealizedPnl',userUnrealizedPnl)
 
     return (
         <Box>
@@ -100,7 +101,7 @@ export default function AccountDetails() {
                     <thead>
                         <tr>
                             <th style={{ width: 225 }}><SectionHeader title="Unrealized Pnl" /></th>
-                            <th><SectionHeader title={formatCurrency(userUnrealizedPnl / AMOUNT_DECIMALS)} /></th>
+                            <th><SectionHeader title={formatCurrency(userUnrealizedPnl)} /></th>
                         </tr>
                     </thead>
                     <tbody>
