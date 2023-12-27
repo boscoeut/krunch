@@ -3,6 +3,7 @@ import Table from '@mui/joy/Table';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { LEVERAGE_DECIMALS, MARKETS, AMOUNT_DECIMALS } from 'utils/dist/constants';
 import Stat from './Stat';
+import SubStat from './SubStat';
 import { Stack } from '@mui/joy';
 import { formatCurrency, renderItem, formatNumber, formatPercent } from '../utils';
 import SectionHeader from './SectionHeader';
@@ -32,6 +33,11 @@ export default function PoolDetails() {
                 <Stat title="Pool Value" value={total / AMOUNT_DECIMALS} />
                 <Stat title="Pending Rewards" value={exchangeRewardsAvailable / AMOUNT_DECIMALS} />
                 <Stat title="Unrealized Pnl" value={exchangeUnrealizedPnl} />
+            </Stack>
+            <Stack direction={"row"} >
+                <SubStat numValue={total} title="Pool ROI" value={formatPercent((total / exchange.collateralValue)-1)} />
+                <SubStat numValue={exchange.rebates} title="Rewards Paid" value={formatCurrency(exchange.rebates / AMOUNT_DECIMALS)} />
+                <SubStat numValue={exchangeUnrealizedPnl/exchange.basis} title="Pnl ROI" value={formatPercent(exchangeUnrealizedPnl/(exchange.basis/AMOUNT_DECIMALS))} />
             </Stack>
             <Table>
                 <thead>

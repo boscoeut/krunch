@@ -23,8 +23,8 @@ const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = 
 
 
 const addMarkets = async function (provider: any, program: any) {
-    const _takerFee = 0.2;
-    const _makerFee = -0.1;
+    const _takerFee = 0.02;
+    const _makerFee = -0.01;
     const _marketWeight = 1
     const markets = MARKETS
 
