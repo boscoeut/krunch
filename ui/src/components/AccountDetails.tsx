@@ -3,9 +3,10 @@ import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { formatCurrency, renderItem } from '../utils';
+import { formatCurrency, renderItem, formatNumber, formatPercent } from '../utils';
 import SectionHeader from './SectionHeader';
 import Stat from './Stat';
+import SubStat from './SubStat';
 
 export default function AccountDetails() {
     const userAccount = useKrunchStore(state => state.userAccount)
@@ -31,10 +32,14 @@ export default function AccountDetails() {
     return (
         <Box>
             <Stack direction={"row"} >
-                <Stat title="Account Value" value={total / AMOUNT_DECIMALS} />
-                <Stat title="Pending Rewards" value={userRewardsAvailable / AMOUNT_DECIMALS} />
-                <Stat title="Unrealized Pnl" value={userUnrealizedPnl} />
-
+                <Stat numValue={total} title="Account Value" value={total / AMOUNT_DECIMALS} />
+                <Stat numValue={userRewardsAvailable} title="Pending Rewards" value={userRewardsAvailable / AMOUNT_DECIMALS} />
+                <Stat numValue={userUnrealizedPnl} title="Unrealized Pnl" value={userUnrealizedPnl} />
+            </Stack>
+            <Stack direction={"row"} >
+                <SubStat numValue={(total / userAccount.collateralValue)-1} title="Account ROI" value={formatPercent((total / userAccount.collateralValue)-1)} />
+                <SubStat numValue={userAccount.rewards+userAccount.rebates} title="Rewards + Rebates" value={formatCurrency(userAccount.rewards / AMOUNT_DECIMALS+userAccount.rebates / AMOUNT_DECIMALS)} />
+                <SubStat numValue={userUnrealizedPnl} title="Trading ROI" value={formatPercent(userUnrealizedPnl/(Math.abs(userAccount.basis)/AMOUNT_DECIMALS))} />
             </Stack>
             <Stack direction="column" spacing={2}>
                 <Table>
