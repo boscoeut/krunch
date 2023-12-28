@@ -9,6 +9,7 @@ import Input from '@mui/joy/Input';
 import Select from '@mui/joy/Select';
 import Option from '@mui/joy/Option';
 import Modal from '@mui/joy/Modal';
+import Box from '@mui/joy/Box';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
@@ -99,14 +100,14 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
             <Stack spacing={2}>
               {properties.map((property) => {
                 return (
-                  <>
+                  <Box key={property.label}>
                     {property.type === 'markets' && <FormControl key={property.label}>
                       <FormLabel>{property.label}</FormLabel>
                       <Select value={property.value} onChange={(e: any, newValue: any) => {
                         property.onChange(newValue)
                       }}>
                         {EXCHANGE_POSITIONS.map((position) => {
-                          return <Option value={position.market} >{position.market}</Option>
+                          return <Option key={position.market} value={position.market} >{position.market}</Option>
                         })}
                       </Select>
 
@@ -115,7 +116,7 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
                       <FormLabel>{property.label}</FormLabel>
                       <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
                     </FormControl>}
-                  </>
+                  </Box>
                 );
               })}
             <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>

@@ -13,6 +13,7 @@ import Modal from '@mui/joy/Modal';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
+import Box from '@mui/joy/Box';
 import * as React from 'react';
 import { AMOUNT_DECIMALS, CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants';
 import { fetchOrCreateAccount, findAddress } from "utils/dist/utils";
@@ -99,16 +100,16 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
             }}
           >
             <Stack spacing={2}>
-              {properties.map((property) => {
+              {properties.map((property:any) => {
                 return (
-                  <>
+                  <Box key={property.label}>
                     {property.type === 'markets' && <FormControl key={property.label}>
                       <FormLabel>{property.label}</FormLabel>
                       <Select value={`${property.value}`} onChange={(e: any, newValue: any) => {
                         property.onChange(newValue)
                       }}>
                         {MARKETS.map((position) => {
-                          return <Option value={`${position.marketIndex}`} >{position.name}</Option>
+                          return <Option key={`${position.marketIndex}`} value={`${position.marketIndex}`} >{position.name}</Option>
                         })}
                       </Select>
 
@@ -117,8 +118,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                       <FormLabel>{property.label}</FormLabel>
                       <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
                     </FormControl>}
-                  </>
-
+                  </Box>
                 );
               })}
               <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>

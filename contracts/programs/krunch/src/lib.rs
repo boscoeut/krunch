@@ -5,7 +5,6 @@ use chainlink_solana as chainlink;
 pub mod state;
 use state::*;
 
-// declare_id!("6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5"); // codespaces
 declare_id!("6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5"); // local
 const LEVERAGE_DECIMALS: u128 = 10u128.pow(4);
 const MARKET_WEIGHT_DECIMALS: u128 = 10u128.pow(4);

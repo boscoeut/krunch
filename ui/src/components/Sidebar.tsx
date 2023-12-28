@@ -174,7 +174,7 @@ export default function Sidebar() {
                         '--ListItem-radius': (theme) => theme.vars.radius.sm,
                     }}
                 >
-                    {pages.map((page) => ( <ListItem>
+                    {pages.map((page) => ( <ListItem key={page.name}>
                         <ListItemButton selected={location.pathname.startsWith(page.path)} 
                             onClick={page.onclick}>
                             {page.icon}
@@ -196,7 +196,7 @@ export default function Sidebar() {
                     }}
                 >
 
-                 {bottomPages.map((page) => ( <ListItem>
+                 {bottomPages.map((page) => ( <ListItem key={page.name}>
                         <ListItemButton selected={location.pathname.startsWith(page.path)} 
                             onClick={page.onclick}>
                             {page.icon}

@@ -1,5 +1,9 @@
 import { PublicKey } from "@solana/web3.js";
 
+
+// export const NETWORK_URL = "http://localhost:8899"; // local
+export const NETWORK_URL = "https://api.devnet.solana.com" // devnet
+
 export const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 export const SOL_MINT = new PublicKey("Fx84E9SUstSvQN4pq56xcG4hXghkeAMoL6W6ajCnZjyt")
 export const USDT_MINT = new PublicKey("Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB")
@@ -13,9 +17,6 @@ export const BTC_USD_FEED = new PublicKey("Cv4T27XbjVoKUYwP72NQQanvZeA7W4YF9L4En
 export const CHAINLINK_PROGRAM="HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
 // export const REWARD_FREQUENCY = 86400 * 1000 / 400; // 1 week
 export const REWARD_FREQUENCY = 5; // 1 week
-// export const NETWORK_URL="https://shiny-halibut-7vpx9xx4wj2x579-3000.app.github.dev/" // codespaces
-export const NETWORK_URL = "http://localhost:8899";
-
 export const PRICE_DECIMALS = 10 ** 9;
 export const FEE_DECIMALS = 10 ** 4;
 export const MARKET_WEIGHT_DECIMALS = 10 ** 4;
@@ -25,12 +26,9 @@ export const MARKET_LEVERAGE = 10;
 export const EXCHANGE_LEVERAGE = 10;    
 
 export const REWARD_RATE = 0.5 * AMOUNT_DECIMALS;
-// export const ADMIN_ADDRESS="EDsmoWKuanmGubggz7XxTYX6qc3LtWgXj39qSikEqk7S" // codespaces
 export const ADMIN_ADDRESS="HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS" // local
 export const TOKEN_PROGRAM_ID="TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 export const ASSOCIATED_TOKEN_PROGRAM_ID="ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-// export const KRUNCH="6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5" // codespaces
-export const KRUNCH="6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5" // local address
 
 export const MARKET_TYPES = [{
     id: 1,
