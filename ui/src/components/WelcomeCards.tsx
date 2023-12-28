@@ -74,7 +74,7 @@ export default function WelcomeCards() {
                         <ListItemDecorator>
                             <Check />
                         </ListItemDecorator>
-                        Invest in the Trading Pool to earn fees
+                        Earn trading rebates by providing liquidity
                     </ListItem>
                     <ListItem>
                         <ListItemDecorator>
@@ -92,7 +92,7 @@ export default function WelcomeCards() {
                         <ListItemDecorator>
                             <Check />
                         </ListItemDecorator>
-                        Earn fee rebates by providing liquidity
+                        Earn Rewards by holding deposits in the protocol
                     </ListItem>
                 </List>
                 <Divider inset="none" />

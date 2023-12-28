@@ -71,7 +71,7 @@ export default function Documentation() {
         "Account Funding": [<><AppTitle variant={"doc"} /> only supports deposits and withdrawals made using {appInfo.stableCoin}.</>],
         "Price Feeds": [<><AppTitle variant={"doc"} /> relies on <Link href="https://docs.chain.link/data-feeds/price-feeds" target="_blank">ChainLink Oracles</Link> for all price feeds.</>],
         "Conclusion": [<>
-            <div>The {appInfo.appTitle} protocol was created by developers who love DeFi but have been burned too many times by hacks, exploits, and rug pulls. We hope users appreciate the following:</div>
+            <div>The {appInfo.appTitle} protocol was created by developers who love DeFi but have been burned too many times by hacks, exploits, and liquidations caused by momentary price fluctation. We hope users appreciate the following:</div>
             <ul>
                 <li><strong>No Protocol Token:</strong> There is no governance token, trading token, or collateral token. Users can only deposit and withdraw {appInfo.stableCoin}.</li>
                 <li><strong>Immutable Smart Contract:</strong> The contract is immutable and cannot be upgraded. Once deployed, the only functions available to the admin are:
