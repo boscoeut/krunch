@@ -1,7 +1,6 @@
 import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRounded';
-import Button from '@mui/joy/Button';
-import Stack from '@mui/joy/Stack';
 import Box from '@mui/joy/Box';
+import Button from '@mui/joy/Button';
 // icons
 import AccountBalanceRounded from '@mui/icons-material/AccountBalanceRounded';
 import CurrencyExchangeRounded from '@mui/icons-material/CurrencyExchangeRounded';
@@ -9,15 +8,15 @@ import EmojiEventsRounded from '@mui/icons-material/EmojiEventsRounded';
 import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import { useState } from 'react';
+import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from '../hooks/useProgram';
+import { formatCurrency } from '../utils';
 import AccountDialog from './AccountDialog';
+import ClaimDialog from './ClaimDialog';
 import ExchangeDialog from './ExchangeDialog';
 import MarketDialog from './MarketDialog';
-import { formatCurrency } from '../utils';
 import TradeDialog from './TradeDialog';
-import { AMOUNT_DECIMALS } from 'utils/dist/constants';
-import ClaimDialog from './ClaimDialog';
 
 export default function Toolbar() {
     const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
@@ -45,7 +44,6 @@ export default function Toolbar() {
     return (
         <>
             <Box gap={1} flex={1} display={'flex'}>
-
                 <Button
                     color="success"
                     startDecorator={<EmojiEventsRounded />}
