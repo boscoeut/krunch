@@ -30,6 +30,7 @@ export type ExchangeBalance = {
     balance:number,
     decimals:number,
     price?:number,
+    currValue?:number,  
 }
 
 export type UserPosition = {

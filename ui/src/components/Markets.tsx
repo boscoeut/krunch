@@ -19,7 +19,7 @@ export default function Markets() {
             <Table>
                 <thead>
                 <tr>
-                        <th colSpan={4}><SectionHeader title="Available Markets" /></th>
+                        <th colSpan={9}><SectionHeader title="Available Markets" /></th>
                     </tr>
                     <tr>
                         <th style={{ width: '100px' }}>Market</th>

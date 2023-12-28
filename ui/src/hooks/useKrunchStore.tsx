@@ -38,6 +38,7 @@ interface KrunchState {
   exchangeUnrealizedPnl: number,
   exchangeCurrentValue: number,
   exchangeBalances: Array<ExchangeBalance>,
+  treasuryTotal:number,
   userBalances: Array<ExchangeBalance>,
   userStableBalance: number,
   markets: Array<Market>,
@@ -60,6 +61,7 @@ interface KrunchState {
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
   isAdmin:false,
+  treasuryTotal:0,
   appInfo: defaultAppInfo,
   exchangeRewardsAvailable: 0,
   userRewardsAvailable: 0,
@@ -308,6 +310,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const exchangeAddress = await findAddress(get().program, ['exchange'])
 
     const balances: Array<ExchangeBalance> = []
+    let total = 0
     for (const item of EXCHANGE_POSITIONS) {
       const escrowAccount = await findAddress(get().program, [
         exchangeAddress,
@@ -321,17 +324,20 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         console.log('could not get balance:' + item.market)
       }
       const price = get().prices.get(item.market)
+      const currValue = (balance / (10**item.decimals)) * (price || 0)
+      total += currValue
       balances.push({
         market: item.market,
         mint: item.mint,
         balance,
         decimals: item.decimals,
-        price
+        price,
+        currValue
       })
     }
 
     const exchange: any = await fetchOrCreateAccount(get().program, 'exchange', ['exchange'], 'initializeExchange', []);
-    set(() => ({ exchange, exchangeBalances: balances }))
+    set(() => ({ exchange, exchangeBalances: balances, treasuryTotal: total }))
   },
 
 }))
