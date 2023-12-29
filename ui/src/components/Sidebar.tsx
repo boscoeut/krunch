@@ -214,7 +214,7 @@ export default function Sidebar() {
                     {wallet.connected &&
                         <>
                         <Typography sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} level="title-sm">Account: {wallet.publicKey?.toString()}</Typography>
-                        <Typography display={provider.connection?.rpcEndpoint?'inline':'none'} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} level="body-xs">RPC: {provider.connection?.rpcEndpoint}</Typography>
+                        <Typography display={provider.connection?.rpcEndpoint?'inline':'none'} sx={{ display:'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} level="body-xs">RPC: {provider.connection?.rpcEndpoint}</Typography>
                         </>
                     }
                     {!wallet.connected &&

@@ -66,7 +66,7 @@ var fetchOrCreateAccount = function (program, name, seeds, createMethod, args, a
                 return [2 /*return*/, acct];
             case 4:
                 err_1 = _c.sent();
-                console.log("Account not found: ", name);
+                console.log("Account not found: ".concat(name, " Address: ").concat(address, " "));
                 console.log('Initializing ' + name);
                 accounts = __assign((_a = {}, _a[name] = address, _a), (additionalAccounts || {}));
                 console.log('Initializing accounts ' + JSON.stringify(accounts));
@@ -121,6 +121,7 @@ var findAddress = function (program, args) { return __awaiter(void 0, void 0, vo
                 return [4 /*yield*/, anchor.web3.PublicKey.findProgramAddress(buffer, program.programId)];
             case 1:
                 account = (_a.sent())[0];
+                console.log("findAddress ".concat(args[0], " ").concat(account.toString()));
                 return [2 /*return*/, account];
         }
     });

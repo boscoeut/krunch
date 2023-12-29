@@ -7,6 +7,7 @@ import CurrencyExchangeRounded from '@mui/icons-material/CurrencyExchangeRounded
 import EmojiEventsRounded from '@mui/icons-material/EmojiEventsRounded';
 import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import { useState } from 'react';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
@@ -26,20 +27,18 @@ export default function Toolbar() {
     const [accountDialogOpen, setAccountDialogOpen] = useState(false);
     const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
     const refreshAll = useKrunchStore((state: any) => state.refreshAll)
-    const claimRewards = useKrunchStore((state: any) => state.claimRewards)
     const isAdmin = useKrunchStore((state: any) => state.isAdmin)
+    const setup = useKrunchStore((state: any) => state.setup)
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const refresh = async () => {
         const program = await getProgram()
         const provider = await getProvider()
         refreshAll()
-}
-    const claim = async () => {
-        try {
-            await claimRewards()
-        } catch (e) {
-            console.log("claim error", e)
-        }
+    }
+    const initApp = async () => {
+        const program = await getProgram()
+        const provider = await getProvider()
+        setup()
     }
     return (
         <>
@@ -96,6 +95,14 @@ export default function Toolbar() {
                         Exchange
                     </Button>
                 </>}
+                <Button
+                    startDecorator={<SettingsRoundedIcon />}
+                    size="sm"
+                    color="danger"
+                    onClick={() => initApp()}
+                >
+                    Setup
+                </Button>
 
             </Box>
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />

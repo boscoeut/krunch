@@ -13,7 +13,7 @@ export const fetchOrCreateAccount = async (program: any,
         const acct = await program.account[name].fetch(address);
         return acct;
     } catch (err) {
-        console.log("Account not found: ", name);
+        console.log(`Account not found: ${name} Address: ${address} `);
         console.log('Initializing ' + name);
         const accounts = { [name]: address, ...(additionalAccounts || {}), }
         console.log('Initializing accounts ' + JSON.stringify(accounts));
@@ -51,5 +51,6 @@ export const findAddress = async (program: any, args: any) => {
             buffer,
             program.programId as any
         );
+    console.log(`findAddress ${args[0]} ${account.toString()}`)
     return account
 }

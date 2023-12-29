@@ -15,16 +15,20 @@ import {
     MARKETS,
     MARKET_LEVERAGE,
     MARKET_WEIGHT_DECIMALS,
+    NETWORK,
     REWARD_FREQUENCY,
     REWARD_RATE,
+    MAKER_FEE,
+    TAKER_FEE,
+    MARKET_WEIGHT
 } from 'utils/src/constants';
 import { Krunch } from "../target/types/krunch";
 const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = require("@solana/spl-token");
 
 
 const addMarkets = async function (provider: any, program: any) {
-    const _takerFee = 0.02;
-    const _makerFee = -0.01;
+    const _takerFee = TAKER_FEE;
+    const _makerFee = MAKER_FEE;
     const _marketWeight = 1
     const markets = MARKETS
 
@@ -57,7 +61,7 @@ const addExchangePositions = async function (provider: any, program: any) {
                 tokenMint.mint
             ],
             'addExchangePosition',
-            [tokenMint.mint, true, new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS),
+            [tokenMint.mint, true, new anchor.BN(MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS),
             new anchor.BN(tokenMint.decimals),
             tokenMint.feedAddress
             ],
@@ -71,7 +75,7 @@ const addExchangePositions = async function (provider: any, program: any) {
             updateExchangePosition(
                 tokenMint.mint,
                 true,
-                new anchor.BN(0.1 * MARKET_WEIGHT_DECIMALS),
+                new anchor.BN(MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS),
                 new anchor.BN(tokenMint.decimals),
                 tokenMint.feedAddress).
             accounts({
@@ -85,14 +89,14 @@ const addExchangePositions = async function (provider: any, program: any) {
 
 
 const initializeKrunch = async function (provider: any, program: any) {
-    let slotsIn24Hours = REWARD_FREQUENCY; 
+    let slotsIn24Hours = REWARD_FREQUENCY;
     const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'],
-         'initializeExchange', [
-            EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS, 
-            new anchor.BN(slotsIn24Hours),
-            new anchor.BN(REWARD_RATE)]);
+        'initializeExchange', [
+        EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,
+        new anchor.BN(slotsIn24Hours),
+        new anchor.BN(REWARD_RATE)]);
     console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
-    console.log("exchange", exchange.collateralValue.toString());
+    console.log("exchange collateralValue", exchange.collateralValue.toString());
     await addMarkets(provider, program);
     const marketIndex = 1;
 
@@ -124,6 +128,7 @@ const mintTokens = async function (provider: any) {
 
 
     for (const token of EXCHANGE_POSITIONS) {
+        console.log("minting tokens token", token.market)
         const mint = await getMint(provider.connection, new PublicKey(token.mint))
         console.log("SUPPLY", mint.supply.toString())
 
@@ -196,19 +201,35 @@ const deposit = async function (provider: any,
 }
 
 const setupAccounts = async function (provider: any, program: any) {
-    await mintTokens(provider);
+    if (NETWORK === 'Localnet') {
+        await mintTokens(provider);
+    }
     //await deposit(provider, program, USDC_MINT, USDC_USD_FEED, 100);
     //  await deposit(provider, program, SOL_MINT, SOL_USD_FEED, 100);
 };
 
 (async () => {
     const provider = anchor.AnchorProvider.env();
+    console.log("provider rpcEndpoint", provider.connection.rpcEndpoint)
     try {
         const program = anchor.workspace.Krunch as Program<Krunch>;
+        const hash = await provider.connection.getLatestBlockhash();
+        console.log("hash", hash)
 
-        await initializeKrunch(provider, program);
-        await setupAccounts(provider, program);
+
+        let slotsIn24Hours = REWARD_FREQUENCY;
+        const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'],
+        'initializeExchange', [
+        EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,
+        new anchor.BN(slotsIn24Hours),
+        new anchor.BN(REWARD_RATE)]);
+        console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
+        console.log("exchange collateralValue", exchange.collateralValue.toString());
+       
+        // await initializeKrunch(provider, program);
+        // await setupAccounts(provider, program);
     } catch (e) {
+        console.log("error", e.message)
         console.log(e)
     }
 })();
