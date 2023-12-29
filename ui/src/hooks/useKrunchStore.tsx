@@ -100,44 +100,52 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       console.log("market created ", market.marketIndex.toString());
     }
   },
-  addExchangePositions: async function () {
+  addExchangePositions: async function (shouldUpdate: boolean = false) {
     const provider = get().provider
     console.log('provider', provider)
     const program = get().program
     for (const tokenMint of EXCHANGE_POSITIONS) {
 
       console.log('adding exchange position', tokenMint.market)
-      
-      const exchangePosition: any = await fetchOrCreateAccount(program,
-        'exchangeTreasuryPosition',
-        ['exchange_position',
-          tokenMint.mint
-        ],
-        'addExchangePosition',
-        [tokenMint.mint, true, new anchor.BN(MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS),
-        new anchor.BN(tokenMint.decimals),
-        tokenMint.feedAddress
-        ],
-        {
-          admin: provider.wallet.publicKey,
-          exchange: await findAddress(program, ['exchange']),
-        });
-      console.log('exchangePosition', exchangePosition.tokenMint.toString());
 
-      await program?.methods.
-        updateExchangePosition(
-          tokenMint.mint,
-          true,
-          new anchor.BN(MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS),
+      try {
+        const exchangePosition: any = await fetchAccount(program,
+          'exchangeTreasuryPosition',
+          ['exchange_position',
+            tokenMint.mint
+          ]);
+        console.log('exchangePosition', exchangePosition.tokenMint.toString());
+        if (shouldUpdate) {
+          await program?.methods.
+            updateExchangePosition(
+              tokenMint.mint,
+              true,
+              new anchor.BN(MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS),
+              new anchor.BN(tokenMint.decimals),
+              tokenMint.feedAddress).
+            accounts({
+              exchangeTreasuryPosition: await findAddress(program, ['exchange_position', tokenMint.mint]),
+              exchange: await findAddress(program, ['exchange']),
+              owner: provider.wallet.publicKey,
+            }).rpc();
+        }
+      } catch (x) {
+        const exchangePosition: any = await fetchOrCreateAccount(program,
+          'exchangeTreasuryPosition',
+          ['exchange_position',
+            tokenMint.mint
+          ],
+          'addExchangePosition',
+          [tokenMint.mint, true, new anchor.BN(MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS),
           new anchor.BN(tokenMint.decimals),
-          tokenMint.feedAddress).
-        accounts({
-          exchangeTreasuryPosition: await findAddress(program, ['exchange_position', tokenMint.mint]),
-          exchange: await findAddress(program, ['exchange']),
-          owner: provider.wallet.publicKey,
-        }).rpc();
+          tokenMint.feedAddress
+          ],
+          {
+            admin: provider.wallet.publicKey,
+            exchange: await findAddress(program, ['exchange']),
+          });
+      }
     }
-
   },
   setup: async () => {
     const provider = get().provider
