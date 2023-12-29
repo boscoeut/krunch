@@ -26,8 +26,8 @@ export default function AccountDetails() {
         lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
     }
 
-    console.log('userUnrealizedPnl / AMOUNT_DECIMALS',userUnrealizedPnl / AMOUNT_DECIMALS)
-    console.log('userUnrealizedPnl',userUnrealizedPnl)
+    console.log('userUnrealizedPnl / AMOUNT_DECIMALS', userUnrealizedPnl / AMOUNT_DECIMALS)
+    console.log('userUnrealizedPnl', userUnrealizedPnl)
 
     return (
         <Box>
@@ -37,9 +37,9 @@ export default function AccountDetails() {
                 <Stat numValue={userUnrealizedPnl} title="Unrealized Pnl" value={userUnrealizedPnl} />
             </Stack>
             <Stack direction={"row"} >
-                <SubStat numValue={(total / userAccount.collateralValue)-1} title="Account ROI" value={formatPercent((total / userAccount.collateralValue)-1)} />
-                <SubStat numValue={userAccount.rewards+userAccount.rebates} title="Rewards + Rebates" value={formatCurrency(userAccount.rewards / AMOUNT_DECIMALS+userAccount.rebates / AMOUNT_DECIMALS)} />
-                <SubStat numValue={userUnrealizedPnl} title="Trading ROI" value={formatPercent(userUnrealizedPnl/(Math.abs(userAccount.basis)/AMOUNT_DECIMALS))} />
+                <SubStat numValue={(total / userAccount.collateralValue) - 1} title="Account ROI" value={formatPercent((total / userAccount.collateralValue) - 1)} />
+                <SubStat numValue={userAccount.rewards || 0 + userAccount.rebates || 0} title="Rewards + Rebates" value={formatCurrency(userAccount.rewards / AMOUNT_DECIMALS + userAccount.rebates / AMOUNT_DECIMALS)} />
+                <SubStat numValue={userUnrealizedPnl} title="Trading ROI" value={formatPercent(userUnrealizedPnl / (Math.abs(userAccount.basis) / AMOUNT_DECIMALS))} />
             </Stack>
             <Stack direction="column" spacing={2}>
                 <Table>

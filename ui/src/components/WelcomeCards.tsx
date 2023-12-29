@@ -68,12 +68,6 @@ export default function WelcomeCards() {
                         <ListItemDecorator>
                             <Check />
                         </ListItemDecorator>
-                        100% of all fees go to users of the protocol
-                    </ListItem>
-                    <ListItem>
-                        <ListItemDecorator>
-                            <Check />
-                        </ListItemDecorator>
                         Earn trading rebates by providing liquidity
                     </ListItem>
                     <ListItem>

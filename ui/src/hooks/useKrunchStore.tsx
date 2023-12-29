@@ -77,10 +77,9 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const program = get().program
     const _takerFee = TAKER_FEE
     const _makerFee = MAKER_FEE
-    const _marketWeight = 1
-    const markets = MARKETS
-
-    for (const m of markets) {
+    const _marketWeight = MARKET_WEIGHT
+    
+    for (const m of MARKETS) {
       const marketIndex = m.marketIndex;
       const address = new PublicKey(m.feedAddress);
       const market: any = await fetchOrCreateAccount(
@@ -428,7 +427,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       amount ${amount}`)
     set({
       exchangeRewardsAvailable: exchangeRewards,
-      userRewardsAvailable: amount,
+      userRewardsAvailable: amount || 0,
     })
   },
   refreshPool: async () => {

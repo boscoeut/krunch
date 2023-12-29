@@ -35,9 +35,9 @@ export default function PoolDetails() {
                 <Stat numValue={exchangeUnrealizedPnl} title="Unrealized Pnl" value={exchangeUnrealizedPnl} />
             </Stack>
             <Stack direction={"row"} >
-                <SubStat numValue={total} title="Pool ROI" value={formatPercent((total / exchange.collateralValue)-1)} />
-                <SubStat numValue={exchange.rewards?.toNumber()+exchange.rebates?.toNumber()} title="Rewards + Rebates" value={formatCurrency(exchange.rewards / AMOUNT_DECIMALS+exchange.rebates / AMOUNT_DECIMALS)} />
-                <SubStat numValue={exchangeUnrealizedPnl/exchange.basis} title="Pnl ROI" value={formatPercent(exchangeUnrealizedPnl/(Math.abs(exchange.basis)/AMOUNT_DECIMALS))} />
+                <SubStat numValue={total} title="Pool ROI" value={formatPercent((total / exchange.collateralValue) - 1)} />
+                <SubStat numValue={exchange.rewards?.toNumber() + exchange.rebates?.toNumber()} title="Rewards + Rebates" value={formatCurrency((exchange.rewards || 0 + exchange.rebates || 0) / AMOUNT_DECIMALS)} />
+                <SubStat numValue={exchangeUnrealizedPnl / exchange.basis} title="Pnl ROI" value={formatPercent(exchangeUnrealizedPnl / (Math.abs(exchange.basis) / AMOUNT_DECIMALS))} />
             </Stack>
             <Table>
                 <thead>
@@ -141,7 +141,7 @@ export default function PoolDetails() {
                 </tbody>
             </Table>
 
-          
+
         </Box>
     );
 }

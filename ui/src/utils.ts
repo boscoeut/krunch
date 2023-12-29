@@ -29,12 +29,12 @@ export const toggleSidebar = () => {
   }
 };
 
-export const formatPercent = (item: any, decimals=2) => {
-  return `${(item * 100).toFixed(decimals)}%`
+export const formatPercent = (item: any, decimals = 2) => {
+  return `${((item || 0) * 100).toFixed(decimals)}%`
 }
 
-export const formatNumber = (item: any, decimals=2) => {
-  return `${(item * 1).toFixed(decimals)}`
+export const formatNumber = (item: any, decimals = 2) => {
+  return `${((item || 0) * 1).toFixed(decimals)}`
 }
 
 
@@ -57,10 +57,10 @@ export const renderItem = (item: any, decimals = AMOUNT_DECIMALS) => {
 }
 
 export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(amount?.toFixed(2)));
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number((amount || 0).toFixed(2)));
 };
 
 export const colors = {
-  logoColor:'#37c437',
-  dangerColor:'red',
+  logoColor: '#37c437',
+  dangerColor: 'red',
 }
