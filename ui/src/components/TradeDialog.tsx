@@ -3,21 +3,26 @@ import * as anchor from "@coral-xyz/anchor";
 import Button from '@mui/joy/Button';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
-import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
-
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import FormControl from '@mui/joy/FormControl';
+import FormHelperText from '@mui/joy/FormHelperText';
 import Select from '@mui/joy/Select';
 import Option from '@mui/joy/Option';
+import Table from '@mui/joy/Table';
 import Input from '@mui/joy/Input';
+import Chip from '@mui/joy/Chip';
 import Modal from '@mui/joy/Modal';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
-import Box from '@mui/joy/Box';
+import { useKrunchStore } from "../hooks/useKrunchStore";
 import * as React from 'react';
 import { AMOUNT_DECIMALS, CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants';
 import { fetchOrCreateAccount, findAddress } from "utils/dist/utils";
 import useProgram from '../hooks/useProgram';
+import { Tab } from "@mui/joy";
+import { formatCurrency, formatPercent } from "../utils";
 // icons
 
 
@@ -31,7 +36,17 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const [amount, setAmount] = React.useState('0.5');
   const { getProgram, getProvider } = useProgram();
   const [submitting, setSubmitting] = React.useState(false);
+  const exchangeBalances = useKrunchStore(state => state.exchangeBalances)
 
+  const selectedMarket = MARKETS.find((position) => position.marketIndex === Number(marketIndex))
+  const selectedExchangeMarket  = exchangeBalances.find((position) => position.market === selectedMarket?.name)
+  const tradeValue = Number(amount) * (selectedExchangeMarket?.price || 0)
+  const feeRate =0.01
+  const fee = Math.abs(tradeValue) * feeRate  
+  const total = Math.abs(tradeValue) + fee
+
+  console.log('selectedExchangeMarket', selectedExchangeMarket)
+  
   const handleSubmit = async () => {
     const market = MARKETS.find((market) => market.marketIndex === Number(marketIndex))
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market?.name)
@@ -81,10 +96,19 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
     }
   };
 
-  const properties = [
-    { label: 'Index', value: marketIndex, onChange: setMarketIndex, type: 'markets' },
-    { label: 'Amount', value: amount, onChange: setAmount, type: 'number' },
-  ]
+  let submitMessage = 'Execute Trade'
+  let errorMessage = ''
+  let canSubmit = !submitting
+  let selectedBalance = 0.6
+
+  if (selectedBalance < Number(amount)) {
+    canSubmit = false
+    submitMessage = 'Insufficient Balance'
+    errorMessage = submitMessage
+  }
+  if (submitting) {
+    submitMessage = 'Executing...'
+  }
 
   return (
     <React.Fragment>
@@ -92,7 +116,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
         <ModalDialog>
           <ModalClose />
           <DialogTitle>Trade</DialogTitle>
-          <DialogContent>Trade Details.</DialogContent>
+          <DialogContent>Enter Trade Details.</DialogContent>
           <form
             onSubmit={async (event: React.FormEvent<HTMLFormElement>) => {
               event.preventDefault();
@@ -100,28 +124,53 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
             }}
           >
             <Stack spacing={2}>
-              {properties.map((property:any) => {
-                return (
-                  <Box key={property.label}>
-                    {property.type === 'markets' && <FormControl key={property.label}>
-                      <FormLabel>{property.label}</FormLabel>
-                      <Select value={`${property.value}`} onChange={(e: any, newValue: any) => {
-                        property.onChange(newValue)
-                      }}>
-                        {MARKETS.map((position) => {
-                          return <Option key={`${position.marketIndex}`} value={`${position.marketIndex}`} >{position.name}</Option>
-                        })}
-                      </Select>
+              <FormControl>
+                <FormLabel>Market</FormLabel>
+                <Select value={`${marketIndex}`} onChange={(e: any, newValue: any) => {
+                  setMarketIndex(newValue)
+                }}>
+                  {MARKETS.map((position) => {
+                    return <Option key={`${position.marketIndex}`} value={`${position.marketIndex}`} >{position.name}</Option>
+                  })}
+                </Select>
+              </FormControl>
+              <FormControl error={!canSubmit}>
+                <FormLabel>Amount</FormLabel>
+                <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
+                {!canSubmit && <FormHelperText>
+                  <InfoOutlined />
+                  {errorMessage}
+                </FormHelperText>}
+              </FormControl>
 
-                    </FormControl>}
-                    {property.type === 'number' && <FormControl key={property.label}>
-                      <FormLabel>{property.label}</FormLabel>
-                      <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
-                    </FormControl>}
-                  </Box>
-                );
-              })}
-              <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
+              <Table>
+                <thead>
+                  <tr>
+                    <th style={{ width: 150 }}>Trade Details</th>     
+                    <th></th>           
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Price</td>
+                    <td>{`${selectedExchangeMarket?.price || 0}`}</td>
+                  </tr>
+                  <tr>
+                    <td>Value</td>
+                    <td>{formatCurrency(tradeValue,4)}</td>
+                  </tr>
+                  <tr>
+                    <td>Fee <Chip color={fee > 0 ? "danger":"success"}>Rate: {formatPercent(feeRate)}</Chip></td>
+                    <td>{formatCurrency(fee,4)}</td>
+                  </tr>
+                  <tr>
+                    <th>Total</th>
+                    <th>{formatCurrency(total,4)}</th>
+                  </tr>
+                </tbody>
+              </Table>
+
+              <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
             </Stack>
           </form>
         </ModalDialog>

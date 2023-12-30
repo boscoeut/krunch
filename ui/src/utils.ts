@@ -56,8 +56,8 @@ export const renderItem = (item: any, decimals = AMOUNT_DECIMALS, numDecimals = 
   }
 }
 
-export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number((amount || 0).toFixed(2)));
+export const formatCurrency = (amount: number, decimals:number=2, currency: string = 'USD'): string => {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number((amount || 0).toFixed(decimals)));
 };
 
 export const colors = {
