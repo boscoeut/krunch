@@ -226,8 +226,8 @@ const setupAccounts = async function (provider: any, program: any) {
         console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
         console.log("exchange collateralValue", exchange.collateralValue.toString());
        
-        // await initializeKrunch(provider, program);
-        // await setupAccounts(provider, program);
+        await initializeKrunch(provider, program);
+        await setupAccounts(provider, program);
     } catch (e) {
         console.log("error", e.message)
         console.log(e)

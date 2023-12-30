@@ -5,6 +5,7 @@ import Table from '@mui/joy/Table';
 import '../App.css';
 import { renderItem, formatCurrency } from '../utils';
 import SectionHeader from './SectionHeader';
+import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 
 export default function PoolPositions({ positions }: { positions: Array<any> }) {
     const openPositions = positions.filter(p => p.tokenAmount?.toNumber() != 0)
@@ -40,7 +41,7 @@ export default function PoolPositions({ positions }: { positions: Array<any> }) 
                             <td>{renderItem(row.fees)}</td>
                             <td>{renderItem(row.rebates)}</td>
                             <td>{renderItem(row.basis)}</td>
-                            <td>{renderItem(row.tokenAmount)}</td>
+                            <td>{renderItem(row.tokenAmount, AMOUNT_DECIMALS, 4)}</td>
                             <td>{formatCurrency(entryPrice)}</td>
                             <td>{formatCurrency(row.price || 0)}</td>
                             <td>{formatCurrency(row.currValue)}</td>

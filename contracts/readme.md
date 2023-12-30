@@ -16,3 +16,6 @@ solana-test-validator --reset
 # to change networks modify provider in anchor.toml
 [provider]
 cluster = "Devnet"  # Devnet, Mainnet
+
+# USDC Faucet
+https://faucet.circle.com/

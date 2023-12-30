@@ -60,6 +60,7 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
         console.log("transactionAmount", transactionAmount);
 
         const method = transactionAmount > 0 ? 'deposit' : 'withdraw'
+        console.log(`{${method} of ${position.mint} `);
 
         const tx = await program.methods[method](
           new anchor.BN(Math.abs(transactionAmount))

@@ -5,6 +5,7 @@ import Table from '@mui/joy/Table';
 import '../App.css';
 import { renderItem, formatCurrency } from '../utils';
 import SectionHeader from './SectionHeader';
+import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 
 export default function Positions({ positions }: { positions: Array<any> }) {
     const openPositions = positions.filter(p => p.tokenAmount?.toNumber() != 0)
@@ -31,7 +32,7 @@ export default function Positions({ positions }: { positions: Array<any> }) {
                         const entryPrice = Math.abs(row.tokenAmount === 0 ? 0 : row.basis / row.tokenAmount)
                         return <tr key={row.marketIndex}>
                             <td>{row.market}</td>
-                            <td>{renderItem(row.tokenAmount)}</td>
+                            <td>{renderItem(row.tokenAmount,AMOUNT_DECIMALS,4)}</td>
                             <td>{renderItem(row.basis)}</td>
                             <td>{formatCurrency(row.currValue)}</td>
                             <td>{formatCurrency(row.unrealizedPnl)}</td>

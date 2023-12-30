@@ -38,14 +38,14 @@ export const formatNumber = (item: any, decimals = 2) => {
 }
 
 
-export const renderItem = (item: any, decimals = AMOUNT_DECIMALS) => {
+export const renderItem = (item: any, decimals = AMOUNT_DECIMALS, numDecimals = 3) => {
   if (!item) {
     return ""
   } else if (item instanceof PublicKey) {
     return `${item.toString()}`
   } else if (item instanceof anchor.BN) {
     try {
-      return `${(item.toNumber() / decimals).toFixed(3)}`
+      return `${(item.toNumber() / decimals).toFixed(numDecimals)}`
     } catch {
       return `${item.toString()}`
     }

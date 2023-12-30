@@ -31,7 +31,7 @@ export default function PoolDetails() {
         <Box>
             <Stack direction={"row"} >
                 <Stat numValue={total} title="Pool Value" value={total / AMOUNT_DECIMALS} />
-                <Stat numValue={exchangeRewardsAvailable} title="Pending Rewards" value={exchangeRewardsAvailable / AMOUNT_DECIMALS} />
+                <Stat numValue={exchange.fees?.toNumber()} title="Fees" value={exchange.fees?.toNumber()  / AMOUNT_DECIMALS} />
                 <Stat numValue={exchangeUnrealizedPnl} title="Unrealized Pnl" value={exchangeUnrealizedPnl} />
             </Stack>
             <Stack direction={"row"} >
