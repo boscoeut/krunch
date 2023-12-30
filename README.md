@@ -20,3 +20,6 @@ anchor run startValidator
 
 ## To deploy changes
 anchor run init
+
+## To switch networks
+Update anchor.toml and constants.NETWORK

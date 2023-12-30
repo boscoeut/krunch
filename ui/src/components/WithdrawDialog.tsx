@@ -1,27 +1,23 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import * as anchor from "@coral-xyz/anchor";
+import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
-import RadioGroup from '@mui/joy/RadioGroup';
-import Radio from '@mui/joy/Radio';
 import FormLabel from '@mui/joy/FormLabel';
-import Select from '@mui/joy/Select';
-import Option from '@mui/joy/Option';
-import Table from '@mui/joy/Table';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
-import { useKrunchStore } from "../hooks/useKrunchStore";
-import Box from '@mui/joy/Box';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
+import Option from '@mui/joy/Option';
+import Select from '@mui/joy/Select';
 import Stack from '@mui/joy/Stack';
 import { PublicKey } from "@solana/web3.js";
-import { formatCurrency, renderItem } from '../utils';
 import * as React from 'react';
-import { CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, AMOUNT_DECIMALS } from "utils/dist/constants";
+import { AMOUNT_DECIMALS, CHAINLINK_PROGRAM, EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { findAddress } from "utils/dist/utils";
+import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from '../hooks/useProgram';
 const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
 // icons

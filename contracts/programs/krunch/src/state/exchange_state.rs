@@ -29,6 +29,7 @@ pub struct InitializeExchange<'info> {
                 + 8 // last_rewards_claim:i64
                 + 8 // reward_frequency:u64
                 + 8 // reward_rate:u64
+                + 1 // test_mode:bool
             )]
     pub exchange: Account<'info, Exchange>,
     system_program: Program<'info, System>,
@@ -336,6 +337,20 @@ pub struct AddExchangeTreasuryPosition<'info> {
 }
 
 #[derive(Accounts)]
+pub struct UpdateExchange<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    #[account(
+        mut, 
+        seeds = [b"exchange".as_ref()],
+        bump,
+        constraint = exchange.admin == admin.key(),
+    )]
+    pub exchange: Account<'info, Exchange>,
+    system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 #[instruction(token_mint: Pubkey)]
 pub struct UpdateExchangeTreasuryPosition<'info> {
     #[account(mut)]
@@ -411,6 +426,8 @@ pub struct Exchange {
     pub last_rewards_claim: i64,
     pub reward_frequency: u64,
     pub reward_rate: u64,
+    pub test_mode: bool,
+
 }
 
 #[account]

@@ -1,6 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
 
-
 export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Devnet";
 
 let networkUrl = "http://localhost:8899" // Localnet

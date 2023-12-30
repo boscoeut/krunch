@@ -9,7 +9,7 @@ import {
   MAKER_FEE, TAKER_FEE,
   REWARD_RATE, EXCHANGE_LEVERAGE, EXCHANGE_POSITIONS,
   LEVERAGE_DECIMALS, MARKETS, MARKET_WEIGHT_DECIMALS,
-  AMOUNT_DECIMALS, MARKET_TYPES, MARKET_WEIGHT, USDC_MINT
+  AMOUNT_DECIMALS, MARKET_TYPES, MARKET_WEIGHT, NETWORK
 } from 'utils/dist/constants';
 import { create } from 'zustand';
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
@@ -69,9 +69,11 @@ interface KrunchState {
   claimRewards: () => Promise<void>,
   addMarkets: () => Promise<void>,
   addExchangePositions: () => Promise<void>
+  userAccountValue: number,
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  userAccountValue: 0,
   addMarkets: async function () {
     const provider = get().provider
     console.log('provider', provider)
@@ -157,7 +159,8 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', [
       EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,
       new anchor.BN(slotsIn24Hours),
-      new anchor.BN(REWARD_RATE)
+      new anchor.BN(REWARD_RATE),
+      NETWORK === 'Localnet'
     ]);
     console.log('exchange', exchange)
     console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
@@ -372,7 +375,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       + userAccount.collateralValue.toNumber();
     let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
     console.log('###uuserTotal', userTotal / AMOUNT_DECIMALS)
-    set({ userCollateral: userTotal })
+    set({ userCollateral: userTotal,userAccountValue: hardAmount })
     return userTotal
   },
   refreshExchangeCollateral: async () => {

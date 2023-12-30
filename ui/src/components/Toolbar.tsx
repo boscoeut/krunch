@@ -8,6 +8,7 @@ import EmojiEventsRounded from '@mui/icons-material/EmojiEventsRounded';
 import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
 import UploadRoundedIcon from '@mui/icons-material/UploadRounded';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
 import { useState } from 'react';
@@ -17,10 +18,17 @@ import useProgram from '../hooks/useProgram';
 import { formatCurrency } from '../utils';
 import DepositDialog from './DepositDialog';
 import WithdrawDialog from './WithdrawDialog';
+import ListItemDecorator from '@mui/joy/ListItemDecorator';
 import ClaimDialog from './ClaimDialog';
 import ExchangeDialog from './ExchangeDialog';
 import MarketDialog from './MarketDialog';
 import TradeDialog from './TradeDialog';
+import Dropdown from '@mui/joy/Dropdown';
+import Menu from '@mui/joy/Menu';
+import MenuButton from '@mui/joy/MenuButton';
+import ButtonGroup from '@mui/joy/ButtonGroup';
+import MenuItem from '@mui/joy/MenuItem';
+
 
 export default function Toolbar() {
     const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
@@ -33,6 +41,7 @@ export default function Toolbar() {
     const refreshAll = useKrunchStore((state: any) => state.refreshAll)
     const isAdmin = useKrunchStore((state: any) => state.isAdmin)
     const setup = useKrunchStore((state: any) => state.setup)
+    const userAccountValue = useKrunchStore((state: any) => state.userAccountValue)
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const refresh = async () => {
         const program = await getProgram()
@@ -47,74 +56,58 @@ export default function Toolbar() {
     return (
         <>
             <Box gap={1} flex={1} display={'flex'}>
-                <Button
-                    color="success"
-                    startDecorator={<EmojiEventsRounded />}
-                    size="sm"
-                    onClick={() => setClaimDialogOpen(true)}
-                >
-                    {`Claim ${formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}`}
-                </Button>
-                <Button
-                    color="success"
-                    startDecorator={<QueryStatsRounded />}
-                    size="sm"
-                    onClick={() => setTradeDialogOpen(true)}
-                >
-                    Trade
-                </Button>
-                <Button
-                    color="success"
-                    startDecorator={<UploadRoundedIcon />}
-                    size="sm"
-                    onClick={() => setDepositDialogOpen(true)}
-                >
-                    Deposit
-                </Button>
-                <Button
-                    color="success"
-                    startDecorator={<DownloadRoundedIcon />}
-                    size="sm"
-                    onClick={() => setWithdrawDialogOpen(true)}
-                >
-                    Withdraw
-                </Button>
-
-
-                <Button
-                    color="success"
-                    startDecorator={<RefreshRoundedIcon />}
-                    size="sm"
-                    onClick={() => refresh()}
-                >Refresh</Button>
-
-                <Box flex={1}></Box>
-
-                {isAdmin && <><Button
-                    startDecorator={<CandlestickChartRoundedIcon />}
-                    size="sm"
-                    color="danger"
-                    onClick={() => setMarketDialogOpen(true)}
-                >
-                    Market
-                </Button>
+                <ButtonGroup color="success" variant='solid'>
                     <Button
-                        startDecorator={<CurrencyExchangeRounded />}
+                        color="success"
+                        startDecorator={<EmojiEventsRounded />}
                         size="sm"
-                        color="danger"
-                        onClick={() => setExchangeDialogOpen(true)}
+                        onClick={() => setClaimDialogOpen(true)}
                     >
-                        Exchange
+                        {`Claim Rewards: ${formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}`}
                     </Button>
-                </>}
-                <Button
-                    startDecorator={<SettingsRoundedIcon />}
-                    size="sm"
-                    color="danger"
-                    onClick={() => initApp()}
-                >
-                    Setup
-                </Button>
+                    <Button
+                        color="success"
+                        startDecorator={<QueryStatsRounded />}
+                        size="sm"
+                        onClick={() => setTradeDialogOpen(true)}
+                    >
+                        Trade
+                    </Button>
+
+                    <Dropdown>
+                        <MenuButton
+                            size="sm"
+                            variant='solid'
+                            startDecorator={<CurrencyExchangeRounded />}
+                            endDecorator={<ArrowDropDown />}
+                            color="success">Wallet: {formatCurrency(userAccountValue / AMOUNT_DECIMALS)}</MenuButton>
+                        <Menu>
+                            <MenuItem onClick={() => setDepositDialogOpen(true)}><ListItemDecorator><UploadRoundedIcon /></ListItemDecorator>Deposit</MenuItem>
+                            <MenuItem onClick={() => setWithdrawDialogOpen(true)}><ListItemDecorator><DownloadRoundedIcon /></ListItemDecorator>Withdraw</MenuItem>
+                        </Menu>
+                    </Dropdown>
+
+                    <Button
+                        color="success"
+                        startDecorator={<RefreshRoundedIcon />}
+                        size="sm"
+                        onClick={() => refresh()}
+                    >Refresh</Button>
+                </ButtonGroup>
+                <Box flex={1}></Box>
+                <Dropdown>
+                    <MenuButton
+                        size="sm"
+                        variant='solid'
+                        startDecorator={<SettingsRoundedIcon />}
+                        endDecorator={<ArrowDropDown />}
+                        color="danger">Settings</MenuButton>
+                    <Menu>
+                        <MenuItem onClick={() => initApp()}><ListItemDecorator><SettingsRoundedIcon /></ListItemDecorator>Setup</MenuItem>
+                        {isAdmin && <MenuItem onClick={() => setExchangeDialogOpen(true)}><ListItemDecorator><CurrencyExchangeRounded /></ListItemDecorator>Exchange Deposit/Withdraw</MenuItem>}
+                        {isAdmin && <MenuItem onClick={() => setMarketDialogOpen(true)}><ListItemDecorator><CandlestickChartRoundedIcon /></ListItemDecorator>Update Market</MenuItem>}
+                    </Menu>
+                </Dropdown>
 
             </Box>
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />

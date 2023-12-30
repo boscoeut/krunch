@@ -94,7 +94,9 @@ const initializeKrunch = async function (provider: any, program: any) {
         'initializeExchange', [
         EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,
         new anchor.BN(slotsIn24Hours),
-        new anchor.BN(REWARD_RATE)]);
+        new anchor.BN(REWARD_RATE),
+        NETWORK === 'Localnet']
+        );
     console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
     console.log("exchange collateralValue", exchange.collateralValue.toString());
     await addMarkets(provider, program);

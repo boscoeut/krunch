@@ -16,7 +16,7 @@ const AMOUNT_DECIMALS: u128 = 10u128.pow(AMOUNT_NUM_DECIMALS as u32);
 pub mod krunch {
     use super::*;
 
-    pub fn initialize_exchange(ctx: Context<InitializeExchange>, leverage: u32, reward_frequency:u64, reward_rate:u64) -> Result<()> {
+    pub fn initialize_exchange(ctx: Context<InitializeExchange>, leverage: u32, reward_frequency:u64, reward_rate:u64,test_mode:bool) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.admin = ctx.accounts.admin.key.to_owned();
         exchange.margin_used = 0;
@@ -33,6 +33,7 @@ pub mod krunch {
         exchange.amount_deposited = 0;
         exchange.reward_frequency = reward_frequency;
         exchange.reward_rate = reward_rate; 
+        exchange.test_mode = test_mode;
         Ok(())
     }
 
@@ -59,6 +60,15 @@ pub mod krunch {
         Ok(())
     }
 
+    pub fn update_exchange(
+        ctx: Context<UpdateExchange>,
+        test_mode: bool,
+    ) -> Result<()> {
+        let exchange = &mut ctx.accounts.exchange;
+        exchange.test_mode = test_mode;
+        Ok(())
+    }
+
     pub fn execute_trade(
         ctx: Context<ExecuteTrade>,
         _market_index: u16,
@@ -79,13 +89,13 @@ pub mod krunch {
             ctx.accounts.chainlink_feed.to_account_info(),
         )?;
 
-        // TODO: REMOVE
         let mut current_price = round.answer;
-        let clock = Clock::get()?;
-        let current_unix_timestamp = clock.unix_timestamp;
-        let last_digit = current_unix_timestamp % 10;
-        current_price = (current_price as f64 * (1.0 + (last_digit as f64) / 100.0)) as i128;
-        // END TODO
+        if exchange.test_mode {
+            let clock = Clock::get()?;
+            let current_unix_timestamp = clock.unix_timestamp;
+            let last_digit = current_unix_timestamp % 10;
+            current_price = (current_price as f64 * (1.0 + (last_digit as f64) / 100.0)) as i128;
+        }
 
         let fbasis = (amount as i128 * current_price as i128) / 10i128.pow(price_decimals.into());
         msg!("basis is {}", fbasis);
@@ -499,6 +509,7 @@ pub mod krunch {
         })
     }
 }
+
 fn calculate_exchange_balance_available(exchange: &Exchange) -> i128 {
     let exchange_total = exchange.pnl as i128
         + exchange.rebates as i128
@@ -509,6 +520,7 @@ fn calculate_exchange_balance_available(exchange: &Exchange) -> i128 {
         + (exchange.margin_used as i128 * LEVERAGE_DECIMALS as i128 / exchange.leverage as i128);
     return exchange_total;
 }
+
 fn calculate_exchange_total(exchange: &Exchange) -> i128 {
     let exchange_hard_amount =
         exchange.amount_withdrawn
@@ -541,6 +553,7 @@ fn calculate_market_total(exchange: &Exchange, market: &Market) -> i128 {
     let market_total = max_market_collateral as i128 + market.margin_used as i128;
     return market_total;
 }
+
 fn calculate_user_total(user_account: &UserAccount, leverage: i128) -> i128 {
     let user_hard_amount =
         user_account.pnl 
