@@ -4,16 +4,21 @@ import Button from '@mui/joy/Button';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
+import RadioGroup from '@mui/joy/RadioGroup';
+import Radio from '@mui/joy/Radio';
 import FormLabel from '@mui/joy/FormLabel';
 import Select from '@mui/joy/Select';
 import Option from '@mui/joy/Option';
+import Table from '@mui/joy/Table';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
+import { useKrunchStore } from "../hooks/useKrunchStore";
 import Box from '@mui/joy/Box';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
 import { PublicKey } from "@solana/web3.js";
+import { formatCurrency, renderItem } from '../utils';
 import * as React from 'react';
 import { CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, AMOUNT_DECIMALS } from "utils/dist/constants";
 import { findAddress } from "utils/dist/utils";
@@ -22,17 +27,18 @@ const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
 // icons
 
 
-export interface AccountDialogProps {
+export interface WithdrawDialogProps {
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>; // Definition of setOpen prop    
 }
 
-export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
+export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   const [market, setMarket] = React.useState('USDC/USD');
   const [amount, setAmount] = React.useState('1000');
   const [submitting, setSubmitting] = React.useState(false);
   const { getProgram, getProvider } = useProgram();
 
+  const userBalances = useKrunchStore(state => state.userBalances)
 
   const handleSubmit = async () => {
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
@@ -87,7 +93,7 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
 
   const properties = [
     { label: 'Amount', value: amount, onChange: setAmount, type: 'number' },
-    { label: 'Market', value: market, onChange: setMarket, type: 'markets' },
+    { label:  "Token to Receive", value: market, onChange: setMarket, type: 'markets' },
   ]
 
   return (
@@ -95,8 +101,8 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
       <Modal open={open} onClose={() => setOpen(false)}>
         <ModalDialog>
           <ModalClose />
-          <DialogTitle>Deposit/Withdraw</DialogTitle>
-          <DialogContent>Fill in the information of the project.</DialogContent>
+          <DialogTitle>Withdraw Funds</DialogTitle>
+          <DialogContent>Enter Withdraw Details</DialogContent>
           <form
             onSubmit={async (event: React.FormEvent<HTMLFormElement>) => {
               event.preventDefault();
@@ -104,6 +110,8 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
             }}
           >
             <Stack spacing={2}>
+             
+
               {properties.map((property) => {
                 return (
                   <Box key={property.label}>
@@ -125,7 +133,8 @@ export default function AccountDialog({ open, setOpen }: AccountDialogProps) {
                   </Box>
                 );
               })}
-              <Button disabled={submitting} type="submit">{submitting?'Submitting...':'Submit'}</Button>
+              
+              <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
             </Stack>
           </form>
         </ModalDialog>

@@ -9,13 +9,14 @@ import {
   MAKER_FEE, TAKER_FEE,
   REWARD_RATE, EXCHANGE_LEVERAGE, EXCHANGE_POSITIONS,
   LEVERAGE_DECIMALS, MARKETS, MARKET_WEIGHT_DECIMALS,
-  AMOUNT_DECIMALS, MARKET_TYPES, MARKET_WEIGHT
+  AMOUNT_DECIMALS, MARKET_TYPES, MARKET_WEIGHT, USDC_MINT
 } from 'utils/dist/constants';
 import { create } from 'zustand';
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
 import type { ExchangeBalance, Market, UserPosition, AppInfo } from '../types';
 import { colors } from "../utils";
 import { PublicKey } from "@solana/web3.js";
+import { getAccount, getMint } from '@solana/spl-token';
 
 export const defaultAppInfo: AppInfo = {
   appTitle: "Krunch",
@@ -67,7 +68,7 @@ interface KrunchState {
   refreshUserCollateral: () => Promise<Number>,
   claimRewards: () => Promise<void>,
   addMarkets: () => Promise<void>,
-  addExchangePositions: () => Promise<void>,
+  addExchangePositions: () => Promise<void>
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
@@ -78,7 +79,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const _takerFee = TAKER_FEE
     const _makerFee = MAKER_FEE
     const _marketWeight = MARKET_WEIGHT
-    
+
     for (const m of MARKETS) {
       const marketIndex = m.marketIndex;
       const address = new PublicKey(m.feedAddress);
@@ -151,6 +152,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     console.log('provider', provider)
     const program = get().program
     console.log('program', program)
+
     const slotsIn24Hours = REWARD_FREQUENCY;
     const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', [
       EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,

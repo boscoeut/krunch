@@ -8,12 +8,15 @@ import EmojiEventsRounded from '@mui/icons-material/EmojiEventsRounded';
 import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import UploadRoundedIcon from '@mui/icons-material/UploadRounded';
+import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
 import { useState } from 'react';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from '../hooks/useProgram';
 import { formatCurrency } from '../utils';
-import AccountDialog from './AccountDialog';
+import DepositDialog from './DepositDialog';
+import WithdrawDialog from './WithdrawDialog';
 import ClaimDialog from './ClaimDialog';
 import ExchangeDialog from './ExchangeDialog';
 import MarketDialog from './MarketDialog';
@@ -22,9 +25,10 @@ import TradeDialog from './TradeDialog';
 export default function Toolbar() {
     const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
     const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
+    const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
     const [claimDialogOpen, setClaimDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
-    const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+    const [DepositDialogOpen, setDepositDialogOpen] = useState(false);
     const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
     const refreshAll = useKrunchStore((state: any) => state.refreshAll)
     const isAdmin = useKrunchStore((state: any) => state.isAdmin)
@@ -61,11 +65,19 @@ export default function Toolbar() {
                 </Button>
                 <Button
                     color="success"
-                    startDecorator={<AccountBalanceRounded />}
+                    startDecorator={<UploadRoundedIcon />}
                     size="sm"
-                    onClick={() => setAccountDialogOpen(true)}
+                    onClick={() => setDepositDialogOpen(true)}
                 >
-                    Wallet
+                    Deposit
+                </Button>
+                <Button
+                    color="success"
+                    startDecorator={<DownloadRoundedIcon />}
+                    size="sm"
+                    onClick={() => setWithdrawDialogOpen(true)}
+                >
+                    Withdraw
                 </Button>
 
 
@@ -107,9 +119,10 @@ export default function Toolbar() {
             </Box>
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
             <MarketDialog open={marketDialogOpen} setOpen={setMarketDialogOpen} />
-            <AccountDialog open={accountDialogOpen} setOpen={setAccountDialogOpen} />
+            <DepositDialog open={DepositDialogOpen} setOpen={setDepositDialogOpen} />
             <ExchangeDialog open={exchangeDialogOpen} setOpen={setExchangeDialogOpen} />
             <ClaimDialog open={claimDialogOpen} setOpen={setClaimDialogOpen} />
+            <WithdrawDialog open={withdrawDialogOpen} setOpen={setWithdrawDialogOpen} />
         </>
     );
 }
