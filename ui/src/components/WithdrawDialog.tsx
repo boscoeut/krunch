@@ -4,21 +4,25 @@ import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
-import FormControl from '@mui/joy/FormControl';
-import FormLabel from '@mui/joy/FormLabel';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
+import Chip from '@mui/joy/Chip';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Option from '@mui/joy/Option';
 import Select from '@mui/joy/Select';
 import Stack from '@mui/joy/Stack';
 import { PublicKey } from "@solana/web3.js";
+import FormControl from '@mui/joy/FormControl';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import FormHelperText from '@mui/joy/FormHelperText';
+import FormLabel from '@mui/joy/FormLabel';
 import * as React from 'react';
 import { AMOUNT_DECIMALS, CHAINLINK_PROGRAM, EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { findAddress } from "utils/dist/utils";
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from '../hooks/useProgram';
+import { formatCurrency } from '../utils';
 const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
 // icons
 
@@ -34,7 +38,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   const [submitting, setSubmitting] = React.useState(false);
   const { getProgram, getProvider } = useProgram();
 
-  const userBalances = useKrunchStore(state => state.userBalances)
+  const userAccountValue = useKrunchStore(state => state.userAccountValue)
 
   const handleSubmit = async () => {
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
@@ -89,8 +93,22 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
 
   const properties = [
     { label: 'Amount', value: amount, onChange: setAmount, type: 'number' },
-    { label:  "Token to Receive", value: market, onChange: setMarket, type: 'markets' },
+    { label: "Token to Receive", value: market, onChange: setMarket, type: 'markets' },
   ]
+
+  let submitMessage = 'Withdraw'
+  let errorMessage = ''
+  let canSubmit = !submitting
+
+  const selectedBalance = userAccountValue / AMOUNT_DECIMALS
+  if (selectedBalance < Number(amount)) {
+    canSubmit = false
+    submitMessage = 'Insufficient Balance'
+    errorMessage = submitMessage
+  }
+  if (submitting) {
+    submitMessage = 'Withdrawing...'
+  }
 
   return (
     <React.Fragment>
@@ -106,31 +124,25 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
             }}
           >
             <Stack spacing={2}>
-             
-
-              {properties.map((property) => {
-                return (
-                  <Box key={property.label}>
-                    {property.type === 'markets' && <FormControl key={property.label}>
-                      <FormLabel>{property.label}</FormLabel>
-                      <Select value={property.value} onChange={(e: any, newValue: any) => {
-                        property.onChange(newValue)
-                      }}>
-                        {EXCHANGE_POSITIONS.map((position) => {
-                          return <Option key={position.market} value={position.market} >{position.market}</Option>
-                        })}
-                      </Select>
-
-                    </FormControl>}
-                    {property.type === 'number' && <FormControl key={property.label}>
-                      <FormLabel>{property.label}</FormLabel>
-                      <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
-                    </FormControl>}
-                  </Box>
-                );
-              })}
-              
-              <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
+              <FormControl error={!canSubmit}>
+                <FormLabel>Amount <Chip color="success">Max {formatCurrency(userAccountValue/AMOUNT_DECIMALS)} </Chip></FormLabel>
+                <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
+                {!canSubmit && <FormHelperText>
+                        <InfoOutlined />
+                        {errorMessage}
+                      </FormHelperText>}
+              </FormControl>
+              <FormControl>
+                <FormLabel>Token to Receive</FormLabel>
+                <Select value={market} onChange={(e: any, newValue: any) => {
+                  setMarket(newValue)
+                }}>
+                  {EXCHANGE_POSITIONS.map((position) => {
+                    return <Option key={position.market} value={position.market} >{position.market}</Option>
+                  })}
+                </Select>
+              </FormControl>
+              <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
             </Stack>
           </form>
         </ModalDialog>

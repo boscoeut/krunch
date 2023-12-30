@@ -39,7 +39,7 @@ export default function Toolbar() {
     const [updateExchangeDialogOpen, setUpdateExchangeDialogOpen] = useState(false);
     const [claimDialogOpen, setClaimDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
-    const [DepositDialogOpen, setDepositDialogOpen] = useState(false);
+    const [depositDialogOpen, setDepositDialogOpen] = useState(true);
     const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
     const refreshAll = useKrunchStore((state: any) => state.refreshAll)
     const isAdmin = useKrunchStore((state: any) => state.isAdmin)
@@ -116,7 +116,7 @@ export default function Toolbar() {
             </Box>
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
             <MarketDialog open={marketDialogOpen} setOpen={setMarketDialogOpen} />
-            <DepositDialog open={DepositDialogOpen} setOpen={setDepositDialogOpen} />
+            <DepositDialog open={depositDialogOpen} setOpen={setDepositDialogOpen} />
             <ExchangeDialog open={exchangeDialogOpen} setOpen={setExchangeDialogOpen} />
             <ClaimDialog open={claimDialogOpen} setOpen={setClaimDialogOpen} />
             <WithdrawDialog open={withdrawDialogOpen} setOpen={setWithdrawDialogOpen} />

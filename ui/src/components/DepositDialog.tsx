@@ -1,28 +1,29 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import * as anchor from "@coral-xyz/anchor";
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
-import RadioGroup from '@mui/joy/RadioGroup';
-import Radio from '@mui/joy/Radio';
+import FormHelperText from '@mui/joy/FormHelperText';
 import FormLabel from '@mui/joy/FormLabel';
-import Select from '@mui/joy/Select';
-import Option from '@mui/joy/Option';
-import Table from '@mui/joy/Table';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
-import { useKrunchStore } from "../hooks/useKrunchStore";
-import Box from '@mui/joy/Box';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
+import Option from '@mui/joy/Option';
+import Select from '@mui/joy/Select';
 import Stack from '@mui/joy/Stack';
+import Table from '@mui/joy/Table';
 import { PublicKey } from "@solana/web3.js";
-import { formatCurrency, renderItem } from '../utils';
 import * as React from 'react';
-import { CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, AMOUNT_DECIMALS } from "utils/dist/constants";
+import { AMOUNT_DECIMALS, CHAINLINK_PROGRAM, EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { findAddress } from "utils/dist/utils";
+import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from '../hooks/useProgram';
+import { renderItem } from '../utils';
+
 const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
 // icons
 
@@ -39,6 +40,9 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
   const { getProgram, getProvider } = useProgram();
 
   const userBalances = useKrunchStore(state => state.userBalances)
+
+  const selectedMarket = userBalances.find((position) => position.market === market)
+  const selectedBalance = (selectedMarket?.balance || 0) / (10 ** (selectedMarket?.decimals || 1))
 
   const handleSubmit = async () => {
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
@@ -96,6 +100,19 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
     { label: `Token to Deposit`, value: market, onChange: setMarket, type: 'markets' },
   ]
 
+  let submitMessage = 'Deposit'
+  let errorMessage = ''
+  let canSubmit = !submitting
+
+  if (selectedBalance < Number(amount)) {
+    canSubmit = false
+    submitMessage = 'Insufficient Balance'
+    errorMessage = submitMessage
+  }
+  if (submitting) {
+    submitMessage = 'Depositing...'
+  }
+
   return (
     <React.Fragment>
       <Modal open={open} onClose={() => setOpen(false)}>
@@ -110,7 +127,6 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
             }}
           >
             <Stack spacing={2}>
-              
               {properties.map((property) => {
                 return (
                   <Box key={property.label}>
@@ -125,35 +141,42 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                       </Select>
 
                     </FormControl>}
-                    {property.type === 'number' && <FormControl key={property.label}>
+                    {property.type === 'number' && <FormControl key={property.label} error={!canSubmit}>
                       <FormLabel>{property.label}</FormLabel>
-                      <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
+                      <Input 
+                        autoFocus required
+                        value={property.value}
+                        onChange={(e: any) => property.onChange(e.target.value)} />
+                      {!canSubmit && <FormHelperText>
+                        <InfoOutlined />
+                        {errorMessage}
+                      </FormHelperText>}
                     </FormControl>}
                   </Box>
                 );
               })}
-              
-                <Table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 225 }}>Token</th>
-                      <th>Available to Deposit</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {userBalances.map((item) => {
-                      const amount = item.balance !== 0 ? renderItem(item.balance || 0, 10 ** item.decimals) : 0
-                      return (
-                        <tr key={item.market}>
-                          <td>{item.market}</td>
-                          <td>{amount}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </Table>
-              
-              <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
+
+              <Table>
+                <thead>
+                  <tr>
+                    <th style={{ width: 225 }}>Token</th>
+                    <th>Available to Deposit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userBalances.map((item) => {
+                    const amount = item.balance !== 0 ? renderItem(item.balance || 0, 10 ** item.decimals) : 0
+                    return (
+                      <tr key={item.market}>
+                        <td>{item.market}</td>
+                        <td>{amount}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </Table>
+
+              <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
             </Stack>
           </form>
         </ModalDialog>

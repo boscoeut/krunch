@@ -16,7 +16,6 @@ import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/util
 import type { ExchangeBalance, Market, UserPosition, AppInfo } from '../types';
 import { colors } from "../utils";
 import { PublicKey } from "@solana/web3.js";
-import { getAccount, getMint } from '@solana/spl-token';
 
 export const defaultAppInfo: AppInfo = {
   appTitle: "Krunch",
