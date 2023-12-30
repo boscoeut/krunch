@@ -70,10 +70,18 @@ interface KrunchState {
   addMarkets: () => Promise<void>,
   addExchangePositions: () => Promise<void>
   userAccountValue: number,
+  updateExchange: (testMode:boolean) => Promise<void>,
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
   userAccountValue: 0,
+  updateExchange: async function (testMode:boolean) {
+    const program = get().program
+    const tx = await program.methods.updateExchange(testMode).accounts({
+      exchange: await findAddress(program, ['exchange']),      
+    }).rpc();
+    console.log("updateExchange tx", tx);
+  },
   addMarkets: async function () {
     const provider = get().provider
     console.log('provider', provider)

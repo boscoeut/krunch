@@ -11,6 +11,7 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
 import UploadRoundedIcon from '@mui/icons-material/UploadRounded';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import UpdateRounded from '@mui/icons-material/UpdateRounded';
 import { useState } from 'react';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
@@ -21,6 +22,7 @@ import WithdrawDialog from './WithdrawDialog';
 import ListItemDecorator from '@mui/joy/ListItemDecorator';
 import ClaimDialog from './ClaimDialog';
 import ExchangeDialog from './ExchangeDialog';
+import UpdateExchangeDialog from './UpdateExchangeDialog';
 import MarketDialog from './MarketDialog';
 import TradeDialog from './TradeDialog';
 import Dropdown from '@mui/joy/Dropdown';
@@ -34,6 +36,7 @@ export default function Toolbar() {
     const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
     const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
     const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+    const [updateExchangeDialogOpen, setUpdateExchangeDialogOpen] = useState(false);
     const [claimDialogOpen, setClaimDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
     const [DepositDialogOpen, setDepositDialogOpen] = useState(false);
@@ -105,6 +108,7 @@ export default function Toolbar() {
                     <Menu>
                         <MenuItem onClick={() => initApp()}><ListItemDecorator><SettingsRoundedIcon /></ListItemDecorator>Setup</MenuItem>
                         {isAdmin && <MenuItem onClick={() => setExchangeDialogOpen(true)}><ListItemDecorator><CurrencyExchangeRounded /></ListItemDecorator>Exchange Deposit/Withdraw</MenuItem>}
+                        {isAdmin && <MenuItem onClick={() => setUpdateExchangeDialogOpen(true)}><ListItemDecorator><UpdateRounded /></ListItemDecorator>Update Exchange</MenuItem>}
                         {isAdmin && <MenuItem onClick={() => setMarketDialogOpen(true)}><ListItemDecorator><CandlestickChartRoundedIcon /></ListItemDecorator>Update Market</MenuItem>}
                     </Menu>
                 </Dropdown>
@@ -116,6 +120,7 @@ export default function Toolbar() {
             <ExchangeDialog open={exchangeDialogOpen} setOpen={setExchangeDialogOpen} />
             <ClaimDialog open={claimDialogOpen} setOpen={setClaimDialogOpen} />
             <WithdrawDialog open={withdrawDialogOpen} setOpen={setWithdrawDialogOpen} />
+            <UpdateExchangeDialog open={updateExchangeDialogOpen} setOpen={setUpdateExchangeDialogOpen} />
         </>
     );
 }
