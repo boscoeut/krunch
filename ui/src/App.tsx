@@ -3,6 +3,7 @@ import CssBaseline from '@mui/joy/CssBaseline';
 import { CssVarsProvider, extendTheme } from '@mui/joy/styles';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Account from './components/Account';
+import UserPositions from './components/UserPositions';
 import Contracts from './components/Contracts';
 import Documentation from './components/Documentation';
 import Header from './components/Header';
@@ -111,6 +112,7 @@ export default function App() {
                             <Route path="/pool" Component={Pool} />
                             <Route path="/documentation" Component={Documentation} />
                             <Route path="/contracts" Component={Contracts} />
+                            <Route path="/positions" Component={UserPositions} />
                             <Route path="/markets" Component={Markets} />
                             <Route path="/" element={<Navigate replace to="/home" />} />
                         </Routes>

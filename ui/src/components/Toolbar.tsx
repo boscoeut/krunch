@@ -2,34 +2,33 @@ import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRou
 import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
 // icons
-import AccountBalanceRounded from '@mui/icons-material/AccountBalanceRounded';
+import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
+import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
 import CurrencyExchangeRounded from '@mui/icons-material/CurrencyExchangeRounded';
 import EmojiEventsRounded from '@mui/icons-material/EmojiEventsRounded';
 import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
-import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
 import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutlineRounded';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import UpdateRounded from '@mui/icons-material/UpdateRounded';
+import ButtonGroup from '@mui/joy/ButtonGroup';
+import Dropdown from '@mui/joy/Dropdown';
+import ListItemDecorator from '@mui/joy/ListItemDecorator';
+import Menu from '@mui/joy/Menu';
+import MenuButton from '@mui/joy/MenuButton';
+import MenuItem from '@mui/joy/MenuItem';
 import { useState } from 'react';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from '../hooks/useProgram';
 import { formatCurrency } from '../utils';
-import DepositDialog from './DepositDialog';
-import WithdrawDialog from './WithdrawDialog';
-import ListItemDecorator from '@mui/joy/ListItemDecorator';
 import ClaimDialog from './ClaimDialog';
+import DepositDialog from './DepositDialog';
 import ExchangeDialog from './ExchangeDialog';
-import UpdateExchangeDialog from './UpdateExchangeDialog';
 import MarketDialog from './MarketDialog';
 import TradeDialog from './TradeDialog';
-import Dropdown from '@mui/joy/Dropdown';
-import Menu from '@mui/joy/Menu';
-import MenuButton from '@mui/joy/MenuButton';
-import ButtonGroup from '@mui/joy/ButtonGroup';
-import MenuItem from '@mui/joy/MenuItem';
+import UpdateExchangeDialog from './UpdateExchangeDialog';
+import WithdrawDialog from './WithdrawDialog';
 
 
 export default function Toolbar() {

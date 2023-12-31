@@ -30,9 +30,9 @@ export default function PoolDetails() {
     return (
         <Box>
             <Stack direction={"row"} >
-                <Stat numValue={total} title="Pool Value" value={total / AMOUNT_DECIMALS} />
-                <Stat numValue={exchange.fees?.toNumber()} title="Fees" value={exchange.fees?.toNumber()  / AMOUNT_DECIMALS} />
-                <Stat numValue={exchangeUnrealizedPnl} title="Unrealized Pnl" value={exchangeUnrealizedPnl} />
+                <Stat numValue={total} title="Pool Value" value={formatCurrency(total / AMOUNT_DECIMALS)} />
+                <Stat numValue={exchange.fees?.toNumber()} title="Fees" value={formatCurrency(exchange.fees?.toNumber()  / AMOUNT_DECIMALS)} />
+                <Stat numValue={exchangeUnrealizedPnl} title="Unrealized Pnl" value={formatCurrency(exchangeUnrealizedPnl)} />
             </Stack>
             <Stack direction={"row"} >
                 <SubStat numValue={total} title="Pool ROI" value={formatPercent((total / exchange.collateralValue) - 1)} />

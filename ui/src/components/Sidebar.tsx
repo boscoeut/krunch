@@ -5,6 +5,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
+import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
 import WavesRoundedIcon from '@mui/icons-material/WavesRounded';
 import Box from '@mui/joy/Box';
 import Divider from '@mui/joy/Divider';
@@ -58,6 +59,11 @@ export default function Sidebar() {
         name: 'Account',
         icon: <DashboardRoundedIcon />,
         onclick: () => navigate('/home')
+    },{
+        path: '/positions',
+        name: 'User Positions',
+        icon: <QueryStatsRounded />,
+        onclick: () => navigate('/positions')
     },{
         path: '/pool',
         name: 'Pool',
