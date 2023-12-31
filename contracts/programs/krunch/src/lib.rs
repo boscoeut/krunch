@@ -66,9 +66,12 @@ pub mod krunch {
         Ok(())
     }
 
-    pub fn update_exchange(ctx: Context<UpdateExchange>, test_mode: bool) -> Result<()> {
+    pub fn update_exchange(ctx: Context<UpdateExchange>, test_mode: bool,reward_frequency: u64,reward_rate: u64, leverage: u32) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.test_mode = test_mode;
+        exchange.reward_frequency = reward_frequency;
+        exchange.reward_rate = reward_rate;
+        exchange.leverage = leverage;
         Ok(())
     }
 

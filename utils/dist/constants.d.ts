@@ -1,5 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 export declare const NETWORK: 'Localnet' | 'Devnet' | 'Mainnet';
+export declare const SLOTS_PER_DAY: number;
 export declare const NETWORK_EXPLORER = "https://explorer.solana.com/";
 export declare const NETWORK_URL: string;
 export declare const ADMIN_ADDRESS: string;
@@ -17,7 +18,7 @@ export declare const ETH_USD_FEED: PublicKey;
 export declare const BTC_USD_FEED: PublicKey;
 export declare const CHAINLINK_PROGRAM: string;
 export declare const MARKET_WEIGHT = 1;
-export declare const REWARD_FREQUENCY = 5;
+export declare const REWARD_FREQUENCY: number;
 export declare const PRICE_DECIMALS: number;
 export declare const FEE_DECIMALS: number;
 export declare const MARKET_WEIGHT_DECIMALS: number;

@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EXCHANGE_POSITIONS = exports.MARKETS = exports.MARKET_TYPES = exports.REWARD_RATE = exports.MAKER_FEE = exports.TAKER_FEE = exports.EXCHANGE_LEVERAGE = exports.MARKET_LEVERAGE = exports.LEVERAGE_DECIMALS = exports.AMOUNT_DECIMALS = exports.MARKET_WEIGHT_DECIMALS = exports.FEE_DECIMALS = exports.PRICE_DECIMALS = exports.REWARD_FREQUENCY = exports.MARKET_WEIGHT = exports.CHAINLINK_PROGRAM = exports.BTC_USD_FEED = exports.ETH_USD_FEED = exports.USDT_USD_FEED = exports.USDC_USD_FEED = exports.SOL_USD_FEED = exports.ETH_MINT = exports.BTC_MINT = exports.USDT_MINT = exports.SOL_MINT = exports.USDC_MINT = exports.ASSOCIATED_TOKEN_PROGRAM_ID = exports.TOKEN_PROGRAM_ID = exports.ADMIN_ADDRESS = exports.NETWORK_URL = exports.NETWORK_EXPLORER = exports.NETWORK = void 0;
+exports.EXCHANGE_POSITIONS = exports.MARKETS = exports.MARKET_TYPES = exports.REWARD_RATE = exports.MAKER_FEE = exports.TAKER_FEE = exports.EXCHANGE_LEVERAGE = exports.MARKET_LEVERAGE = exports.LEVERAGE_DECIMALS = exports.AMOUNT_DECIMALS = exports.MARKET_WEIGHT_DECIMALS = exports.FEE_DECIMALS = exports.PRICE_DECIMALS = exports.REWARD_FREQUENCY = exports.MARKET_WEIGHT = exports.CHAINLINK_PROGRAM = exports.BTC_USD_FEED = exports.ETH_USD_FEED = exports.USDT_USD_FEED = exports.USDC_USD_FEED = exports.SOL_USD_FEED = exports.ETH_MINT = exports.BTC_MINT = exports.USDT_MINT = exports.SOL_MINT = exports.USDC_MINT = exports.ASSOCIATED_TOKEN_PROGRAM_ID = exports.TOKEN_PROGRAM_ID = exports.ADMIN_ADDRESS = exports.NETWORK_URL = exports.NETWORK_EXPLORER = exports.SLOTS_PER_DAY = exports.NETWORK = void 0;
 var web3_js_1 = require("@solana/web3.js");
 exports.NETWORK = "Devnet";
+exports.SLOTS_PER_DAY = 24 * 60 * 60 * 2.5;
 var networkUrl = "http://localhost:8899"; // Localnet
 var adminAddress = "HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS";
 var tokenProgramId = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
@@ -18,6 +19,7 @@ var usdtUsdFeed = new web3_js_1.PublicKey("8vAuuqC5wVZ9Z9oQUGGDSjYgudTfjmyqGU5Vu
 var ethUsdFeed = new web3_js_1.PublicKey("716hFAECqotxcXcj8Hs8nr7AG6q9dBw2oX3k3M8V7uGq");
 var btcUsdFeed = new web3_js_1.PublicKey("Cv4T27XbjVoKUYwP72NQQanvZeA7W4YF9L4EnYT9kx5o");
 var chainlinkProgram = "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny";
+var rewardFrequency = exports.SLOTS_PER_DAY * 1;
 if (exports.NETWORK === "Devnet") {
     networkUrl = "https://api.devnet.solana.com"; // devnet
     usdcMint = new web3_js_1.PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
@@ -52,8 +54,7 @@ exports.ETH_USD_FEED = ethUsdFeed;
 exports.BTC_USD_FEED = btcUsdFeed;
 exports.CHAINLINK_PROGRAM = chainlinkProgram;
 exports.MARKET_WEIGHT = 1;
-// export const REWARD_FREQUENCY = 86400 * 1000 / 400; // 1 week
-exports.REWARD_FREQUENCY = 5; // 1 week
+exports.REWARD_FREQUENCY = rewardFrequency;
 exports.PRICE_DECIMALS = Math.pow(10, 9);
 exports.FEE_DECIMALS = Math.pow(10, 4);
 exports.MARKET_WEIGHT_DECIMALS = Math.pow(10, 4);

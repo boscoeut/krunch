@@ -1,6 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 
 export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Devnet";
+export const SLOTS_PER_DAY = 24 * 60 * 60 * 2.5
 
 let networkUrl = "http://localhost:8899" // Localnet
 let adminAddress = "HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS" 
@@ -17,6 +18,9 @@ let usdtUsdFeed = new PublicKey("8vAuuqC5wVZ9Z9oQUGGDSjYgudTfjmyqGU5VucQxTk5U")
 let ethUsdFeed = new PublicKey("716hFAECqotxcXcj8Hs8nr7AG6q9dBw2oX3k3M8V7uGq")
 let btcUsdFeed = new PublicKey("Cv4T27XbjVoKUYwP72NQQanvZeA7W4YF9L4EnYT9kx5o")
 let chainlinkProgram =  "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
+
+
+let rewardFrequency = SLOTS_PER_DAY * 1
 if (NETWORK === "Devnet") {
     networkUrl = "https://api.devnet.solana.com" // devnet
     usdcMint = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
@@ -52,9 +56,7 @@ export const ETH_USD_FEED = ethUsdFeed;
 export const BTC_USD_FEED = btcUsdFeed;
 export const CHAINLINK_PROGRAM = chainlinkProgram;
 export const MARKET_WEIGHT = 1;
-
-// export const REWARD_FREQUENCY = 86400 * 1000 / 400; // 1 week
-export const REWARD_FREQUENCY = 5; // 1 week
+export const REWARD_FREQUENCY = rewardFrequency;
 export const PRICE_DECIMALS = 10 ** 9;
 export const FEE_DECIMALS = 10 ** 4;
 export const MARKET_WEIGHT_DECIMALS = 10 ** 4;
@@ -64,9 +66,7 @@ export const MARKET_LEVERAGE = 10;
 export const EXCHANGE_LEVERAGE = 10;
 export const TAKER_FEE = 0.002;
 export const MAKER_FEE = -0.001;
-
 export const REWARD_RATE = 0.5 * AMOUNT_DECIMALS;
-
 
 export const MARKET_TYPES = [{
     id: 1,

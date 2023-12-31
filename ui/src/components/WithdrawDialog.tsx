@@ -33,11 +33,14 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   const userBalances = useKrunchStore(state => state.userBalances)
   const withdraw = useKrunchStore(state => state.withdraw)
   const userAccountValue = useKrunchStore(state => state.userAccountValue)
+  const userAccount = useKrunchStore(state => state.userAccount)
   const withdrawValue=Number(amount) 
   const selectedMarket = userBalances.find((position) => position.market === market)
   const balanceAfterWithdraw = userAccountValue/AMOUNT_DECIMALS - withdrawValue
 
   const tokenAmount = Number(amount) / (selectedMarket?.price || 0)
+  const marginUsed = userAccount.marginUsed?.toNumber() || 0
+  const amountAvailable = userAccountValue + marginUsed
   const tokenPhrase = `Receive ${formatNumber(tokenAmount,5)} ${selectedMarket?.market.replace("/USD","")} Tokens`
   const handleSubmit = async () => {
     try {
@@ -54,7 +57,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   let submitMessage = 'Withdraw'
   let errorMessage = ''
   let canSubmit = !submitting
-  const selectedBalance = userAccountValue / AMOUNT_DECIMALS
+  const selectedBalance = amountAvailable / AMOUNT_DECIMALS
   if (Number(selectedBalance.toFixed(2)) < Number(amount)) {
     canSubmit = false
     submitMessage = 'Insufficient Balance'
@@ -72,7 +75,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   }
 
   const setMax = () => {
-    setAmount(Number(userAccountValue / AMOUNT_DECIMALS).toFixed(2))
+    setAmount(Number(amountAvailable / AMOUNT_DECIMALS).toFixed(2))
   }
 
   return (
@@ -89,8 +92,27 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
             }}
           >
             <Stack spacing={2}>
-              <FormControl error={!canSubmit}>
-                <FormLabel>Amount <Chip onClick={setMax} color="success">Max {formatCurrency(userAccountValue / AMOUNT_DECIMALS)} </Chip></FormLabel>
+            <FormControl>
+                <Table>
+                <tbody>
+                  <tr>
+                    <td style={{width:175}}>Account Value</td>
+                    <td>{formatCurrency(userAccountValue/AMOUNT_DECIMALS)}</td>
+                  </tr>
+                  <tr>
+                    <td style={{width:175}}>Margin Used</td>
+                    <td>{formatCurrency(marginUsed/AMOUNT_DECIMALS)}</td>
+                  </tr>
+                  <tr>
+                    <td>Amount Available</td>
+                    <td><KLabel fontWeight='bold' numValue={amountAvailable}>{formatCurrency(amountAvailable/AMOUNT_DECIMALS)}</KLabel></td> 
+                  </tr>
+                 
+                </tbody>
+                </Table>                  
+              </FormControl>
+              <FormControl error={!canSubmit && !submitting}>
+                <FormLabel>Amount to Withdraw<Chip onClick={setMax} color="success">Max {formatCurrency(amountAvailable / AMOUNT_DECIMALS)} </Chip></FormLabel>
                 <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
                 {!canSubmit && <FormHelperText>
                   <InfoOutlined />
@@ -124,6 +146,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
                     <td>Balance After Withdraw</td>
                     <td><KLabel fontWeight='bold' numValue={balanceAfterWithdraw}>{formatCurrency(balanceAfterWithdraw)}</KLabel></td> 
                   </tr>
+                 
                 </tbody>
                 </Table>                  
               </FormControl>

@@ -2,21 +2,27 @@ import * as anchor from "@coral-xyz/anchor";
 import { PythCluster, PythHttpClient, getPythClusterApiUrl, getPythProgramKeyForCluster } from '@pythnetwork/client';
 import type { } from '@redux-devtools/extension'; // required for devtools typing
 import { getAssociatedTokenAddress } from "@solana/spl-token";
-import { Connection } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import {
+  AMOUNT_DECIMALS,
+  CHAINLINK_PROGRAM,
+  EXCHANGE_LEVERAGE, EXCHANGE_POSITIONS,
+  FEE_DECIMALS,
+  LEVERAGE_DECIMALS,
+  MAKER_FEE,
+  MARKETS,
   MARKET_LEVERAGE,
-  FEE_DECIMALS, REWARD_FREQUENCY,
-  MAKER_FEE, TAKER_FEE,
-  REWARD_RATE, EXCHANGE_LEVERAGE, EXCHANGE_POSITIONS,
-  LEVERAGE_DECIMALS, MARKETS, MARKET_WEIGHT_DECIMALS,
-  AMOUNT_DECIMALS, MARKET_TYPES, MARKET_WEIGHT, NETWORK,
-  CHAINLINK_PROGRAM
+  MARKET_TYPES, MARKET_WEIGHT,
+  MARKET_WEIGHT_DECIMALS,
+  NETWORK,
+  REWARD_FREQUENCY,
+  REWARD_RATE,
+  TAKER_FEE
 } from 'utils/dist/constants';
-import { create } from 'zustand';
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
-import type { ExchangeBalance, Market, UserPosition, AppInfo } from '../types';
+import { create } from 'zustand';
+import type { AppInfo, ExchangeBalance, Market, UserPosition } from '../types';
 import { colors } from "../utils";
-import { PublicKey } from "@solana/web3.js";
 const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
 
 export const defaultAppInfo: AppInfo = {
@@ -71,18 +77,18 @@ interface KrunchState {
   addMarkets: () => Promise<void>,
   addExchangePositions: () => Promise<void>
   userAccountValue: number,
-  updateExchange: (testMode: boolean) => Promise<void>,
+  updateExchange: (testMode: boolean, rewardFrequency: number, rewardRate: number, leverage: number) => Promise<void>,
   executeTrade: (marketIndex: number, amount: number) => Promise<void>,
   deposit: (market: string, amount: number) => Promise<void>,
   withdraw: (market: string, amount: number) => Promise<void>,
   exchangeDepositOrWithdraw: (market: string, amount: number) => Promise<void>,
-  updateMarket: (name: string, marketIndex: number,marketWeight:number,
-    leverage:number,takerFee:number,makerFee:number,feedAddress:string) => Promise<void>,
+  updateMarket: (name: string, marketIndex: number, marketWeight: number,
+    leverage: number, takerFee: number, makerFee: number, feedAddress: string) => Promise<void>,
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
-  updateMarket: async (name: string, marketIndex: number,marketWeight:number,
-    leverage:number,takerFee:number,makerFee:number,feedAddress:string) => {
+  updateMarket: async (name: string, marketIndex: number, marketWeight: number,
+    leverage: number, takerFee: number, makerFee: number, feedAddress: string) => {
     let accountExists = false;
     console.log('handleSubmit', marketIndex)
     const program = get().program
@@ -122,7 +128,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       console.log("updateMarket", tx);
       const acct: any = await fetchAccount(program, 'market',
         ['market', Number(marketIndex)]);
-      console.log('updateMarket', acct)      
+      console.log('updateMarket', acct)
     }
   },
   exchangeDepositOrWithdraw: async (market: string, amount: number) => {
@@ -289,9 +295,12 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     console.log("executeTrade", tx);
   },
   userAccountValue: 0,
-  updateExchange: async function (testMode: boolean) {
+  updateExchange: async function (testMode: boolean, rewardFrequency: number, rewardRate: number, leverage: number) {
     const program = get().program
-    const tx = await program.methods.updateExchange(testMode).accounts({
+    const tx = await program.methods.updateExchange(testMode, 
+      new anchor.BN(rewardFrequency), 
+      new anchor.BN(rewardRate), 
+      leverage * LEVERAGE_DECIMALS).accounts({
       exchange: await findAddress(program, ['exchange']),
     }).rpc();
     console.log("updateExchange tx", tx);
