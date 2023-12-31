@@ -8,7 +8,6 @@ import Documentation from './components/Documentation';
 import Header from './components/Header';
 import Markets from './components/Markets';
 import Pool from './components/Pool';
-import Settings from './components/Settings';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import Welcome from './components/Welcome';
@@ -110,7 +109,6 @@ export default function App() {
                             <Route path="/welcome" Component={Welcome} />
                             <Route path="/home" Component={Account} />
                             <Route path="/pool" Component={Pool} />
-                            <Route path="/settings" Component={Settings} />
                             <Route path="/documentation" Component={Documentation} />
                             <Route path="/contracts" Component={Contracts} />
                             <Route path="/markets" Component={Markets} />
