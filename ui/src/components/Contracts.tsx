@@ -57,7 +57,7 @@ export default function Contracts() {
                     </thead>
                     <tbody>
                         {allContracts.map(c => {
-                            return <tr key={c.name}>
+                            return <tr key={`${c.name}_${c.type}`}>
                                 <td>{c.name}</td>
                                 <td>{c.type}</td>
                                 <td style={{

@@ -71,14 +71,14 @@ interface KrunchState {
   addMarkets: () => Promise<void>,
   addExchangePositions: () => Promise<void>
   userAccountValue: number,
-  updateExchange: (testMode:boolean) => Promise<void>,
-  executeTrade: (marketIndex:number,amount:number) => Promise<void>,
-  deposit: (market:string,amount:number) => Promise<void>,
-  withdraw: (market:string,amount:number) => Promise<void>,
+  updateExchange: (testMode: boolean) => Promise<void>,
+  executeTrade: (marketIndex: number, amount: number) => Promise<void>,
+  deposit: (market: string, amount: number) => Promise<void>,
+  withdraw: (market: string, amount: number) => Promise<void>,
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
-  withdraw: async (market:string,amount:number) => {
+  withdraw: async (market: string, amount: number) => {
     const program = get().program
     const provider = get().provider
 
@@ -118,14 +118,14 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       chainlinkProgram: CHAINLINK_PROGRAM,
     }).rpc();
   },
-  deposit: async (market:string,amount:number) => {
+  deposit: async (market: string, amount: number) => {
     const program = get().program
     const provider = get().provider
     const position = EXCHANGE_POSITIONS.find((p) => p.market === market)
 
     if (!position) {
       throw new Error('Position not found')
-    } 
+    }
     let tokenAccount = await getOrCreateAssociatedTokenAccount(
       provider.connection, //connection
       provider.wallet.publicKey, //payer
@@ -159,53 +159,53 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     }).rpc();
     console.log("transactionAmount tx", tx);
   },
-  executeTrade: async function (marketIndex:number,amount:number) {
-        const provider = get().provider
-        const program = get().program
+  executeTrade: async function (marketIndex: number, amount: number) {
+    const provider = get().provider
+    const program = get().program
 
-        const index = Number(marketIndex)
-        const market = MARKETS.find((market) => market.marketIndex === Number(marketIndex))
-        const position = EXCHANGE_POSITIONS.find((position) => position.market === market?.name)
+    const index = Number(marketIndex)
+    const market = MARKETS.find((market) => market.marketIndex === Number(marketIndex))
+    const position = EXCHANGE_POSITIONS.find((position) => position.market === market?.name)
 
-        if (!position) {
-          throw new Error('Position not found')
-        } 
+    if (!position) {
+      throw new Error('Position not found')
+    }
 
-        console.log('executeTrade', marketIndex)
+    console.log('executeTrade', marketIndex)
 
-        await fetchOrCreateAccount(program, 'userPosition',
-          ['user_position',
-            provider.wallet.publicKey,
-            index],
-          'addUserPosition', [new anchor.BN(index)],
-          {
-            userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-            market: await findAddress(program, ['market', index]),
-          });
+    await fetchOrCreateAccount(program, 'userPosition',
+      ['user_position',
+        provider.wallet.publicKey,
+        index],
+      'addUserPosition', [new anchor.BN(index)],
+      {
+        userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+        market: await findAddress(program, ['market', index]),
+      });
 
-        await fetchOrCreateAccount(program, 'userAccount',
-          ['user_account',
-            provider.wallet.publicKey],
-          'createUserAccount', []);
+    await fetchOrCreateAccount(program, 'userAccount',
+      ['user_account',
+        provider.wallet.publicKey],
+      'createUserAccount', []);
 
-        const tx = await program.methods.executeTrade(
-          new anchor.BN(marketIndex),
-          new anchor.BN(Number(amount) * AMOUNT_DECIMALS)
-        ).accounts({
-          market: await findAddress(program, ['market', index]),
-          exchange: await findAddress(program, ['exchange']),
-          userPosition: await findAddress(program, ['user_position', provider.wallet.publicKey, index]),
-          userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-          chainlinkFeed: position.feedAddress,
-          chainlinkProgram: CHAINLINK_PROGRAM,
-        }).rpc();
-        console.log("executeTrade", tx);
+    const tx = await program.methods.executeTrade(
+      new anchor.BN(marketIndex),
+      new anchor.BN(Number(amount) * AMOUNT_DECIMALS)
+    ).accounts({
+      market: await findAddress(program, ['market', index]),
+      exchange: await findAddress(program, ['exchange']),
+      userPosition: await findAddress(program, ['user_position', provider.wallet.publicKey, index]),
+      userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+      chainlinkFeed: position.feedAddress,
+      chainlinkProgram: CHAINLINK_PROGRAM,
+    }).rpc();
+    console.log("executeTrade", tx);
   },
   userAccountValue: 0,
-  updateExchange: async function (testMode:boolean) {
+  updateExchange: async function (testMode: boolean) {
     const program = get().program
     const tx = await program.methods.updateExchange(testMode).accounts({
-      exchange: await findAddress(program, ['exchange']),      
+      exchange: await findAddress(program, ['exchange']),
     }).rpc();
     console.log("updateExchange tx", tx);
   },
@@ -510,7 +510,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       + userAccount.collateralValue.toNumber();
     let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
     console.log('###uuserTotal', userTotal / AMOUNT_DECIMALS)
-    set({ userCollateral: userTotal,userAccountValue: hardAmount })
+    set({ userCollateral: userTotal, userAccountValue: hardAmount })
     return userTotal
   },
   refreshExchangeCollateral: async () => {
@@ -551,12 +551,15 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     console.log('userCollateral', get().userCollateral.toString())
     let userTotal = get().userCollateral - userAccount.rewards.toNumber();
     let exchangeTotal = get().exchangeCollateral;
-    const exchangeRewards =
+    let exchangeRewards =
       (exchange.pnl.toNumber()
         + exchange.rebates.toNumber()
         + exchange.rewards.toNumber()
         + exchange.fees.toNumber()) * (exchange.rewardRate.toNumber()) / AMOUNT_DECIMALS;
     // get % or rewards available
+    if (exchangeRewards < 0) {
+      exchangeRewards = 0
+    }
     let amount = (exchangeRewards * userTotal) / exchangeTotal;
 
     console.log(`____

@@ -16,7 +16,13 @@ const AMOUNT_DECIMALS: u128 = 10u128.pow(AMOUNT_NUM_DECIMALS as u32);
 pub mod krunch {
     use super::*;
 
-    pub fn initialize_exchange(ctx: Context<InitializeExchange>, leverage: u32, reward_frequency:u64, reward_rate:u64,test_mode:bool) -> Result<()> {
+    pub fn initialize_exchange(
+        ctx: Context<InitializeExchange>,
+        leverage: u32,
+        reward_frequency: u64,
+        reward_rate: u64,
+        test_mode: bool,
+    ) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.admin = ctx.accounts.admin.key.to_owned();
         exchange.margin_used = 0;
@@ -32,7 +38,7 @@ pub mod krunch {
         exchange.amount_withdrawn = 0;
         exchange.amount_deposited = 0;
         exchange.reward_frequency = reward_frequency;
-        exchange.reward_rate = reward_rate; 
+        exchange.reward_rate = reward_rate;
         exchange.test_mode = test_mode;
         Ok(())
     }
@@ -60,10 +66,7 @@ pub mod krunch {
         Ok(())
     }
 
-    pub fn update_exchange(
-        ctx: Context<UpdateExchange>,
-        test_mode: bool,
-    ) -> Result<()> {
+    pub fn update_exchange(ctx: Context<UpdateExchange>, test_mode: bool) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.test_mode = test_mode;
         Ok(())
@@ -103,10 +106,12 @@ pub mod krunch {
         let mut fee_rate: i64 = market.taker_fee.into();
 
         let fee_token_delta = market.token_amount + amount * -1; // market amounts are stored opposite user positions so flip the sign
-        if fee_token_delta.abs() < market.token_amount.abs() && amount.abs() <= market.token_amount.abs() {
+        if fee_token_delta.abs() < market.token_amount.abs()
+            && amount.abs() <= market.token_amount.abs()
+        {
             // maker
-            let temp_maker_fee:i64 = market.maker_fee.into();
-            let maker_fee= ((fbasis.abs() * temp_maker_fee as i128) / FEE_DECIMALS as i128) as i64;
+            let temp_maker_fee: i64 = market.maker_fee.into();
+            let maker_fee = ((fbasis.abs() * temp_maker_fee as i128) / FEE_DECIMALS as i128) as i64;
             let exchange_rewards = exchange_rewards_available(&exchange);
             if maker_fee * -1 < exchange_rewards as i64 {
                 fee_rate = market.maker_fee.into();
@@ -271,11 +276,14 @@ pub mod krunch {
         let clock = Clock::get()?;
         let current_unix_timestamp = clock.unix_timestamp;
 
-        if user_account.last_rewards_claim + exchange.reward_frequency as i64 > current_unix_timestamp {
+        if user_account.last_rewards_claim + exchange.reward_frequency as i64
+            > current_unix_timestamp
+        {
             return err!(KrunchErrors::RewardsClaimUnavailable);
         }
 
-        let user_total = calculate_user_total(&user_account, exchange.leverage.into()) - user_account.rewards as i128; // don't double count rewards
+        let user_total = calculate_user_total(&user_account, exchange.leverage.into())
+            - user_account.rewards as i128; // don't double count rewards
         let exchange_total = calculate_exchange_total(&exchange);
         let exchange_rewards = exchange_rewards_available(&exchange);
         // get % or rewards available
@@ -317,7 +325,7 @@ pub mod krunch {
 
         // do token transfer
         let token_amount = (amount as u128) / 10u128.pow(conversion.into());
-        
+
         let destination = &ctx.accounts.escrow_account;
         let source = &ctx.accounts.user_token_account;
         let token_program = &ctx.accounts.token_program;
@@ -522,28 +530,26 @@ fn calculate_exchange_balance_available(exchange: &Exchange) -> i128 {
 }
 
 fn calculate_exchange_total(exchange: &Exchange) -> i128 {
-    let exchange_hard_amount =
-        exchange.amount_withdrawn
+    let exchange_hard_amount = exchange.amount_withdrawn
         + exchange.amount_deposited
         + exchange.pnl
         + exchange.rebates
         + exchange.rewards
         + exchange.fees
         + exchange.collateral_value;
-    let exchange_total = exchange_hard_amount as i128
-        * exchange.leverage as i128
+    let exchange_total = exchange_hard_amount as i128 * exchange.leverage as i128
         / LEVERAGE_DECIMALS as i128
         + exchange.margin_used as i128;
     return exchange_total;
 }
 
 fn exchange_rewards_available(exchange: &Exchange) -> i128 {
-    let exchange_total = 
-        exchange.pnl
-        + exchange.rebates
-        + exchange.rewards
-        + exchange.fees;
-    return (exchange_total as i128 * exchange.reward_rate as i128)/AMOUNT_DECIMALS as i128;
+    let exchange_total = exchange.pnl + exchange.rebates + exchange.rewards + exchange.fees;
+    if exchange_total < 0 {
+        return 0;
+    } else {
+        return (exchange_total as i128 * exchange.reward_rate as i128) / AMOUNT_DECIMALS as i128;
+    }
 }
 
 fn calculate_market_total(exchange: &Exchange, market: &Market) -> i128 {
@@ -555,15 +561,12 @@ fn calculate_market_total(exchange: &Exchange, market: &Market) -> i128 {
 }
 
 fn calculate_user_total(user_account: &UserAccount, leverage: i128) -> i128 {
-    let user_hard_amount =
-        user_account.pnl 
-        + user_account.fees 
-        + user_account.rebates 
-        + user_account.rewards 
+    let user_hard_amount = user_account.pnl
+        + user_account.fees
+        + user_account.rebates
+        + user_account.rewards
         + user_account.collateral_value;
-    let user_total = user_hard_amount as i128 
-        * leverage as i128 
-        / LEVERAGE_DECIMALS as i128
+    let user_total = user_hard_amount as i128 * leverage as i128 / LEVERAGE_DECIMALS as i128
         + user_account.margin_used as i128;
     return user_total;
 }
