@@ -143,7 +143,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                 </tbody>
                 </Table>                  
               </FormControl>
-              
+              <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
               <Table>
                 <thead>
                   <tr>
@@ -173,7 +173,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                 </tbody>
               </Table>
 
-              <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
+             
             </Stack>
           </form>
         </ModalDialog>
