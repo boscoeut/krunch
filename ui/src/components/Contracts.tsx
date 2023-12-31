@@ -5,6 +5,7 @@ import { EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants';
 import { useKrunchStore } from '../hooks/useKrunchStore';
 import idl from '../idl/krunch.json';
 import KSheet from './KSheet';
+import {NETWORK_EXPLORER} from 'utils/dist/constants';
 export default function Contracts() {
 
     const appInfo = useKrunchStore(state => state.appInfo)
@@ -16,7 +17,7 @@ export default function Contracts() {
         type:string,
     }
 
-    const explorer = 'https://explorer.solana.com/'
+    const explorer = NETWORK_EXPLORER
     const marketContracts:Array<Contract> = MARKETS.map(map=> {return { 
         name: `${map.name}`,
         address: map.feedAddress,

@@ -1,5 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 export declare const NETWORK: 'Localnet' | 'Devnet' | 'Mainnet';
+export declare const NETWORK_EXPLORER = "https://explorer.solana.com/";
 export declare const NETWORK_URL: string;
 export declare const ADMIN_ADDRESS: string;
 export declare const TOKEN_PROGRAM_ID: string;

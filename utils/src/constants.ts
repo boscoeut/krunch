@@ -35,6 +35,7 @@ if (NETWORK === "Devnet") {
     chainlinkProgram =  "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
 }
 
+export const NETWORK_EXPLORER = 'https://explorer.solana.com/'
 export const NETWORK_URL = networkUrl;
 export const ADMIN_ADDRESS = adminAddress;
 export const TOKEN_PROGRAM_ID = tokenProgramId;

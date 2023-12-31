@@ -75,9 +75,96 @@ interface KrunchState {
   executeTrade: (marketIndex: number, amount: number) => Promise<void>,
   deposit: (market: string, amount: number) => Promise<void>,
   withdraw: (market: string, amount: number) => Promise<void>,
+  exchangeDepositOrWithdraw: (market: string, amount: number) => Promise<void>,
+  updateMarket: (name: string, marketIndex: number,marketWeight:number,
+    leverage:number,takerFee:number,makerFee:number,feedAddress:string) => Promise<void>,
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  updateMarket: async (name: string, marketIndex: number,marketWeight:number,
+    leverage:number,takerFee:number,makerFee:number,feedAddress:string) => {
+    let accountExists = false;
+    console.log('handleSubmit', marketIndex)
+    const program = get().program
+    try {
+      await fetchAccount(program, 'market', ['market', Number(marketIndex)])
+      accountExists = true;
+    } catch (x) {
+      // market does not exist.  Needs to be created
+    }
+    if (accountExists) {
+      const tx = await program.methods.updateMarket(
+        new anchor.BN(marketIndex),
+        new anchor.BN(Number(makerFee) * FEE_DECIMALS),
+        new anchor.BN(Number(takerFee) * FEE_DECIMALS),
+        new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
+        new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
+      ).accounts({
+        market: await findAddress(program, ['market', Number(marketIndex)]),
+        exchange: await findAddress(program, ['exchange'])
+      }).rpc();
+      console.log("updateMarket", tx);
+      const acct: any = await fetchAccount(program, 'market',
+        ['market', Number(marketIndex)]);
+      console.log('updateMarket', acct)
+    } else {
+      const tx = await program.methods.addMarket(
+        new anchor.BN(marketIndex),
+        new anchor.BN(Number(makerFee) * FEE_DECIMALS),
+        new anchor.BN(Number(takerFee) * FEE_DECIMALS),
+        new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
+        new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
+        new PublicKey(feedAddress),
+      ).accounts({
+        market: await findAddress(program, ['market', Number(marketIndex)]),
+        exchange: await findAddress(program, ['exchange'])
+      }).rpc();
+      console.log("updateMarket", tx);
+      const acct: any = await fetchAccount(program, 'market',
+        ['market', Number(marketIndex)]);
+      console.log('updateMarket', acct)      
+    }
+  },
+  exchangeDepositOrWithdraw: async (market: string, amount: number) => {
+    const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
+    if (!position) {
+      throw new Error('Position not found')
+    }
+    console.log("position", position);
+    const program = get().program
+    const provider = get().provider
+
+    let tokenAccount = await getOrCreateAssociatedTokenAccount(
+      provider.connection, //connection
+      provider.wallet.publicKey, //payer
+      position.mint, //mint
+      provider.wallet.publicKey, //owner
+    )
+
+    const exchangeAddress = await findAddress(program, ['exchange'])
+    const escrowAccount = await findAddress(program, [
+      exchangeAddress,
+      position.mint])
+
+    const transactionAmount = Number(amount) * AMOUNT_DECIMALS
+    console.log("transactionAmount", transactionAmount);
+
+    const method = transactionAmount > 0 ? 'exchangeDeposit' : 'exchangeWithdraw'
+
+    const tx = await program.methods[method](
+      new anchor.BN(Math.abs(transactionAmount))
+    ).accounts({
+      userTokenAccount: new PublicKey(tokenAccount.address.toString()),
+      mint: position.mint,
+      exchange: exchangeAddress,
+      escrowAccount,
+      exchangeTreasuryPosition: await findAddress(program, ['exchange_position', position.mint]),
+      owner: provider.wallet.publicKey,
+      chainlinkFeed: position.feedAddress,
+      chainlinkProgram: CHAINLINK_PROGRAM,
+    }).rpc();
+    console.log("transactionAmount tx", tx);
+  },
   withdraw: async (market: string, amount: number) => {
     const program = get().program
     const provider = get().provider

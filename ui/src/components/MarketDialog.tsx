@@ -1,5 +1,4 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import * as anchor from "@coral-xyz/anchor";
 import Button from '@mui/joy/Button';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
@@ -11,10 +10,8 @@ import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
 import * as React from 'react';
-import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS, PRICE_DECIMALS, SOL_USD_FEED } from 'utils/dist/constants';
-import { fetchAccount, findAddress } from "utils/dist/utils";
-import useProgram from '../hooks/useProgram';
-import { PublicKey } from "@solana/web3.js";
+import { SOL_USD_FEED } from 'utils/dist/constants';
+import { useKrunchStore } from "../hooks/useKrunchStore";
 
 export interface MarketDialogProps {
   open: boolean;
@@ -29,57 +26,21 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
   const [takerFee, setTakerFee] = React.useState('0.02');
   const [makerFee, setMakerFee] = React.useState('0.01');
   const [feedAddress, setFeedAddress] = React.useState(SOL_USD_FEED.toString());
-  const { getProgram } = useProgram();
   const [submitting, setSubmitting] = React.useState(false);
+  const updateMarket = useKrunchStore(state => state.updateMarket)
 
   const handleSubmit = async () => {
     // Handle form submission here
     try {
       setSubmitting(true)
-      let accountExists = false;
-      console.log('handleSubmit', marketIndex)
-      const program = await getProgram(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
-
-      try {
-        await fetchAccount(program, 'market', ['market', Number(marketIndex)])
-        accountExists = true;
-      } catch (x) {
-        // create account
-      }
-      if (accountExists) {
-        const tx = await program.methods.updateMarket(
-          new anchor.BN(marketIndex),
-          new anchor.BN(Number(makerFee) * FEE_DECIMALS),
-          new anchor.BN(Number(takerFee) * FEE_DECIMALS),
-          new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
-          new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
-        ).accounts({
-          market: await findAddress(program, ['market', Number(marketIndex)]),
-          exchange: await findAddress(program, ['exchange'])
-        }).rpc();
-        console.log("updateMarket", tx);
-        const acct: any = await fetchAccount(program, 'market',
-          ['market', Number(marketIndex)]);
-        console.log('updateMarket', acct)
-        setOpen(false)
-      } else {
-        const tx = await program.methods.addMarket(
-          new anchor.BN(marketIndex),
-          new anchor.BN(Number(makerFee) * FEE_DECIMALS),
-          new anchor.BN(Number(takerFee) * FEE_DECIMALS),
-          new anchor.BN(Number(leverage) * LEVERAGE_DECIMALS),
-          new anchor.BN(Number(marketWeight) * MARKET_WEIGHT_DECIMALS),
-          new PublicKey(feedAddress),
-        ).accounts({
-          market: await findAddress(program, ['market', Number(marketIndex)]),
-          exchange: await findAddress(program, ['exchange'])
-        }).rpc();
-        console.log("updateMarket", tx);
-        const acct: any = await fetchAccount(program, 'market',
-          ['market', Number(marketIndex)]);
-        console.log('updateMarket', acct)
-        setOpen(false)
-      }
+      await updateMarket(name,
+        Number(marketIndex),
+        Number(marketWeight),
+        Number(leverage),
+        Number(takerFee),
+        Number(makerFee),
+        feedAddress)
+      setOpen(false)
     } catch (e) {
       console.log("error", e);
     } finally {
