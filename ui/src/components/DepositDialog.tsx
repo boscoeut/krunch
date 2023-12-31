@@ -40,6 +40,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
   const { getProgram, getProvider } = useProgram();
 
   const userBalances = useKrunchStore(state => state.userBalances)
+  const deposit = useKrunchStore(state => state.deposit)
 
   const selectedMarket = userBalances.find((position) => position.market === market)
   const selectedBalance = (selectedMarket?.balance || 0) / (10 ** (selectedMarket?.decimals || 1))
@@ -50,42 +51,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
     try {
       setSubmitting(true)
       if (position) {
-        console.log("position", position);
-        const program = await getProgram(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
-        const provider = await getProvider(); // Replace 'getProgram' with the correct function name or define the 'getProgram' function.
-
-        let tokenAccount = await getOrCreateAssociatedTokenAccount(
-          provider.connection, //connection
-          provider.wallet.publicKey, //payer
-          position.mint, //mint
-          provider.wallet.publicKey, //owner
-        )
-
-        const exchangeAddress = await findAddress(program, ['exchange'])
-        const escrowAccount = await findAddress(program, [
-          exchangeAddress,
-          position.mint])
-
-        const transactionAmount = Number(amount) * AMOUNT_DECIMALS
-        console.log("transactionAmount", transactionAmount);
-
-        const method = transactionAmount > 0 ? 'deposit' : 'withdraw'
-        console.log(`{${method} of ${position.mint} `);
-
-        const tx = await program.methods[method](
-          new anchor.BN(Math.abs(transactionAmount))
-        ).accounts({
-          userTokenAccount: new PublicKey(tokenAccount.address.toString()),
-          mint: position.mint,
-          exchange: exchangeAddress,
-          escrowAccount,
-          userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-          exchangeTreasuryPosition: await findAddress(program, ['exchange_position', position.mint]),
-          owner: provider.wallet.publicKey,
-          chainlinkFeed: position.feedAddress,
-          chainlinkProgram: CHAINLINK_PROGRAM,
-        }).rpc();
-        console.log("transactionAmount tx", tx);
+        await deposit(market, Number(amount))
         setOpen(false)
       }
     } catch (e) {
@@ -141,13 +107,13 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                       </Select>
 
                     </FormControl>}
-                    {property.type === 'number' && <FormControl key={property.label} error={!canSubmit}>
+                    {property.type === 'number' && <FormControl key={property.label} error={!canSubmit && !submitting}>
                       <FormLabel>{property.label}</FormLabel>
                       <Input 
                         autoFocus required
                         value={property.value}
                         onChange={(e: any) => property.onChange(e.target.value)} />
-                      {!canSubmit && <FormHelperText>
+                      {!canSubmit && !submitting && <FormHelperText>
                         <InfoOutlined />
                         {errorMessage}
                       </FormHelperText>}

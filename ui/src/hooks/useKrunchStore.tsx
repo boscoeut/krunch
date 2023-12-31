@@ -9,13 +9,15 @@ import {
   MAKER_FEE, TAKER_FEE,
   REWARD_RATE, EXCHANGE_LEVERAGE, EXCHANGE_POSITIONS,
   LEVERAGE_DECIMALS, MARKETS, MARKET_WEIGHT_DECIMALS,
-  AMOUNT_DECIMALS, MARKET_TYPES, MARKET_WEIGHT, NETWORK
+  AMOUNT_DECIMALS, MARKET_TYPES, MARKET_WEIGHT, NETWORK,
+  CHAINLINK_PROGRAM
 } from 'utils/dist/constants';
 import { create } from 'zustand';
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
 import type { ExchangeBalance, Market, UserPosition, AppInfo } from '../types';
 import { colors } from "../utils";
 import { PublicKey } from "@solana/web3.js";
+const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
 
 export const defaultAppInfo: AppInfo = {
   appTitle: "Krunch",
@@ -70,9 +72,94 @@ interface KrunchState {
   addExchangePositions: () => Promise<void>
   userAccountValue: number,
   updateExchange: (testMode:boolean) => Promise<void>,
+  executeTrade: (marketIndex:number,amount:number) => Promise<void>,
+  deposit: (market:string,amount:number) => Promise<void>,
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  deposit: async (market:string,amount:number) => {
+    const program = get().program
+    const provider = get().provider
+    const position = EXCHANGE_POSITIONS.find((p) => p.market === market)
+
+    if (!position) {
+      throw new Error('Position not found')
+    } 
+    let tokenAccount = await getOrCreateAssociatedTokenAccount(
+      provider.connection, //connection
+      provider.wallet.publicKey, //payer
+      position.mint, //mint
+      provider.wallet.publicKey, //owner
+    )
+
+    const exchangeAddress = await findAddress(program, ['exchange'])
+    const escrowAccount = await findAddress(program, [
+      exchangeAddress,
+      position.mint])
+
+    const transactionAmount = Number(amount) * AMOUNT_DECIMALS
+    console.log("transactionAmount", transactionAmount);
+
+    const method = transactionAmount > 0 ? 'deposit' : 'withdraw'
+    console.log(`{${method} of ${position.mint} `);
+
+    const tx = await program.methods[method](
+      new anchor.BN(Math.abs(transactionAmount))
+    ).accounts({
+      userTokenAccount: new PublicKey(tokenAccount.address.toString()),
+      mint: position.mint,
+      exchange: exchangeAddress,
+      escrowAccount,
+      userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+      exchangeTreasuryPosition: await findAddress(program, ['exchange_position', position.mint]),
+      owner: provider.wallet.publicKey,
+      chainlinkFeed: position.feedAddress,
+      chainlinkProgram: CHAINLINK_PROGRAM,
+    }).rpc();
+    console.log("transactionAmount tx", tx);
+  },
+  executeTrade: async function (marketIndex:number,amount:number) {
+        const provider = get().provider
+        const program = get().program
+
+        const index = Number(marketIndex)
+        const market = MARKETS.find((market) => market.marketIndex === Number(marketIndex))
+        const position = EXCHANGE_POSITIONS.find((position) => position.market === market?.name)
+
+        if (!position) {
+          throw new Error('Position not found')
+        } 
+
+        console.log('executeTrade', marketIndex)
+
+        await fetchOrCreateAccount(program, 'userPosition',
+          ['user_position',
+            provider.wallet.publicKey,
+            index],
+          'addUserPosition', [new anchor.BN(index)],
+          {
+            userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+            market: await findAddress(program, ['market', index]),
+          });
+
+        await fetchOrCreateAccount(program, 'userAccount',
+          ['user_account',
+            provider.wallet.publicKey],
+          'createUserAccount', []);
+
+        const tx = await program.methods.executeTrade(
+          new anchor.BN(marketIndex),
+          new anchor.BN(Number(amount) * AMOUNT_DECIMALS)
+        ).accounts({
+          market: await findAddress(program, ['market', index]),
+          exchange: await findAddress(program, ['exchange']),
+          userPosition: await findAddress(program, ['user_position', provider.wallet.publicKey, index]),
+          userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+          chainlinkFeed: position.feedAddress,
+          chainlinkProgram: CHAINLINK_PROGRAM,
+        }).rpc();
+        console.log("executeTrade", tx);
+  },
   userAccountValue: 0,
   updateExchange: async function (testMode:boolean) {
     const program = get().program

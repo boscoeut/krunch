@@ -10,6 +10,7 @@ import FormHelperText from '@mui/joy/FormHelperText';
 import Select from '@mui/joy/Select';
 import Option from '@mui/joy/Option';
 import Table from '@mui/joy/Table';
+import KLabel from "./KLabel";
 import Input from '@mui/joy/Input';
 import Chip from '@mui/joy/Chip';
 import Modal from '@mui/joy/Modal';
@@ -18,10 +19,10 @@ import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import * as React from 'react';
-import { AMOUNT_DECIMALS, CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants';
+import { AMOUNT_DECIMALS, CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, FEE_DECIMALS, MARKETS } from 'utils/dist/constants';
 import { fetchOrCreateAccount, findAddress } from "utils/dist/utils";
 import useProgram from '../hooks/useProgram';
-import { Tab } from "@mui/joy";
+import { Tab, Typography } from "@mui/joy";
 import { formatCurrency, formatPercent } from "../utils";
 // icons
 
@@ -37,60 +38,34 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const { getProgram, getProvider } = useProgram();
   const [submitting, setSubmitting] = React.useState(false);
   const exchangeBalances = useKrunchStore(state => state.exchangeBalances)
+  const markets = useKrunchStore(state => state.markets)
   const userCollateral = useKrunchStore(state => state.userCollateral)
+  const executeTrade = useKrunchStore(state => state.executeTrade)
 
-  const selectedMarket = MARKETS.find((position) => position.marketIndex === Number(marketIndex))
+  const selectedMarket = markets.find((position) => position.marketIndex === Number(marketIndex))
   const selectedExchangeMarket = exchangeBalances.find((position) => position.market === selectedMarket?.name)
   const tradeValue = Number(amount) * (selectedExchangeMarket?.price || 0)
-  const feeRate = 0.01
+  const marketTokenAmount = (selectedMarket?.tokenAmount || 0) / AMOUNT_DECIMALS
+
+  let feeRate = (selectedMarket?.takerFee || 0) / FEE_DECIMALS || 0
+
+  const nAmount = Number(amount) 
+  if ((nAmount > 0 && nAmount <= marketTokenAmount) || (nAmount < 0 && nAmount >= marketTokenAmount)) {
+     feeRate = (selectedMarket?.makerFee || 0) / FEE_DECIMALS || 0
+  }
+
   const fee = Math.abs(tradeValue) * feeRate
   const total = Math.abs(tradeValue) + fee
   const maxTrade = userCollateral / AMOUNT_DECIMALS || 0
 
+  console.log('selectedMarket', selectedMarket)
   console.log('selectedExchangeMarket', selectedExchangeMarket)
 
   const handleSubmit = async () => {
-    const market = MARKETS.find((market) => market.marketIndex === Number(marketIndex))
-    const position = EXCHANGE_POSITIONS.find((position) => position.market === market?.name)
     try {
       setSubmitting(true)
-      if (position) {
-        // Handle form submission here
-        const provider = await getProvider()
-        const program = await getProgram()
-
-        const index = Number(marketIndex)
-        console.log('executeTrade', marketIndex)
-
-        await fetchOrCreateAccount(program, 'userPosition',
-          ['user_position',
-            provider.wallet.publicKey,
-            index],
-          'addUserPosition', [new anchor.BN(index)],
-          {
-            userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-            market: await findAddress(program, ['market', index]),
-          });
-
-        await fetchOrCreateAccount(program, 'userAccount',
-          ['user_account',
-            provider.wallet.publicKey],
-          'createUserAccount', []);
-
-        const tx = await program.methods.executeTrade(
-          new anchor.BN(marketIndex),
-          new anchor.BN(Number(amount) * AMOUNT_DECIMALS)
-        ).accounts({
-          market: await findAddress(program, ['market', index]),
-          exchange: await findAddress(program, ['exchange']),
-          userPosition: await findAddress(program, ['user_position', provider.wallet.publicKey, index]),
-          userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
-          chainlinkFeed: position.feedAddress,
-          chainlinkProgram: CHAINLINK_PROGRAM,
-        }).rpc();
-        console.log("executeTrade", tx);
-        setOpen(false)
-      }
+      await executeTrade(Number(marketIndex), Number(amount))
+      setOpen(false)
     } catch (e) {
       console.log("error", e);
     } finally {
@@ -136,10 +111,10 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                   })}
                 </Select>
               </FormControl>
-              <FormControl error={!canSubmit}>
+              <FormControl error={!canSubmit && !submitting}>
                 <FormLabel>Amount</FormLabel>
                 <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
-                {!canSubmit && <FormHelperText>
+                {!canSubmit && !submitting && <FormHelperText>
                   <InfoOutlined />
                   {errorMessage}
                 </FormHelperText>}
@@ -153,7 +128,10 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                   </tr>
                 </thead>
                 <tbody>
-
+                  <tr>
+                    <td>Token Amount</td>
+                    <td>{`${marketTokenAmount}`}</td>
+                  </tr>
                   <tr>
                     <td>Price</td>
                     <td>{`${selectedExchangeMarket?.price || 0}`}</td>
@@ -163,8 +141,8 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                     <td>{formatCurrency(tradeValue, 4)}</td>
                   </tr>
                   <tr>
-                    <td>Fee </td>
-                    <td>{formatCurrency(fee, 4)}  <Chip color={fee > 0 ? "danger" : "success"}>Rate: {formatPercent(feeRate)}</Chip></td>
+                    <td>{fee > 0 ? 'Fee' : 'Trading Rebate!'}</td>
+                    <td><KLabel fontWeight="bold" numValue={fee * -1}>{formatCurrency(fee, 4)}</KLabel>  <Chip color={fee > 0 ? "danger" : "success"}>Rate: {formatPercent(feeRate)}</Chip></td>
                   </tr>
                   <tr>
                     <th>Total </th>
