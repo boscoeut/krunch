@@ -9,8 +9,8 @@ import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
-import UploadRoundedIcon from '@mui/icons-material/UploadRounded';
-import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
+import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutlineRounded';
 import UpdateRounded from '@mui/icons-material/UpdateRounded';
 import { useState } from 'react';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
@@ -85,8 +85,8 @@ export default function Toolbar() {
                             endDecorator={<ArrowDropDown />}
                             color="success">Wallet: {formatCurrency(userAccountValue / AMOUNT_DECIMALS)}</MenuButton>
                         <Menu>
-                            <MenuItem onClick={() => setDepositDialogOpen(true)}><ListItemDecorator><UploadRoundedIcon /></ListItemDecorator>Deposit</MenuItem>
-                            <MenuItem onClick={() => setWithdrawDialogOpen(true)}><ListItemDecorator><DownloadRoundedIcon /></ListItemDecorator>Withdraw</MenuItem>
+                            <MenuItem onClick={() => setDepositDialogOpen(true)}><ListItemDecorator><AddCircleOutlineRoundedIcon /></ListItemDecorator>Deposit</MenuItem>
+                            <MenuItem onClick={() => setWithdrawDialogOpen(true)}><ListItemDecorator><RemoveCircleOutlineRoundedIcon /></ListItemDecorator>Withdraw</MenuItem>
                         </Menu>
                     </Dropdown>
 
