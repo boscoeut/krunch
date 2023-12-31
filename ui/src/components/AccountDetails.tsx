@@ -15,11 +15,7 @@ export default function AccountDetails() {
     const userUnrealizedPnl = useKrunchStore(state => state.userUnrealizedPnl)
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const exchangeRewardsAvailable = useKrunchStore(state => state.exchangeRewardsAvailable)
-    const total = Number(userAccount.collateralValue)
-        + Number(userAccount.fees)
-        + Number(userAccount.rebates)
-        + Number(userAccount.rewards)
-        + Number(userAccount.pnl)
+    const userAccountValue = useKrunchStore(state => state.userAccountValue)
 
     let lastRewardsClaimed = 'Never'
     if (userAccount.lastRewardsClaim?.toNumber() > 0) {
@@ -32,12 +28,12 @@ export default function AccountDetails() {
     return (
         <Box>
             <Stack direction={"row"} >
-                <Stat numValue={total} title="Account Value" value={total / AMOUNT_DECIMALS} />
+                <Stat numValue={userAccountValue} title="Account Value" value={userAccountValue / AMOUNT_DECIMALS} />
                 <Stat numValue={userRewardsAvailable} title="Pending Rewards" value={userRewardsAvailable / AMOUNT_DECIMALS} />
                 <Stat numValue={userUnrealizedPnl} title="Unrealized Pnl" value={userUnrealizedPnl} />
             </Stack>
             <Stack direction={"row"} >
-                <SubStat numValue={(total / userAccount.collateralValue) - 1} title="Account ROI" value={formatPercent((total / userAccount.collateralValue) - 1)} />
+                <SubStat numValue={(userAccountValue / userAccount.collateralValue) - 1} title="Account ROI" value={formatPercent((userAccountValue / userAccount.collateralValue) - 1)} />
                 <SubStat numValue={userAccount.rewards || 0 + userAccount.rebates || 0} title="Rewards + Rebates" value={formatCurrency(userAccount.rewards / AMOUNT_DECIMALS + userAccount.rebates / AMOUNT_DECIMALS)} />
                 <SubStat numValue={userUnrealizedPnl} title="Trading ROI" value={formatPercent(userUnrealizedPnl / (Math.abs(userAccount.basis) / AMOUNT_DECIMALS))} />
             </Stack>
@@ -46,7 +42,7 @@ export default function AccountDetails() {
                     <thead>
                         <tr>
                             <th style={{ width: 225 }}><SectionHeader title="Account Value" /></th>
-                            <th><SectionHeader title={formatCurrency(total / AMOUNT_DECIMALS)} /></th>
+                            <th><SectionHeader title={formatCurrency(userAccountValue / AMOUNT_DECIMALS)} /></th>
                         </tr>
                     </thead>
                     <tbody>
