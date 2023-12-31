@@ -7,8 +7,8 @@ import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
 import * as React from 'react';
-import { useKrunchStore } from "../hooks/useKrunchStore";
 import { AMOUNT_DECIMALS, EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants';
+import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency } from '../utils';
 
 export interface ClaimDialogProps {
@@ -17,8 +17,6 @@ export interface ClaimDialogProps {
 }
 
 export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
-    const [marketIndex, setMarketIndex] = React.useState('1');
-    const [amount, setAmount] = React.useState('0.5');
     const [submitting, setSubmitting] = React.useState(false);
     const claimRewards = useKrunchStore((state: any) => state.claimRewards)
     const userAccount = useKrunchStore(state => state.userAccount)
@@ -30,7 +28,7 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
     let color = appInfo.logoColor
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     let lastRewardsClaimed = 'Never'
-    let nextRewardsClaim= 'Now'
+    let nextRewardsClaim = 'Now'
     let nextRewardsClaimDate = new Date('1/1/1970')
     let hasClaimed = false
     if (userAccount.lastRewardsClaim?.toNumber() > 0) {
@@ -47,8 +45,6 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
 
 
     const handleSubmit = async () => {
-        const market = MARKETS.find((market) => market.marketIndex === Number(marketIndex))
-        const position = EXCHANGE_POSITIONS.find((position) => position.market === market?.name)
         try {
             setSubmitting(true)
             await claimRewards()
@@ -59,12 +55,6 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
             setSubmitting(false)
         }
     };
-
-    const properties = [
-        { label: 'Index', value: marketIndex, onChange: setMarketIndex, type: 'markets' },
-        { label: 'Amount', value: amount, onChange: setAmount, type: 'number' },
-    ]
-
     return (
         <React.Fragment>
             <Modal open={open} onClose={() => setOpen(false)}>
@@ -79,7 +69,7 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
                         }}
                     >
                         <Stack spacing={2}>
-                        <Typography textAlign={'center'} level='h4' sx={{ textTransform: 'capitalize', fontFamily: 'BrunoAceSC' }}>Claimable Rewards</Typography>
+                            <Typography textAlign={'center'} level='h4' sx={{ textTransform: 'capitalize', fontFamily: 'BrunoAceSC' }}>Claimable Rewards</Typography>
                             <Typography textAlign={'center'}
                                 level='h1' fontSize={48}
                                 sx={{ textTransform: 'capcapitalize', color: color, fontFamily: 'BrunoAceSC' }}>{formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}</Typography>
