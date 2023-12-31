@@ -15,6 +15,7 @@ import Option from '@mui/joy/Option';
 import Select from '@mui/joy/Select';
 import Stack from '@mui/joy/Stack';
 import Table from '@mui/joy/Table';
+import Typography from '@mui/joy/Typography';
 import * as React from 'react';
 import { AMOUNT_DECIMALS, EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
@@ -156,15 +157,16 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                   {userBalances.map((item) => {
                     const tokenAmount = item.balance / (10 ** item.decimals)
                     const amount = item.balance !== 0 ? renderItem(item.balance || 0, 10 ** item.decimals) : 0
+                    let color:'neutral'|'primary'|'success'|'danger' = 'neutral'
+                    if (item.market === selectedMarket?.market) {
+                      color = 'primary'
+                    }
                     return (
-                      <tr key={item.market} style={{
-                        fontWeight: item.market === selectedMarket?.market ? 'bold':'normal',
-                        fontSize: item.market === selectedMarket?.market ? '1.1em':'1em'
-                        }}>
-                        <td>{item.market.replace("/USD", "")}</td>
-                        <td>{amount}</td>
-                        <td>{formatNumber(item.price, 4)}</td>
-                        <td>{formatCurrency(tokenAmount * (item.price || 0), 4)}</td>
+                      <tr key={item.market} style={{fontWeight: item.market === selectedMarket?.market ? 'bold':'normal'}}>
+                        <td><Typography color={color}>{item.market.replace("/USD", "")}</Typography></td>
+                        <td><Typography color={color}>{amount}</Typography></td>
+                        <td><Typography color={color}>{formatNumber(item.price, 4)}</Typography></td>
+                        <td><Typography color={color}>{formatCurrency(tokenAmount * (item.price || 0), 4)}</Typography></td>
                       </tr>
                     )
                   })}
