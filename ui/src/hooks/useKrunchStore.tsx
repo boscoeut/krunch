@@ -74,9 +74,50 @@ interface KrunchState {
   updateExchange: (testMode:boolean) => Promise<void>,
   executeTrade: (marketIndex:number,amount:number) => Promise<void>,
   deposit: (market:string,amount:number) => Promise<void>,
+  withdraw: (market:string,amount:number) => Promise<void>,
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  withdraw: async (market:string,amount:number) => {
+    const program = get().program
+    const provider = get().provider
+
+    const position = EXCHANGE_POSITIONS.find((p) => p.market === market)
+    if (!position) {
+      throw new Error('Position not found')
+    }
+    let tokenAccount = await getOrCreateAssociatedTokenAccount(
+      provider.connection, //connection
+      provider.wallet.publicKey, //payer
+      position.mint, //mint
+      provider.wallet.publicKey, //owner
+    )
+
+    const exchangeAddress = await findAddress(program, ['exchange'])
+    const escrowAccount = await findAddress(program, [
+      exchangeAddress,
+      position.mint])
+
+    const transactionAmount = Number(amount) * AMOUNT_DECIMALS
+    console.log("transactionAmount", transactionAmount);
+
+    const method = transactionAmount > 0 ? 'deposit' : 'withdraw'
+    console.log(`{${method} of ${position.mint} `);
+
+    const tx = await program.methods[method](
+      new anchor.BN(Math.abs(transactionAmount))
+    ).accounts({
+      userTokenAccount: new PublicKey(tokenAccount.address.toString()),
+      mint: position.mint,
+      exchange: exchangeAddress,
+      escrowAccount,
+      userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
+      exchangeTreasuryPosition: await findAddress(program, ['exchange_position', position.mint]),
+      owner: provider.wallet.publicKey,
+      chainlinkFeed: position.feedAddress,
+      chainlinkProgram: CHAINLINK_PROGRAM,
+    }).rpc();
+  },
   deposit: async (market:string,amount:number) => {
     const program = get().program
     const provider = get().provider

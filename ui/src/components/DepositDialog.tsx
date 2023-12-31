@@ -1,5 +1,4 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import * as anchor from "@coral-xyz/anchor";
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
@@ -16,17 +15,11 @@ import Option from '@mui/joy/Option';
 import Select from '@mui/joy/Select';
 import Stack from '@mui/joy/Stack';
 import Table from '@mui/joy/Table';
-import { PublicKey } from "@solana/web3.js";
 import * as React from 'react';
-import { AMOUNT_DECIMALS, CHAINLINK_PROGRAM, EXCHANGE_POSITIONS } from "utils/dist/constants";
-import { findAddress } from "utils/dist/utils";
+import { EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from '../hooks/useProgram';
 import { renderItem } from '../utils';
-
-const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
-// icons
-
 
 export interface DepositDialogProps {
   open: boolean;
@@ -109,7 +102,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                     </FormControl>}
                     {property.type === 'number' && <FormControl key={property.label} error={!canSubmit && !submitting}>
                       <FormLabel>{property.label}</FormLabel>
-                      <Input 
+                      <Input
                         autoFocus required
                         value={property.value}
                         onChange={(e: any) => property.onChange(e.target.value)} />
