@@ -39,7 +39,7 @@ export default function Toolbar() {
     const [updateExchangeDialogOpen, setUpdateExchangeDialogOpen] = useState(false);
     const [claimDialogOpen, setClaimDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
-    const [depositDialogOpen, setDepositDialogOpen] = useState(true);
+    const [depositDialogOpen, setDepositDialogOpen] = useState(false);
     const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
     const refreshAll = useKrunchStore((state: any) => state.refreshAll)
     const isAdmin = useKrunchStore((state: any) => state.isAdmin)

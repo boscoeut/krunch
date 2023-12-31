@@ -37,16 +37,18 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const { getProgram, getProvider } = useProgram();
   const [submitting, setSubmitting] = React.useState(false);
   const exchangeBalances = useKrunchStore(state => state.exchangeBalances)
+  const userCollateral = useKrunchStore(state => state.userCollateral)
 
   const selectedMarket = MARKETS.find((position) => position.marketIndex === Number(marketIndex))
-  const selectedExchangeMarket  = exchangeBalances.find((position) => position.market === selectedMarket?.name)
+  const selectedExchangeMarket = exchangeBalances.find((position) => position.market === selectedMarket?.name)
   const tradeValue = Number(amount) * (selectedExchangeMarket?.price || 0)
-  const feeRate =0.01
-  const fee = Math.abs(tradeValue) * feeRate  
+  const feeRate = 0.01
+  const fee = Math.abs(tradeValue) * feeRate
   const total = Math.abs(tradeValue) + fee
+  const maxTrade = userCollateral / AMOUNT_DECIMALS || 0
 
   console.log('selectedExchangeMarket', selectedExchangeMarket)
-  
+
   const handleSubmit = async () => {
     const market = MARKETS.find((market) => market.marketIndex === Number(marketIndex))
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market?.name)
@@ -99,9 +101,9 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   let submitMessage = 'Execute Trade'
   let errorMessage = ''
   let canSubmit = !submitting
-  let selectedBalance = 0.6
+  let selectedBalance = maxTrade
 
-  if (selectedBalance < Number(amount)) {
+  if (selectedBalance < Number(total)) {
     canSubmit = false
     submitMessage = 'Insufficient Balance'
     errorMessage = submitMessage
@@ -146,26 +148,27 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
               <Table>
                 <thead>
                   <tr>
-                    <th style={{ width: 150 }}>Trade Details</th>     
-                    <th></th>           
+                    <th style={{ width: 150 }}>Trade Details</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
+
                   <tr>
                     <td>Price</td>
                     <td>{`${selectedExchangeMarket?.price || 0}`}</td>
                   </tr>
                   <tr>
                     <td>Value</td>
-                    <td>{formatCurrency(tradeValue,4)}</td>
+                    <td>{formatCurrency(tradeValue, 4)}</td>
                   </tr>
                   <tr>
-                    <td>Fee <Chip color={fee > 0 ? "danger":"success"}>Rate: {formatPercent(feeRate)}</Chip></td>
-                    <td>{formatCurrency(fee,4)}</td>
+                    <td>Fee </td>
+                    <td>{formatCurrency(fee, 4)}  <Chip color={fee > 0 ? "danger" : "success"}>Rate: {formatPercent(feeRate)}</Chip></td>
                   </tr>
                   <tr>
-                    <th>Total</th>
-                    <th>{formatCurrency(total,4)}</th>
+                    <th>Total </th>
+                    <th>{formatCurrency(total, 4)} <Chip color={maxTrade > total ? "success" : "danger"}>Max: {formatCurrency(maxTrade)}</Chip></th>
                   </tr>
                 </tbody>
               </Table>
