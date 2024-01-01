@@ -1,29 +1,25 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import * as anchor from "@coral-xyz/anchor";
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import Button from '@mui/joy/Button';
+import Chip from '@mui/joy/Chip';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
-import FormLabel from '@mui/joy/FormLabel';
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import FormControl from '@mui/joy/FormControl';
 import FormHelperText from '@mui/joy/FormHelperText';
-import Select from '@mui/joy/Select';
-import Option from '@mui/joy/Option';
-import Table from '@mui/joy/Table';
-import KLabel from "./KLabel";
+import FormLabel from '@mui/joy/FormLabel';
 import Input from '@mui/joy/Input';
-import Chip from '@mui/joy/Chip';
 import Modal from '@mui/joy/Modal';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
+import Option from '@mui/joy/Option';
+import Select from '@mui/joy/Select';
 import Stack from '@mui/joy/Stack';
-import { useKrunchStore } from "../hooks/useKrunchStore";
+import Table from '@mui/joy/Table';
 import * as React from 'react';
-import { AMOUNT_DECIMALS, CHAINLINK_PROGRAM, EXCHANGE_POSITIONS, FEE_DECIMALS, MARKETS } from 'utils/dist/constants';
-import { fetchOrCreateAccount, findAddress } from "utils/dist/utils";
-import useProgram from '../hooks/useProgram';
-import { Tab, Typography } from "@mui/joy";
-import { formatCurrency, formatPercent } from "../utils";
+import { AMOUNT_DECIMALS, FEE_DECIMALS, MARKETS } from 'utils/dist/constants';
+import { useKrunchStore } from "../hooks/useKrunchStore";
+import { formatCurrency, formatNumber, formatPercent } from "../utils";
+import KLabel from "./KLabel";
 // icons
 
 
@@ -35,12 +31,12 @@ export interface TradeDialogProps {
 export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const [marketIndex, setMarketIndex] = React.useState('1');
   const [amount, setAmount] = React.useState('0.5');
-  const { getProgram, getProvider } = useProgram();
   const [submitting, setSubmitting] = React.useState(false);
   const exchangeBalances = useKrunchStore(state => state.exchangeBalances)
   const markets = useKrunchStore(state => state.markets)
   const userCollateral = useKrunchStore(state => state.userCollateral)
   const executeTrade = useKrunchStore(state => state.executeTrade)
+  const userAccount = useKrunchStore(state => state.userAccount)
 
   const selectedMarket = markets.find((position) => position.marketIndex === Number(marketIndex))
   const selectedExchangeMarket = exchangeBalances.find((position) => position.market === selectedMarket?.name)
@@ -49,14 +45,15 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
 
   let feeRate = (selectedMarket?.takerFee || 0) / FEE_DECIMALS || 0
 
-  const nAmount = Number(amount) 
+  const nAmount = Number(amount)
   if ((nAmount > 0 && nAmount <= marketTokenAmount) || (nAmount < 0 && nAmount >= marketTokenAmount)) {
-     feeRate = (selectedMarket?.makerFee || 0) / FEE_DECIMALS || 0
+    feeRate = (selectedMarket?.makerFee || 0) / FEE_DECIMALS || 0
   }
 
   const fee = Math.abs(tradeValue) * feeRate
   const total = Math.abs(tradeValue) + fee
-  const maxTrade = userCollateral / AMOUNT_DECIMALS || 0
+  const marginUsed = userAccount.marginUsed?.toNumber() || 0
+  const maxTrade = (userCollateral + marginUsed) / AMOUNT_DECIMALS || 0
 
   console.log('selectedMarket', selectedMarket)
   console.log('selectedExchangeMarket', selectedExchangeMarket)
@@ -134,7 +131,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                   </tr>
                   <tr>
                     <td>Price</td>
-                    <td>{`${selectedExchangeMarket?.price || 0}`}</td>
+                    <td>{`${formatNumber(selectedExchangeMarket?.price || 0)}`}</td>
                   </tr>
                   <tr>
                     <td>Value</td>
@@ -146,7 +143,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                   </tr>
                   <tr>
                     <th>Total </th>
-                    <th>{formatCurrency(total, 4)} <Chip color={maxTrade > total ? "success" : "danger"}>Max: {formatCurrency(maxTrade)}</Chip></th>
+                    <th>{formatCurrency(total, 4)} <Chip color={maxTrade > total ? "success" : "danger"}>Max Margin Available: {formatCurrency(maxTrade)}</Chip></th>
                   </tr>
                 </tbody>
               </Table>
