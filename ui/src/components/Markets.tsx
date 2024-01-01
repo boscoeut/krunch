@@ -18,18 +18,14 @@ export default function Markets() {
         <Box>
             <Table>
                 <thead>
-                <tr>
-                        <th colSpan={9}><SectionHeader title="Available Markets" /></th>
+                    <tr>
+                        <th colSpan={7}><SectionHeader title="Available Markets" /></th>
                     </tr>
                     <tr>
                         <th style={{ width: '100px' }}>Market</th>
-                        <th style={{ width: '75px' }}>Index</th>
                         <th style={{ width: '75px' }}>Type</th>
-
                         <th>Net Amount</th>
                         <th>Price</th>
-                        <th>Collateral Available</th>
-
                         <th>Leverage</th>
                         <th>Maker Fee</th>
                         <th>Taker Fee</th>
@@ -39,13 +35,9 @@ export default function Markets() {
                     {markets.map(row => {
                         return <tr key={row.marketIndex}>
                             <td>{row.name}</td>
-                            <td>{row.marketIndex}</td>
                             <td>{row.marketType}</td>
-
                             <td>{renderItem(row.tokenAmount)}</td>
                             <td>{formatCurrency(row.price || 0)}</td>
-                            <td>{formatCurrency((row.marketTotal || 0) / AMOUNT_DECIMALS)}</td>
-
                             <td>{formatNumber((row.leverage || 0) / LEVERAGE_DECIMALS, 0)}x</td>
                             <td>{formatPercent((row.makerFee || 0) / FEE_DECIMALS)}</td>
                             <td>{formatPercent((row.takerFee || 0) / FEE_DECIMALS)}</td>

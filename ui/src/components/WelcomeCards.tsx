@@ -57,13 +57,7 @@ export default function WelcomeCards() {
                             <Check />
                         </ListItemDecorator>
                         Trade Long or Short Positions on Crypto, Equities and Forex
-                    </ListItem>
-                    <ListItem>
-                        <ListItemDecorator>
-                            <Check />
-                        </ListItemDecorator>
-                        Non Upgradeable Smart Contract
-                    </ListItem>
+                    </ListItem>                  
                     <ListItem>
                         <ListItemDecorator>
                             <Check />

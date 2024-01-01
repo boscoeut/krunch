@@ -193,11 +193,9 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     const transactionAmount = Number(amount) * AMOUNT_DECIMALS
     console.log("transactionAmount", transactionAmount);
+    console.log(`withdraw of ${position.mint} `);
 
-    const method = transactionAmount > 0 ? 'deposit' : 'withdraw'
-    console.log(`{${method} of ${position.mint} `);
-
-    const tx = await program.methods[method](
+    const tx = await program.methods.withdraw(
       new anchor.BN(Math.abs(transactionAmount))
     ).accounts({
       userTokenAccount: new PublicKey(tokenAccount.address.toString()),
@@ -233,11 +231,9 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     const transactionAmount = Number(amount) * AMOUNT_DECIMALS
     console.log("transactionAmount", transactionAmount);
+    console.log(`deposit of ${position.mint} `);
 
-    const method = transactionAmount > 0 ? 'deposit' : 'withdraw'
-    console.log(`{${method} of ${position.mint} `);
-
-    const tx = await program.methods[method](
+    const tx = await program.methods.deposit(
       new anchor.BN(Math.abs(transactionAmount))
     ).accounts({
       userTokenAccount: new PublicKey(tokenAccount.address.toString()),

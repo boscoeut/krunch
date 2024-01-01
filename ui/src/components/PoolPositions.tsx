@@ -10,7 +10,7 @@ export default function PoolPositions({ positions }: { positions: Array<any> }) 
     const openPositions = positions.filter(p => p.tokenAmount?.toNumber() != 0)
 
     return (
-        <Box>
+        <Box display={openPositions.length > 0 ? 'inherit':'none'}>
             <Table>
                 <thead>
                     <tr>

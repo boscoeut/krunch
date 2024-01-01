@@ -26,7 +26,7 @@ export default function ExchangeBalances() {
                 <tbody>
                     {exchangeBalances.map(row => {
                         return <tr key={row.market}>
-                            <td>{row.market}</td>
+                            <td>{row.market.replace("/USD", "")}</td>
                             <td>{row.balance / (10 ** row.decimals)}</td>
                             <td>{formatCurrency(row.price || 0)}</td>
                             <td>{formatCurrency(row.currValue || 0)}</td>
