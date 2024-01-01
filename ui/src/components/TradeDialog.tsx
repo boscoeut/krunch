@@ -31,6 +31,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const [amount, setAmount] = React.useState('0.5');
   const [submitting, setSubmitting] = React.useState(false);
   const exchangeBalances = useKrunchStore(state => state.exchangeBalances)
+  const positions = useKrunchStore(state => state.positions)
   const markets = useKrunchStore(state => state.markets)
   const userCollateral = useKrunchStore(state => state.userCollateral)
   const executeTrade = useKrunchStore(state => state.executeTrade)
@@ -38,8 +39,12 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
 
   const selectedMarket = markets.find((position) => position.marketIndex === Number(marketIndex))
   const selectedExchangeMarket = exchangeBalances.find((position) => position.market === selectedMarket?.name)
+  const selectedUserBalance = positions.find((position) => position.market === selectedMarket?.name)
+  console.log('positions', positions) 
+  console.log('selectedUserBalance', selectedUserBalance)
   const tradeValue = Number(amount) * (selectedExchangeMarket?.price || 0)
   const marketTokenAmount = (selectedMarket?.tokenAmount || 0) / AMOUNT_DECIMALS
+  const userTokenAmount = (selectedUserBalance?.tokenAmount|| 0) / AMOUNT_DECIMALS
 
   let feeRate = (selectedMarket?.takerFee || 0) / FEE_DECIMALS || 0
 
@@ -55,6 +60,10 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
 
   console.log('selectedMarket', selectedMarket)
   console.log('selectedExchangeMarket', selectedExchangeMarket)
+
+  const closeAmount = ()=> {
+    setAmount(Number(userTokenAmount * -1).toFixed(4))
+  }
 
   const handleSubmit = async () => {
     try {
@@ -107,14 +116,14 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                 </Select>
               </FormControl>
               <FormControl error={!canSubmit && !submitting}>
-                <FormLabel>Amount</FormLabel>
+                <FormLabel>Amount <Chip color='success' onClick={closeAmount} style={{display:userTokenAmount !==0 ? 'inherit':'none', marginLeft:10}}>Current Amount: {userTokenAmount}</Chip></FormLabel>
                 <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
                 {!canSubmit && !submitting && <FormHelperText>
                   <InfoOutlined />
                   {errorMessage}
                 </FormHelperText>}
               </FormControl>
-
+            
               <Table>
                 <thead>
                   <tr>
@@ -124,8 +133,8 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Token Amount</td>
-                    <td>{`${marketTokenAmount}`}</td>
+                    <td>Amount</td>
+                    <td>{`${amount}`}</td>
                   </tr>
                   <tr>
                     <td>Price</td>
