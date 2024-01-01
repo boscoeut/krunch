@@ -7,9 +7,10 @@ import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
 import * as React from 'react';
-import { AMOUNT_DECIMALS } from 'utils/dist/constants';
+import { AMOUNT_DECIMALS, SLOTS_PER_DAY } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency } from '../utils';
+import moment from 'moment';
 
 export interface ClaimDialogProps {
     open: boolean;
@@ -33,11 +34,15 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
     let hasClaimed = false
     if (userAccount.lastRewardsClaim?.toNumber() > 0) {
         lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
-        nextRewardsClaimDate = new Date(userAccount.lastRewardsClaim?.toNumber() * 1000 + exchange.rewardFrequency?.toNumber())
+        const numDays = exchange.rewardFrequency?.toNumber() / SLOTS_PER_DAY
+        const milliSecondsPerDay = 1000 * 60 * 60 * 24
+        nextRewardsClaimDate = new Date(userAccount.lastRewardsClaim?.toNumber() * 1000 + numDays * milliSecondsPerDay)
         hasClaimed = true
     }
 
     let canClaim = true
+    const numSecondsUntilClaim = nextRewardsClaimDate.getTime() - new Date().getTime()
+    moment().toNow(true)
     if (nextRewardsClaimDate > new Date()) {
         nextRewardsClaim = `${nextRewardsClaimDate.toLocaleDateString()} ${nextRewardsClaimDate.toLocaleTimeString()}`
         canClaim = false
@@ -75,6 +80,7 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
                                 sx={{ textTransform: 'capcapitalize', color: color, fontFamily: 'BrunoAceSC' }}>{formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}</Typography>
                             {hasClaimed && <Typography textAlign={'center'}>Rewards Last Claimed On: {lastRewardsClaimed}</Typography>}
                             {!canClaim && <Typography textAlign={'center'}>Next Rewards Claim: {nextRewardsClaim}</Typography>}
+                            {!canClaim && <Typography style={{color:appInfo.logoColor}} textAlign={'center'}>Claim {moment(nextRewardsClaimDate).fromNow()}</Typography>}
                             <Button disabled={submitting || !canClaim} type="submit">{submitting ? 'Claiming Rewards..' : 'Claim Rewards'}</Button>
                         </Stack>
                     </form>

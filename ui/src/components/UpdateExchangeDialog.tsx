@@ -6,12 +6,13 @@ import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
 import Modal from '@mui/joy/Modal';
 import Input from '@mui/joy/Input';
+import Chip from '@mui/joy/Chip';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
 import Switch from '@mui/joy/Switch';
 import * as React from 'react';
-import { AMOUNT_DECIMALS, EXCHANGE_LEVERAGE, REWARD_FREQUENCY, REWARD_RATE, SLOTS_PER_DAY } from "utils/dist/constants";
+import { AMOUNT_DECIMALS, EXCHANGE_LEVERAGE, LEVERAGE_DECIMALS, REWARD_FREQUENCY, REWARD_RATE, SLOTS_PER_DAY } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { FormHelperText } from '@mui/joy';
 
@@ -28,13 +29,14 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
     const [testMode, setTestMode] = React.useState(exchange.testMode as boolean || false);
     let slotsIn24Hours = REWARD_FREQUENCY;
     const [rewardFrequency, setRewardFrequency] = React.useState(slotsIn24Hours);
-    const [rewardRate, setRewardRate] = React.useState(REWARD_RATE/ AMOUNT_DECIMALS);
+    const [rewardRate, setRewardRate] = React.useState(REWARD_RATE / AMOUNT_DECIMALS);
     const [leverage, setLeverage] = React.useState(EXCHANGE_LEVERAGE);
 
     const handleSubmit = async () => {
         try {
             setSubmitting(true)
-            await updateExchange(testMode, rewardRate * AMOUNT_DECIMALS, rewardFrequency, leverage)
+            await updateExchange(testMode, rewardFrequency, rewardRate * AMOUNT_DECIMALS, leverage)
+            setOpen(false)
         } catch (e) {
             console.log("error", e);
         } finally {
@@ -42,13 +44,21 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
         }
     };
 
+    const refresh = () => {
+        console.log('exchange', exchange)
+        setTestMode(exchange.testMode as boolean || false)
+        setRewardFrequency(exchange.rewardFrequency?.toNumber() || 0)
+        setRewardRate(exchange.rewardRate?.toNumber() / AMOUNT_DECIMALS)
+        setLeverage(exchange.leverage / LEVERAGE_DECIMALS)
+    }
+
     return (
         <React.Fragment>
             <Modal open={open} onClose={() => setOpen(false)}>
                 <ModalDialog>
                     <ModalClose />
                     <DialogTitle>Update Exchange</DialogTitle>
-                    <DialogContent>Enter Exchange Details</DialogContent>
+                    <DialogContent>Enter Exchange Details <Chip onClick={refresh} color='success'>Refresh</Chip></DialogContent>
                     <form
                         onSubmit={async (event: React.FormEvent<HTMLFormElement>) => {
                             event.preventDefault();
@@ -68,7 +78,12 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
                             <FormControl>
                                 <FormLabel>Reward Frequency</FormLabel>
                                 <Input required value={rewardFrequency} onChange={(e: any) => setRewardFrequency(e.target.value)} />
-                                <FormHelperText>{Number(Number(rewardFrequency)/SLOTS_PER_DAY).toFixed(4)} = {rewardFrequency} / SLOTS_PER_DAY ({SLOTS_PER_DAY})</FormHelperText>
+                                <FormHelperText>
+                                    {Number(Number(rewardFrequency) / SLOTS_PER_DAY).toFixed(4)} = {rewardFrequency} / SLOTS_PER_DAY
+                                </FormHelperText>
+                                <FormHelperText>
+                                    SLOTS_PER_DAY = ({SLOTS_PER_DAY})
+                                </FormHelperText>
                             </FormControl>
                             <FormControl>
                                 <FormLabel>Leverage</FormLabel>

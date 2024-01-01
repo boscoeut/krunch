@@ -33,6 +33,10 @@
         {
           "name": "rewardRate",
           "type": "u64"
+        },
+        {
+          "name": "testMode",
+          "type": "bool"
         }
       ]
     },
@@ -101,6 +105,44 @@
         {
           "name": "marketWeight",
           "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "updateExchange",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "exchange",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "testMode",
+          "type": "bool"
+        },
+        {
+          "name": "rewardFrequency",
+          "type": "u64"
+        },
+        {
+          "name": "rewardRate",
+          "type": "u64"
+        },
+        {
+          "name": "leverage",
+          "type": "u32"
         }
       ]
     },
@@ -725,6 +767,10 @@
           {
             "name": "rewardRate",
             "type": "u64"
+          },
+          {
+            "name": "testMode",
+            "type": "bool"
           }
         ]
       }

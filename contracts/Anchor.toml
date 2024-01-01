@@ -17,7 +17,7 @@ krunch = "6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Devnet"  # Localnet, Devnet, Mainnet
+cluster = "Localnet"  # Localnet, Devnet, Mainnet
 wallet = "/Users/mebert/.config/solana/id.json"
 url = "https://solana-devnet.g.alchemy.com/v2/Q7iPDRrks-_ywtZnSJ9XTSBnu6QCl071"
 

@@ -217,16 +217,7 @@ const setupAccounts = async function (provider: any, program: any) {
         const program = anchor.workspace.Krunch as Program<Krunch>;
         const hash = await provider.connection.getLatestBlockhash();
         console.log("hash", hash)
-
-
-        let slotsIn24Hours = REWARD_FREQUENCY;
-        const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'],
-        'initializeExchange', [
-        EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,
-        new anchor.BN(slotsIn24Hours),
-        new anchor.BN(REWARD_RATE)]);
         console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
-        console.log("exchange collateralValue", exchange.collateralValue.toString());
        
         await initializeKrunch(provider, program);
         await setupAccounts(provider, program);

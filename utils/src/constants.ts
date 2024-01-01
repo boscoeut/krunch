@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 
-export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Devnet";
+export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Localnet";
 export const SLOTS_PER_DAY = 24 * 60 * 60 * 2.5
 
 let networkUrl = "http://localhost:8899" // Localnet
@@ -21,7 +21,7 @@ let chainlinkProgram =  "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny"
 
 
 let rewardFrequency = SLOTS_PER_DAY * 1
-if (NETWORK === "Devnet") {
+if (NETWORK as any === "Devnet") {
     networkUrl = "https://api.devnet.solana.com" // devnet
     usdcMint = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
     solMint = new PublicKey("So11111111111111111111111111111111111111112") // wrong
