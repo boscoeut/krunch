@@ -15,6 +15,7 @@ export default function UserPositions() {
         <Box>
             <Stack direction={"row"} >
                 <Stat numValue={userUnrealizedPnl} title="Unrealized Pnl" value={formatCurrency(userUnrealizedPnl)} />
+                <Stat numValue={userAccount.rewards || 0} title="Rewards Earned" value={formatCurrency(userAccount.rewards / AMOUNT_DECIMALS)} />
                 <Stat numValue={userAccount.rebates || 0} title="Rebates Earned" value={formatCurrency(userAccount.rebates / AMOUNT_DECIMALS)} />
                 <Stat numValue={userUnrealizedPnl} title="Trading ROI" value={formatPercent(userUnrealizedPnl / (Math.abs(userAccount.basis) / AMOUNT_DECIMALS))} />
             </Stack>

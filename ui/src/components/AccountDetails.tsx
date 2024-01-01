@@ -34,7 +34,8 @@ export default function AccountDetails() {
             </Stack>
             <Stack direction={"row"} >
                 <SubStat numValue={(userAccountValue / userAccount.collateralValue) - 1} title="Account ROI" value={formatPercent((userAccountValue / userAccount.collateralValue) - 1)} />
-                <SubStat numValue={userAccount.rewards || 0 + userAccount.rebates || 0} title="Rewards + Rebates" value={formatCurrency(userAccount.rewards / AMOUNT_DECIMALS + userAccount.rebates / AMOUNT_DECIMALS)} />
+                <SubStat numValue={userAccount.rewards || 0} title="Rewards" value={formatCurrency(userAccount.rewards / AMOUNT_DECIMALS)} />
+                <SubStat numValue={userAccount.rebates || 0} title="Rebates" value={formatCurrency(userAccount.rebates / AMOUNT_DECIMALS)} />
                 <SubStat numValue={userUnrealizedPnl} title="Trading ROI" value={formatPercent(userUnrealizedPnl / (Math.abs(userAccount.basis) / AMOUNT_DECIMALS))} />
             </Stack>
             <Stack direction="column" spacing={2}>
