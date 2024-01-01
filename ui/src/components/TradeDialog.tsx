@@ -55,8 +55,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
 
   const fee = Math.abs(tradeValue) * feeRate
   const total = Math.abs(tradeValue) + fee
-  const marginUsed = userAccount.marginUsed?.toNumber() || 0
-  const maxTrade = (userCollateral + marginUsed) / AMOUNT_DECIMALS || 0
+  const maxTrade = userCollateral/ AMOUNT_DECIMALS || 0
 
   console.log('selectedMarket', selectedMarket)
   console.log('selectedExchangeMarket', selectedExchangeMarket)

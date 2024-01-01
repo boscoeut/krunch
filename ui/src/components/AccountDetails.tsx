@@ -16,6 +16,7 @@ export default function AccountDetails() {
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const exchangeRewardsAvailable = useKrunchStore(state => state.exchangeRewardsAvailable)
     const userAccountValue = useKrunchStore(state => state.userAccountValue)
+    const totalPnl = userUnrealizedPnl + (userAccount.pnl?.toNumber() / AMOUNT_DECIMALS || 0)
 
     let lastRewardsClaimed = 'Never'
     if (userAccount.lastRewardsClaim?.toNumber() > 0) {
@@ -30,7 +31,7 @@ export default function AccountDetails() {
             <Stack direction={"row"} >
                 <Stat numValue={userAccountValue} title="Account Value" value={formatCurrency(userAccountValue / AMOUNT_DECIMALS)} />
                 <Stat numValue={userRewardsAvailable} title="Pending Rewards" value={formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)} />
-                <Stat numValue={userUnrealizedPnl} title="Unrealized Pnl" value={formatCurrency(userUnrealizedPnl)} />
+                <Stat numValue={totalPnl} title="Pnl" value={formatCurrency(totalPnl)} />
             </Stack>
             <Stack direction={"row"} >
                 <SubStat numValue={(userAccountValue / userAccount.collateralValue) - 1} title="Account ROI" value={formatPercent((userAccountValue / userAccount.collateralValue) - 1)} />

@@ -42,6 +42,7 @@ export const defaultAppInfo: AppInfo = {
 }
 
 interface KrunchState {
+  poolAccountValue:number,
   nextRewardsClaimDate?:Date,
   setup: () => Promise<void>,
   isAdmin: boolean,
@@ -89,6 +90,7 @@ interface KrunchState {
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  poolAccountValue:0,
   updateMarket: async (name: string, marketIndex: number, marketWeight: number,
     leverage: number, takerFee: number, makerFee: number, feedAddress: string) => {
     let accountExists = false;
@@ -485,12 +487,22 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     let tempMarkets: Array<Market> = []
 
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
+
+    const poolAccountValue = Number(exchange.collateralValue)
+    + Number(exchange.fees)//
+    + Number(exchange.amountWithdrawn)//
+    + Number(exchange.amountDeposited)//
+    + Number(exchange.rebates)//
+    + Number(exchange.rewards)//
+    + Number(exchange.pnl)//
+
     const exchangeTotal = (exchange.pnl.toNumber()
       + exchange.rebates.toNumber()
       + exchange.rewards.toNumber()
       + exchange.amountWithdrawn.toNumber()
       + exchange.amountDeposited.toNumber()
-      + exchange.fees.toNumber() + exchange.collateralValue.toNumber())
+      + exchange.fees.toNumber() 
+      + exchange.collateralValue.toNumber())
       * exchange.leverage
       / LEVERAGE_DECIMALS
       + exchange.marginUsed.toNumber()
@@ -521,7 +533,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         console.log('could not get market ' + market.name)
       }
     }
-    set(() => ({ markets: tempMarkets, exchangeCurrentValue: accountCurrentValue, exchangeUnrealizedPnl: accountUnrealizedPnl }))
+    set(() => ({ poolAccountValue, markets: tempMarkets, exchangeCurrentValue: accountCurrentValue, exchangeUnrealizedPnl: accountUnrealizedPnl }))
   },
   refreshPositions: async () => {
     const provider = get().provider
