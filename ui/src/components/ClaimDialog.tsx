@@ -11,6 +11,7 @@ import { AMOUNT_DECIMALS, SLOTS_PER_DAY } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency } from '../utils';
 import moment from 'moment';
+import { FormControl, FormHelperText } from '@mui/joy';
 
 export interface ClaimDialogProps {
     open: boolean;
@@ -19,8 +20,10 @@ export interface ClaimDialogProps {
 
 export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
     const [submitting, setSubmitting] = React.useState(false);
+    const [error, setError] = React.useState('');
     const claimRewards = useKrunchStore((state: any) => state.claimRewards)
     const userAccount = useKrunchStore(state => state.userAccount)
+    const nextRewardsClaimDate = useKrunchStore(state => state.nextRewardsClaimDate)
     const exchange = useKrunchStore(state => state.exchange)
     const { appInfo
     } = useKrunchStore((state) => ({
@@ -30,32 +33,29 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     let lastRewardsClaimed = 'Never'
     let nextRewardsClaim = 'Now'
-    let nextRewardsClaimDate = new Date('1/1/1970')
     let hasClaimed = false
     if (userAccount.lastRewardsClaim?.toNumber() > 0) {
         lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
-        const numDays = exchange.rewardFrequency?.toNumber() / SLOTS_PER_DAY
-        const milliSecondsPerDay = 1000 * 60 * 60 * 24
-        nextRewardsClaimDate = new Date(userAccount.lastRewardsClaim?.toNumber() * 1000 + numDays * milliSecondsPerDay)
         hasClaimed = true
     }
 
     let canClaim = true
-    const numSecondsUntilClaim = nextRewardsClaimDate.getTime() - new Date().getTime()
     moment().toNow(true)
-    if (nextRewardsClaimDate > new Date()) {
+    if (nextRewardsClaimDate && nextRewardsClaimDate > new Date()) {
         nextRewardsClaim = `${nextRewardsClaimDate.toLocaleDateString()} ${nextRewardsClaimDate.toLocaleTimeString()}`
         canClaim = false
     }
 
-
     const handleSubmit = async () => {
         try {
+            console.log('nextRewardsClaimDate', nextRewardsClaimDate)
+            setError('')
             setSubmitting(true)
             await claimRewards()
             setOpen(false)
-        } catch (e) {
+        } catch (e: any) {
             console.log("error", e);
+            setError(e.message)
         } finally {
             setSubmitting(false)
         }
@@ -80,7 +80,12 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
                                 sx={{ textTransform: 'capcapitalize', color: color, fontFamily: 'BrunoAceSC' }}>{formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}</Typography>
                             {hasClaimed && <Typography textAlign={'center'}>Rewards Last Claimed On: {lastRewardsClaimed}</Typography>}
                             {!canClaim && <Typography textAlign={'center'}>Next Rewards Claim: {nextRewardsClaim}</Typography>}
-                            {!canClaim && <Typography style={{color:appInfo.logoColor}} textAlign={'center'}>Claim {moment(nextRewardsClaimDate).fromNow()}</Typography>}
+                            {!canClaim && <Typography style={{ color: appInfo.logoColor }} textAlign={'center'}>Claim {moment(nextRewardsClaimDate).fromNow()}</Typography>}
+                            <FormControl sx={{display:!!error?'inherit':'none'}} error={!!error}>
+                                <FormHelperText>
+                                   {error}
+                                </FormHelperText>
+                            </FormControl>
                             <Button disabled={submitting || !canClaim} type="submit">{submitting ? 'Claiming Rewards..' : 'Claim Rewards'}</Button>
                         </Stack>
                     </form>

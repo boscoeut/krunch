@@ -12,6 +12,7 @@ import {
   MAKER_FEE,
   MARKETS,
   MARKET_LEVERAGE,
+  SLOTS_PER_DAY,
   MARKET_TYPES, MARKET_WEIGHT,
   MARKET_WEIGHT_DECIMALS,
   NETWORK,
@@ -41,6 +42,7 @@ export const defaultAppInfo: AppInfo = {
 }
 
 interface KrunchState {
+  nextRewardsClaimDate?:Date,
   setup: () => Promise<void>,
   isAdmin: boolean,
   appInfo: AppInfo,
@@ -602,7 +604,17 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       + userAccount.collateralValue.toNumber();
     let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
     console.log('###uuserTotal', userTotal / AMOUNT_DECIMALS)
-    set({ userCollateral: userTotal, userAccountValue: hardAmount })
+    let nextRewardsClaimDate:Date|undefined = undefined
+    if (userAccount.lastRewardsClaim?.toNumber() > 0) {
+      const numDays = exchange.rewardFrequency?.toNumber() / SLOTS_PER_DAY
+      const milliSecondsPerDay = 1000 * 60 * 60 * 24
+      nextRewardsClaimDate = new Date(userAccount.lastRewardsClaim?.toNumber() * 1000 + numDays * milliSecondsPerDay)
+    }
+
+    set({ 
+      nextRewardsClaimDate,
+      userCollateral: userTotal, 
+      userAccountValue: hardAmount })
     return userTotal
   },
   refreshExchangeCollateral: async () => {
