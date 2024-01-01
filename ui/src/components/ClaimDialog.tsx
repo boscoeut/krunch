@@ -40,7 +40,6 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
     }
 
     let canClaim = true
-    moment().toNow(true)
     if (nextRewardsClaimDate && nextRewardsClaimDate > new Date()) {
         nextRewardsClaim = `${nextRewardsClaimDate.toLocaleDateString()} ${nextRewardsClaimDate.toLocaleTimeString()}`
         canClaim = false
@@ -55,6 +54,7 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
             setOpen(false)
         } catch (e: any) {
             console.log("error", e);
+            setSubmitting(false)
             setError(e.message)
         } finally {
             setSubmitting(false)
