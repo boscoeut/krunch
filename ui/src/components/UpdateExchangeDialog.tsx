@@ -42,10 +42,6 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
         }
     };
 
-    const properties = [
-        { label: 'In Test Mode', value: testMode, onChange: setTestMode, type: 'boolean' },
-    ]
-
     return (
         <React.Fragment>
             <Modal open={open} onClose={() => setOpen(false)}>

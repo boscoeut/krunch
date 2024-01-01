@@ -1,5 +1,4 @@
 import '@fontsource/inter';
-
 import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import '../App.css';

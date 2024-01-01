@@ -13,7 +13,6 @@ const useAccounts = () => {
         return acct;
     }
 
-
     function sighash(nameSpace: string, ixName: string): Buffer {
         let name = ixName;
         let preimage = `${nameSpace}:${name}`;

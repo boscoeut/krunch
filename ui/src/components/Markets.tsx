@@ -50,8 +50,6 @@ export default function Markets() {
                             <td>{formatPercent((row.makerFee || 0) / FEE_DECIMALS)}</td>
                             <td>{formatPercent((row.takerFee || 0) / FEE_DECIMALS)}</td>
                         </tr>
-
-
                     })}
                 </tbody>
             </Table>

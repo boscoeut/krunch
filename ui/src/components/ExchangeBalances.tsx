@@ -1,7 +1,7 @@
 import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { renderItem, formatCurrency } from '../utils';
+import { formatCurrency } from '../utils';
 import SectionHeader from './SectionHeader';
 
 export default function ExchangeBalances() {
@@ -13,9 +13,8 @@ export default function ExchangeBalances() {
             <Table>
                 <thead>
                     <tr>
-                        <th style={{width:225}} colSpan={1}><SectionHeader title="Pool Treasury" /></th>
+                        <th style={{ width: 225 }} colSpan={1}><SectionHeader title="Pool Treasury" /></th>
                         <th colSpan={3}><SectionHeader title={formatCurrency(treasuryTotal)} /></th>
-
                     </tr>
                     <tr>
                         <th>Token</th>

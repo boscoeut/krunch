@@ -4,7 +4,6 @@ import Typography from '@mui/joy/Typography';
 import AppTitle from './AppTitle';
 import { useColorScheme } from '@mui/joy';
 
-
 export default function Logo() {
     const { mode } = useColorScheme();
     const color = mode == 'dark' ? 'black' : 'white';

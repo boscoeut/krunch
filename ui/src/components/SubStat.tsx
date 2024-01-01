@@ -1,7 +1,6 @@
+import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import { useKrunchStore } from '../hooks/useKrunchStore';
-import Box from '@mui/joy/Box';
-import { formatCurrency, formatPercent } from '../utils';
 import '../index.css';
 
 export default function SubStat({ title, value, numValue=0 }: { title: string,value:string|number,numValue?:number }) {

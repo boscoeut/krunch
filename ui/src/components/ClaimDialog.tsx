@@ -7,7 +7,7 @@ import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
 import * as React from 'react';
-import { AMOUNT_DECIMALS, EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants';
+import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency } from '../utils';
 

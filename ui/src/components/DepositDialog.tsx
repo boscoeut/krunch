@@ -172,8 +172,6 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                   })}
                 </tbody>
               </Table>
-
-             
             </Stack>
           </form>
         </ModalDialog>

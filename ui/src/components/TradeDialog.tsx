@@ -20,8 +20,6 @@ import { AMOUNT_DECIMALS, FEE_DECIMALS, MARKETS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, formatNumber, formatPercent } from "../utils";
 import KLabel from "./KLabel";
-// icons
-
 
 export interface TradeDialogProps {
   open: boolean;

@@ -1,6 +1,4 @@
-import * as React from 'react';
 import { BarChart } from '@mui/x-charts/BarChart';
-import { styled } from '@mui/system';
 export default function SimpleCharts() {
   return (
     <BarChart

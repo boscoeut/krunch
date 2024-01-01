@@ -1,7 +1,6 @@
 import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRounded';
 import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
-// icons
 import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
 import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
 import CurrencyExchangeRounded from '@mui/icons-material/CurrencyExchangeRounded';
