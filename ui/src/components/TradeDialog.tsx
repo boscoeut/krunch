@@ -128,6 +128,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                 <thead>
                   <tr>
                     <th style={{ width: 150 }}>Trade Details</th>
+                    <th style={{ width: 100 }}></th>
                     <th></th>
                   </tr>
                 </thead>
@@ -135,22 +136,27 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                   <tr>
                     <td>Amount</td>
                     <td>{`${amount}`}</td>
+                    <td></td>
                   </tr>
                   <tr>
                     <td>Price</td>
                     <td>{`${formatNumber(selectedExchangeMarket?.price || 0)}`}</td>
+                    <td></td>
                   </tr>
                   <tr>
                     <td>Value</td>
                     <td>{formatCurrency(tradeValue, 4)}</td>
+                    <td></td>
                   </tr>
                   <tr>
                     <td>{fee > 0 ? 'Fee' : 'Trading Rebate!'}</td>
-                    <td><KLabel fontWeight="bold" numValue={fee * -1}>{formatCurrency(fee, 4)}</KLabel>  <Chip color={fee > 0 ? "danger" : "success"}>Rate: {formatPercent(feeRate)}</Chip></td>
+                    <td><KLabel fontWeight="bold" numValue={fee * -1}>{formatCurrency(fee, 4)}</KLabel>  </td>
+                    <td><Chip color={fee > 0 ? "danger" : "success"}>Rate: {formatPercent(feeRate)}</Chip></td>
                   </tr>
                   <tr>
                     <th>Total </th>
-                    <th>{formatCurrency(total, 4)} <Chip color={maxTrade > total ? "success" : "danger"}>Max Margin Available: {formatCurrency(maxTrade)}</Chip></th>
+                    <th>{formatCurrency(total, 4)} </th>
+                    <td><Chip color={maxTrade > total ? "success" : "danger"}>Max Margin Available: {formatCurrency(maxTrade)}</Chip></td>
                   </tr>
                 </tbody>
               </Table>
