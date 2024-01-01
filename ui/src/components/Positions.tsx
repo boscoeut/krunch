@@ -14,7 +14,7 @@ export default function Positions({ positions }: { positions: Array<any> }) {
             <Table>
                 <thead>
                     <tr>
-                        <th colSpan={7}><SectionHeader title="Open Positions" /></th>
+                        <th colSpan={7}><SectionHeader title={openPositions.length === 0 ?'No Open Positions':'Positions'} /></th>
                     </tr>
                     <tr>
                         <th>Market</th>
@@ -39,7 +39,7 @@ export default function Positions({ positions }: { positions: Array<any> }) {
                             <td>{formatCurrency(row.price || 0)}</td>
                         </tr>
                     })}
-                    {openPositions.length === 0 && <tr><td colSpan={7}>No Open Positions</td></tr>}
+                    
                 </tbody>
             </Table>
         </Box>

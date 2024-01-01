@@ -1,7 +1,7 @@
 import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { formatCurrency } from '../utils';
+import { formatCurrency, formatNumber } from '../utils';
 import SectionHeader from './SectionHeader';
 
 export default function ExchangeBalances() {
@@ -27,7 +27,7 @@ export default function ExchangeBalances() {
                     {exchangeBalances.map(row => {
                         return <tr key={row.market}>
                             <td>{row.market.replace("/USD", "")}</td>
-                            <td>{row.balance / (10 ** row.decimals)}</td>
+                            <td>{formatNumber(row.balance / (10 ** row.decimals),5)}</td>
                             <td>{formatCurrency(row.price || 0)}</td>
                             <td>{formatCurrency(row.currValue || 0)}</td>
                         </tr>

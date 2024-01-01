@@ -14,14 +14,10 @@ export default function PoolPositions({ positions }: { positions: Array<any> }) 
             <Table>
                 <thead>
                     <tr>
-                        <th colSpan={11}><SectionHeader title="Open Positions" /></th>
+                        <th colSpan={7}><SectionHeader title="Open Positions" /></th>
                     </tr>
                     <tr>
                         <th>Market</th>
-                        <th>MarginUsed</th>
-                        <th>Pnl</th>
-                        <th>Fees</th>
-                        <th>Rebates</th>
                         <th>Basis</th>
                         <th>Amount</th>
                         <th>Entry Price</th>
@@ -35,10 +31,6 @@ export default function PoolPositions({ positions }: { positions: Array<any> }) 
                         const entryPrice = Math.abs(row.tokenAmount === 0 ? 0 : row.basis / row.tokenAmount)
                         return <tr key={row.marketIndex}>
                             <td>{row.market}</td>
-                            <td>{renderItem(row.marginUsed)}</td>
-                            <td>{renderItem(row.pnl)}</td>
-                            <td>{renderItem(row.fees)}</td>
-                            <td>{renderItem(row.rebates)}</td>
                             <td>{renderItem(row.basis)}</td>
                             <td>{renderItem(row.tokenAmount, AMOUNT_DECIMALS, 4)}</td>
                             <td>{formatCurrency(entryPrice)}</td>
