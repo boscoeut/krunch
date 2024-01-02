@@ -20,6 +20,7 @@ import { AMOUNT_DECIMALS, EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, formatNumber } from '../utils';
 import KLabel from './KLabel';
+import { set } from '@coral-xyz/anchor/dist/cjs/utils/features';
 
 export interface WithdrawDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ export interface WithdrawDialogProps {
 }
 
 export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
+  const [errorMessage, setErrorMessage] = React.useState('');
   const [market, setMarket] = React.useState('USDC/USD');
   const [amount, setAmount] = React.useState('0');
   const [submitting, setSubmitting] = React.useState(false);
@@ -44,6 +46,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
 
   const closeDialog = () => {
     setSubmitting(false)
+    setErrorMessage('')
     setOpen(false)
   }
 
@@ -52,7 +55,8 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
       setSubmitting(true)
       await withdraw(market, Number(amount))
       closeDialog()
-    } catch (e) {
+    } catch (e:any) {
+      setErrorMessage(e.message)
       console.log("error", e);
     } finally {
       setSubmitting(false)
@@ -60,19 +64,19 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   };
 
   let submitMessage = 'Withdraw'
-  let errorMessage = ''
+  let amountMessage = ''
   let canSubmit = !submitting
   const selectedBalance = amountAvailable / AMOUNT_DECIMALS
   if (Number(selectedBalance.toFixed(2)) < Number(amount)) {
     canSubmit = false
     submitMessage = 'Insufficient Balance'
-    errorMessage = submitMessage
+    amountMessage = submitMessage
   }
 
   if (Number(amount) <= 0) {
     canSubmit = false
     submitMessage = 'Amount must be greater than 0'
-    errorMessage = submitMessage
+    amountMessage = submitMessage
   }
 
   if (submitting) {
@@ -120,7 +124,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
                 <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
                 {!canSubmit && <FormHelperText>
                   <InfoOutlined />
-                  {errorMessage}
+                  {amountMessage}
                 </FormHelperText>}
               </FormControl>
               <FormControl>
@@ -134,7 +138,12 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
                 </Select>
               </FormControl>
               <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
-
+              {errorMessage && <FormControl error={!!errorMessage}>
+                <FormHelperText>
+                  <InfoOutlined />
+                  {errorMessage}
+                </FormHelperText>
+              </FormControl>}
               <FormControl>
                 <Table>
                   <tbody>

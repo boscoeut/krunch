@@ -9,6 +9,8 @@ import Modal from '@mui/joy/Modal';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import FormHelperText from '@mui/joy/FormHelperText';
 import * as React from 'react';
 import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS, SOL_USD_FEED } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
@@ -21,6 +23,7 @@ export interface MarketDialogProps {
 
 export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
   const [name, setName] = React.useState('SOL');
+  const [errorMessage, setErrorMessage] = React.useState('');
   const [marketIndex, setMarketIndex] = React.useState('1');
   const [marketWeight, setMarketWeight] = React.useState('1');
   const [leverage, setLeverage] = React.useState('10');
@@ -33,6 +36,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
 
   const closeDialog = () => {
     setSubmitting(false)
+    setErrorMessage('')
     setOpen(false)
   }
 
@@ -47,7 +51,8 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
         Number(makerFee),
         feedAddress)
         closeDialog()
-    } catch (e) {
+    } catch (e:any) {
+      setErrorMessage(e.message)
       console.log("error", e);
     } finally {
       setSubmitting(false)
@@ -104,6 +109,12 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
                 );
               })}
               <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
+              {errorMessage && <FormControl error={!!errorMessage}>
+                <FormHelperText>
+                  <InfoOutlined />
+                  {errorMessage}
+                </FormHelperText>
+              </FormControl>}
             </Stack>
           </form>
         </ModalDialog>

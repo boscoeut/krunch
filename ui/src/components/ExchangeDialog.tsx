@@ -12,9 +12,12 @@ import ModalDialog from '@mui/joy/ModalDialog';
 import Option from '@mui/joy/Option';
 import Select from '@mui/joy/Select';
 import Stack from '@mui/joy/Stack';
+import FormHelperText from '@mui/joy/FormHelperText';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import * as React from 'react';
 import { EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
+import { set } from '@coral-xyz/anchor/dist/cjs/utils/features';
 
 export interface ExchangeDialogProps {
   open: boolean;
@@ -26,10 +29,12 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
   const [amount, setAmount] = React.useState('0');
   const exchangeDepositOrWithdraw = useKrunchStore(state => state.exchangeDepositOrWithdraw)
   const [submitting, setSubmitting] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState('');
 
   const closeDialog = () => {
     setSubmitting(false)
     setOpen(false)
+    setErrorMessage('')
   }
 
   const handleSubmit = async () => {
@@ -37,7 +42,8 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
       setSubmitting(true)
       await exchangeDepositOrWithdraw(market, Number(amount))
       setOpen(false)
-    } catch (e) {
+    } catch (e: any) {
+      setErrorMessage(e.message)
       console.log("error", e);
     } finally {
       setSubmitting(false)
@@ -85,6 +91,12 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
                 );
               })}
               <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
+              {errorMessage && <FormControl error={!!errorMessage}>
+                <FormHelperText>
+                  <InfoOutlined />
+                  {errorMessage}
+                </FormHelperText>
+              </FormControl>}
             </Stack>
           </form>
         </ModalDialog>

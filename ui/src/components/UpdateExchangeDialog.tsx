@@ -13,9 +13,11 @@ import moment from 'moment';
 import Stack from '@mui/joy/Stack';
 import Switch from '@mui/joy/Switch';
 import * as React from 'react';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import { AMOUNT_DECIMALS, EXCHANGE_LEVERAGE, LEVERAGE_DECIMALS, REWARD_FREQUENCY, REWARD_RATE, SLOTS_PER_DAY } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { FormHelperText } from '@mui/joy';
+import { set } from '@coral-xyz/anchor/dist/cjs/utils/features';
 
 export interface UpdateExchangeDialogProps {
     open: boolean;
@@ -25,6 +27,7 @@ export interface UpdateExchangeDialogProps {
 export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDialogProps) {
 
     const [submitting, setSubmitting] = React.useState(false);
+    const [errorMessage, setErrorMessage] = React.useState('');
     const updateExchange = useKrunchStore((state: any) => state.updateExchange)
     const exchange = useKrunchStore((state: any) => state.exchange)
     const [testMode, setTestMode] = React.useState(exchange.testMode as boolean || false);
@@ -36,14 +39,16 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
     const closeDialog = () => {
         setSubmitting(false)
         setOpen(false)
-      }
+        setErrorMessage('')
+    }
 
     const handleSubmit = async () => {
         try {
             setSubmitting(true)
             await updateExchange(testMode, rewardFrequency, rewardRate * AMOUNT_DECIMALS, leverage)
             closeDialog()
-        } catch (e) {
+        } catch (e:any) {
+            setErrorMessage(e.message)
             console.log("error", e);
         } finally {
             setSubmitting(false)
@@ -91,7 +96,7 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
                                     SLOTS_PER_DAY = ({SLOTS_PER_DAY})
                                 </FormHelperText>
                                 <FormHelperText>
-                                    Duration = {moment.duration(Number(rewardFrequency) / SLOTS_PER_DAY, 'days').humanize()} 
+                                    Duration = {moment.duration(Number(rewardFrequency) / SLOTS_PER_DAY, 'days').humanize()}
                                 </FormHelperText>
                             </FormControl>
                             <FormControl>
@@ -99,6 +104,12 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
                                 <Input required value={leverage} onChange={(e: any) => setLeverage(e.target.value)} />
                             </FormControl>
                             <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
+                            {errorMessage && <FormControl error={!!errorMessage}>
+                                <FormHelperText>
+                                    <InfoOutlined />
+                                    {errorMessage}
+                                </FormHelperText>
+                            </FormControl>}
                         </Stack>
                     </form>
                 </ModalDialog>

@@ -31,6 +31,7 @@ export interface DepositDialogProps {
 export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
   const [market, setMarket] = React.useState('USDC/USD');
   const [amount, setAmount] = React.useState('0');
+  const [errorMessage, setErrorMessage] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const userAccountValue = useKrunchStore(state => state.userAccountValue)
 
@@ -45,6 +46,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
 
   const closeDialog = () => {
     setSubmitting(false)
+    setErrorMessage('')
     setOpen(false)
   }
 
@@ -57,7 +59,8 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
         await deposit(market, Number(amount))
         closeDialog()
       }
-    } catch (e) {
+    } catch (e: any) {
+      setErrorMessage(e.message)
       console.log("error", e);
     } finally {
       setSubmitting(false)
@@ -149,6 +152,12 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                 </Table>
               </FormControl>
               <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
+              {errorMessage && <FormControl error={!!errorMessage}>
+                <FormHelperText>
+                  <InfoOutlined />
+                  {errorMessage}
+                </FormHelperText>
+              </FormControl>}
               <Table>
                 <thead>
                   <tr>
