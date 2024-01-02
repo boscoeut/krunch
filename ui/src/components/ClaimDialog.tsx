@@ -24,7 +24,6 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
     const claimRewards = useKrunchStore((state: any) => state.claimRewards)
     const userAccount = useKrunchStore(state => state.userAccount)
     const nextRewardsClaimDate = useKrunchStore(state => state.nextRewardsClaimDate)
-    const exchange = useKrunchStore(state => state.exchange)
     const { appInfo
     } = useKrunchStore((state) => ({
         appInfo: state.appInfo
@@ -45,13 +44,19 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
         canClaim = false
     }
 
+    const closeDialog = () => { 
+        setError('')
+        setSubmitting(false)
+        setOpen(false)
+    }
+
     const handleSubmit = async () => {
         try {
             console.log('nextRewardsClaimDate', nextRewardsClaimDate)
             setError('')
             setSubmitting(true)
             await claimRewards()
-            setOpen(false)
+            closeDialog()
         } catch (e: any) {
             console.log("error", e);
             setSubmitting(false)
@@ -62,7 +67,7 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
     };
     return (
         <React.Fragment>
-            <Modal open={open} onClose={() => setOpen(false)}>
+            <Modal open={open} onClose={() => closeDialog()}>
                 <ModalDialog>
                     <ModalClose />
                     <DialogTitle></DialogTitle>
@@ -80,7 +85,7 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
                                 sx={{ textTransform: 'capcapitalize', color: color, fontFamily: 'BrunoAceSC' }}>{formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}</Typography>
                             {hasClaimed && <Typography textAlign={'center'}>Rewards Last Claimed On: {lastRewardsClaimed}</Typography>}
                             {!canClaim && <Typography textAlign={'center'}>Next Rewards Claim: {nextRewardsClaim}</Typography>}
-                            {!canClaim && <Typography style={{ color: appInfo.logoColor }} textAlign={'center'}>Claim {moment(nextRewardsClaimDate).fromNow()}</Typography>}
+                            {!canClaim && <Typography style={{ color: appInfo.logoColor }} textAlign={'center'}>Claim {moment(nextRewardsClaimDate).fromNow(false)}</Typography>}
                             <FormControl sx={{display:!!error?'inherit':'none'}} error={!!error}>
                                 <FormHelperText>
                                    {error}

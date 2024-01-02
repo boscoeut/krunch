@@ -1,7 +1,8 @@
 import { PublicKey } from "@solana/web3.js";
 
 export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Localnet";
-export const SLOTS_PER_DAY = 24 * 60 * 60 * 2.5
+export const SLOTS_PER_DAY = 24 * 60 * 60
+// export const SLOTS_PER_DAY = 24 * 60 * 60 * 2.5
 
 let networkUrl = "http://localhost:8899" // Localnet
 let adminAddress = "HQj2MtJPNK1MvdHidVxEMZCtRwkxMPL9MVf2gt3rSKHS" 

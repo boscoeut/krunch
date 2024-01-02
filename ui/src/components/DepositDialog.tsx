@@ -43,6 +43,10 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
   const depositValue=Number(amount) * (selectedMarket?.price || 0  )
   const balanceAfterDeposit = userAccountValue/AMOUNT_DECIMALS + depositValue
 
+  const closeDialog = () => { 
+    setSubmitting(false)
+    setOpen(false)
+}
 
   const handleSubmit = async () => {
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
@@ -51,7 +55,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
       setSubmitting(true)
       if (position) {
         await deposit(market, Number(amount))
-        setOpen(false)
+        closeDialog()
       }
     } catch (e) {
       console.log("error", e);
@@ -85,7 +89,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
 
   return (
     <React.Fragment>
-      <Modal open={open} onClose={() => setOpen(false)}>
+      <Modal open={open} onClose={() => closeDialog()}>
         <ModalDialog>
           <ModalClose />
           <DialogTitle>Deposit Funds</DialogTitle>

@@ -587,7 +587,6 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         console.log('could not get balance:' + item.market)
       }
       const price = get().prices.get(item.market)
-      console.log('price *******', price)
       balances.push({
         market: item.market,
         mint: item.mint,
@@ -596,8 +595,6 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         price
       })
     }
-
-    console.log(`&&&&&`, userAccount.lastRewardsClaim?.toNumber())
     set(() => ({ userAccount, userBalances: balances }))
   },
   refreshUserCollateral: async () => {
