@@ -20,6 +20,7 @@ import * as React from 'react';
 import { AMOUNT_DECIMALS, EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, renderItem, formatNumber } from '../utils';
+import PriceLabel from './PriceLabel';
 import KLabel from './KLabel';
 
 export interface DepositDialogProps {
@@ -165,7 +166,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                       <tr key={item.market} style={{fontWeight: item.market === selectedMarket?.market ? 'bold':'normal'}}>
                         <td><Typography color={color}>{item.market.replace("/USD", "")}</Typography></td>
                         <td><Typography color={color}>{amount}</Typography></td>
-                        <td><Typography color={color}>{formatNumber(item.price, 4)}</Typography></td>
+                        <td><Typography color={color}><PriceLabel value={item.price}>{formatNumber(item.price, 4)}</PriceLabel></Typography></td>
                         <td><Typography color={color}>{formatCurrency(tokenAmount * (item.price || 0), 4)}</Typography></td>
                       </tr>
                     )

@@ -5,6 +5,7 @@ import '../App.css';
 import { renderItem, formatCurrency } from '../utils';
 import SectionHeader from './SectionHeader';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
+import PriceLabel from './PriceLabel';
 
 export default function PoolPositions({ positions }: { positions: Array<any> }) {
     const openPositions = positions.filter(p => p.tokenAmount?.toNumber() != 0)
@@ -34,7 +35,7 @@ export default function PoolPositions({ positions }: { positions: Array<any> }) 
                             <td>{renderItem(row.basis)}</td>
                             <td>{renderItem(row.tokenAmount, AMOUNT_DECIMALS, 4)}</td>
                             <td>{formatCurrency(entryPrice)}</td>
-                            <td>{formatCurrency(row.price || 0)}</td>
+                            <td><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                             <td>{formatCurrency(row.currValue)}</td>
                             <td>{formatCurrency(row.unrealizedPnl)}</td>
                         </tr>

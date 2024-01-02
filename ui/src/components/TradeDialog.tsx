@@ -20,6 +20,7 @@ import { AMOUNT_DECIMALS, FEE_DECIMALS, MARKETS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, formatNumber, formatPercent } from "../utils";
 import KLabel from "./KLabel";
+import PriceLabel from './PriceLabel';
 
 export interface TradeDialogProps {
   open: boolean;
@@ -139,7 +140,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                   </tr>
                   <tr>
                     <td>Price</td>
-                    <td>{`${formatNumber(selectedExchangeMarket?.price || 0)}`}</td>
+                    <td><PriceLabel value={selectedExchangeMarket?.price}>{`${formatNumber(selectedExchangeMarket?.price || 0)}`}</PriceLabel></td>
                     <td></td>
                   </tr>
                   <tr>

@@ -4,6 +4,7 @@ import Table from '@mui/joy/Table';
 import '../App.css';
 import { renderItem, formatCurrency } from '../utils';
 import SectionHeader from './SectionHeader';
+import PriceLabel from './PriceLabel';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 
 export default function Positions({ positions }: { positions: Array<any> }) {
@@ -36,7 +37,7 @@ export default function Positions({ positions }: { positions: Array<any> }) {
                             <td>{formatCurrency(row.currValue)}</td>
                             <td>{formatCurrency(row.unrealizedPnl)}</td>
                             <td>{formatCurrency(entryPrice)}</td>
-                            <td>{formatCurrency(row.price || 0)}</td>
+                            <td><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                         </tr>
                     })}
                     
