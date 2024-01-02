@@ -10,7 +10,7 @@ import SectionHeader from './SectionHeader';
 
 export default function PoolDetails() {
     const exchange = useKrunchStore(state => state.exchange)
-    const exchangeCollateral = useKrunchStore(state => state.exchangeCollateral)
+    const exchangeBalanceAvailable = useKrunchStore(state => state.exchangeBalanceAvailable)
     const poolAccountValue = useKrunchStore(state => state.poolAccountValue)
     const exchangeCurrentValue = useKrunchStore(state => state.exchangeCurrentValue)
     const exchangeUnrealizedPnl = useKrunchStore(state => state.exchangeUnrealizedPnl)
@@ -126,7 +126,7 @@ export default function PoolDetails() {
                     </tr>
                     <tr>
                         <td>Margin Available</td>
-                        <td>{formatCurrency(exchangeCollateral / AMOUNT_DECIMALS)}</td>
+                        <td>{formatCurrency(exchangeBalanceAvailable / AMOUNT_DECIMALS)}</td>
                     </tr>
                     <tr>
                         <td>Leverage</td>

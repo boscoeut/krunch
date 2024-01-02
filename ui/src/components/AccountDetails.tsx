@@ -15,6 +15,7 @@ export default function AccountDetails() {
     const userUnrealizedPnl = useKrunchStore(state => state.userUnrealizedPnl)
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const exchangeRewardsAvailable = useKrunchStore(state => state.exchangeRewardsAvailable)
+    const exchangeBalanceAvailable = useKrunchStore(state => state.exchangeBalanceAvailable)
     const userAccountValue = useKrunchStore(state => state.userAccountValue)
     const totalPnl = userUnrealizedPnl + (userAccount.pnl?.toNumber() / AMOUNT_DECIMALS || 0)
 
@@ -122,7 +123,7 @@ export default function AccountDetails() {
                         </tr>
                         <tr>
                             <td>Margin Available</td>
-                            <td>{formatCurrency(userCollateral / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(Math.min(userCollateral, exchangeBalanceAvailable) / AMOUNT_DECIMALS)}</td>
                         </tr>
                     </tbody>
                 </Table>
