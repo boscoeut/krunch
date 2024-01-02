@@ -31,8 +31,12 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
   const updateMarket = useKrunchStore(state => state.updateMarket)
   const markets = useKrunchStore(state => state.markets)
 
+  const closeDialog = () => {
+    setSubmitting(false)
+    setOpen(false)
+  }
+
   const handleSubmit = async () => {
-    // Handle form submission here
     try {
       setSubmitting(true)
       await updateMarket(name,
@@ -42,7 +46,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
         Number(takerFee),
         Number(makerFee),
         feedAddress)
-      setOpen(false)
+        closeDialog()
     } catch (e) {
       console.log("error", e);
     } finally {
@@ -79,7 +83,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
 
   return (
     <React.Fragment>
-      <Modal open={open} onClose={() => setOpen(false)}>
+      <Modal open={open} onClose={() => closeDialog()}>
         <ModalDialog>
           <ModalClose />
           <DialogTitle>Update Market</DialogTitle>

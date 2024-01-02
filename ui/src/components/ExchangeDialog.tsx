@@ -27,6 +27,11 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
   const exchangeDepositOrWithdraw = useKrunchStore(state => state.exchangeDepositOrWithdraw)
   const [submitting, setSubmitting] = React.useState(false);
 
+  const closeDialog = () => {
+    setSubmitting(false)
+    setOpen(false)
+  }
+
   const handleSubmit = async () => {
     try {
       setSubmitting(true)
@@ -46,7 +51,7 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
 
   return (
     <React.Fragment>
-      <Modal open={open} onClose={() => setOpen(false)}>
+      <Modal open={open} onClose={() => closeDialog()}>
         <ModalDialog>
           <ModalClose />
           <DialogTitle>Exchange Withdraw</DialogTitle>

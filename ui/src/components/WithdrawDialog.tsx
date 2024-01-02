@@ -23,7 +23,7 @@ import KLabel from './KLabel';
 
 export interface WithdrawDialogProps {
   open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>; // Definition of setOpen prop    
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>; 
 }
 
 export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
@@ -42,11 +42,16 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   const amountAvailable = userAccountValue + marginUsed
   const tokenPhrase = `Receive ${formatNumber(tokenAmount, 5)} ${selectedMarket?.market.replace("/USD", "")} Tokens`
 
+  const closeDialog = () => {
+    setSubmitting(false)
+    setOpen(false)
+  }
+
   const handleSubmit = async () => {
     try {
       setSubmitting(true)
       await withdraw(market, Number(amount))
-      setOpen(false)
+      closeDialog()
     } catch (e) {
       console.log("error", e);
     } finally {
@@ -80,7 +85,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
 
   return (
     <React.Fragment>
-      <Modal open={open} onClose={() => setOpen(false)}>
+      <Modal open={open} onClose={() => closeDialog()}>
         <ModalDialog>
           <ModalClose />
           <DialogTitle>Withdraw Funds</DialogTitle>

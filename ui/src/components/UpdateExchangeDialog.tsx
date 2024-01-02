@@ -33,11 +33,16 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
     const [rewardRate, setRewardRate] = React.useState(REWARD_RATE / AMOUNT_DECIMALS);
     const [leverage, setLeverage] = React.useState(EXCHANGE_LEVERAGE);
 
+    const closeDialog = () => {
+        setSubmitting(false)
+        setOpen(false)
+      }
+
     const handleSubmit = async () => {
         try {
             setSubmitting(true)
             await updateExchange(testMode, rewardFrequency, rewardRate * AMOUNT_DECIMALS, leverage)
-            setOpen(false)
+            closeDialog()
         } catch (e) {
             console.log("error", e);
         } finally {
@@ -55,7 +60,7 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
 
     return (
         <React.Fragment>
-            <Modal open={open} onClose={() => setOpen(false)}>
+            <Modal open={open} onClose={() => closeDialog()}>
                 <ModalDialog>
                     <ModalClose />
                     <DialogTitle>Update Exchange</DialogTitle>

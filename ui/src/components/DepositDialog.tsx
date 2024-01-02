@@ -40,13 +40,13 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
   const selectedMarket = userBalances.find((position) => position.market === market)
   const selectedBalance = (selectedMarket?.balance || 0) / (10 ** (selectedMarket?.decimals || 1))
 
-  const depositValue=Number(amount) * (selectedMarket?.price || 0  )
-  const balanceAfterDeposit = userAccountValue/AMOUNT_DECIMALS + depositValue
+  const depositValue = Number(amount) * (selectedMarket?.price || 0)
+  const balanceAfterDeposit = userAccountValue / AMOUNT_DECIMALS + depositValue
 
-  const closeDialog = () => { 
+  const closeDialog = () => {
     setSubmitting(false)
     setOpen(false)
-}
+  }
 
   const handleSubmit = async () => {
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
@@ -132,21 +132,21 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
 
               <FormControl>
                 <Table>
-                <tbody>
-                  <tr>
-                    <td style={{width:175}}>Current Balance</td>
-                    <td>{formatCurrency(userAccountValue/AMOUNT_DECIMALS)}</td>
-                  </tr>
-                  <tr>
-                    <td>Deposit Amount</td>
-                    <td><KLabel numValue={Number(amount)}>{formatCurrency(depositValue)}</KLabel><span style={{paddingLeft:10, fontSize:'0.9em'}}>(Current Price = {formatNumber(selectedMarket?.price || 0,4)})</span></td>
-                  </tr>
-                  <tr>
-                    <td>Balance After Deposit</td>
-                    <td><KLabel fontWeight='bold' numValue={Number(amount)}>{formatCurrency(balanceAfterDeposit)}</KLabel></td> 
-                  </tr>
-                </tbody>
-                </Table>                  
+                  <tbody>
+                    <tr>
+                      <td style={{ width: 175 }}>Current Balance</td>
+                      <td>{formatCurrency(userAccountValue / AMOUNT_DECIMALS)}</td>
+                    </tr>
+                    <tr>
+                      <td>Deposit Amount</td>
+                      <td><KLabel numValue={Number(amount)}>{formatCurrency(depositValue)}</KLabel><span style={{ paddingLeft: 10, fontSize: '0.9em' }}>(Current Price = {formatNumber(selectedMarket?.price || 0, 4)})</span></td>
+                    </tr>
+                    <tr>
+                      <td>Balance After Deposit</td>
+                      <td><KLabel fontWeight='bold' numValue={Number(amount)}>{formatCurrency(balanceAfterDeposit)}</KLabel></td>
+                    </tr>
+                  </tbody>
+                </Table>
               </FormControl>
               <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
               <Table>
@@ -162,12 +162,12 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                   {userBalances.map((item) => {
                     const tokenAmount = item.balance / (10 ** item.decimals)
                     const amount = item.balance !== 0 ? renderItem(item.balance || 0, 10 ** item.decimals) : 0
-                    let color:'neutral'|'primary'|'success'|'danger' = 'neutral'
+                    let color: 'neutral' | 'primary' | 'success' | 'danger' = 'neutral'
                     if (item.market === selectedMarket?.market) {
                       color = 'primary'
                     }
                     return (
-                      <tr key={item.market} style={{fontWeight: item.market === selectedMarket?.market ? 'bold':'normal'}}>
+                      <tr key={item.market} style={{ fontWeight: item.market === selectedMarket?.market ? 'bold' : 'normal' }}>
                         <td><Typography color={color}>{item.market.replace("/USD", "")}</Typography></td>
                         <td><Typography color={color}>{amount}</Typography></td>
                         <td><Typography color={color}><PriceLabel value={item.price}>{formatNumber(item.price, 4)}</PriceLabel></Typography></td>

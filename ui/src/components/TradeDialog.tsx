@@ -29,6 +29,7 @@ export interface TradeDialogProps {
 
 export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const [marketIndex, setMarketIndex] = React.useState('1');
+  const [errorMessage, setErrorMessage] = React.useState('');
   const [amount, setAmount] = React.useState('0.5');
   const [submitting, setSubmitting] = React.useState(false);
   const exchangeBalances = useKrunchStore(state => state.exchangeBalances)
@@ -42,7 +43,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const selectedUserBalance = positions.find((position) => position.market === selectedMarket?.name)
   const tradeValue = Number(amount) * (selectedExchangeMarket?.price || 0)
   const marketTokenAmount = (selectedMarket?.tokenAmount || 0) / AMOUNT_DECIMALS
-  const userTokenAmount = (selectedUserBalance?.tokenAmount|| 0) / AMOUNT_DECIMALS
+  const userTokenAmount = (selectedUserBalance?.tokenAmount || 0) / AMOUNT_DECIMALS
 
   let feeRate = (selectedMarket?.takerFee || 0) / FEE_DECIMALS || 0
 
@@ -52,41 +53,50 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   }
   const fee = Math.abs(tradeValue) * feeRate
   const total = Math.abs(tradeValue) + fee
-  const maxTrade = userCollateral/ AMOUNT_DECIMALS || 0
+  const maxTrade = userCollateral / AMOUNT_DECIMALS || 0
 
-  const closeAmount = ()=> {
+  const closeDialog = () => {
+    setErrorMessage('')
+    setSubmitting(false)
+    setOpen(false)
+  }
+
+  const closeAmount = () => {
     setAmount(Number(userTokenAmount * -1).toFixed(4))
   }
 
   const handleSubmit = async () => {
     try {
       setSubmitting(true)
+      setErrorMessage('')
       await executeTrade(Number(marketIndex), Number(amount))
-      setOpen(false)
-    } catch (e) {
+      closeDialog()
+    } catch (e: any) {
+      setErrorMessage(e.message)
       console.log("error", e);
     } finally {
       setSubmitting(false)
     }
   };
 
-  let submitMessage = 'Execute Trade'
-  let errorMessage = ''
+
   let canSubmit = !submitting
   let selectedBalance = maxTrade
 
+  let amountMessage = ''
   if (selectedBalance < Number(total)) {
     canSubmit = false
-    submitMessage = 'Insufficient Balance'
-    errorMessage = submitMessage
+    amountMessage = 'Insufficient Balance'
   }
+
+  let submitMessage = 'Execute Trade'
   if (submitting) {
     submitMessage = 'Executing...'
   }
 
   return (
     <React.Fragment>
-      <Modal open={open} onClose={() => setOpen(false)}>
+      <Modal open={open} onClose={() => closeDialog()}>
         <ModalDialog>
           <ModalClose />
           <DialogTitle>Trade</DialogTitle>
@@ -108,15 +118,15 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                   })}
                 </Select>
               </FormControl>
-              <FormControl error={!canSubmit && !submitting}>
-                <FormLabel>Amount <Chip color='success' onClick={closeAmount} style={{display:userTokenAmount !==0 ? 'inherit':'none', marginLeft:10}}>Current Amount: {userTokenAmount}</Chip></FormLabel>
+              <FormControl error={!!amountMessage}>
+                <FormLabel>Amount <Chip color='success' onClick={closeAmount} style={{ display: userTokenAmount !== 0 ? 'inherit' : 'none', marginLeft: 10 }}>Current Amount: {userTokenAmount}</Chip></FormLabel>
                 <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
-                {!canSubmit && !submitting && <FormHelperText>
+                {amountMessage && !submitting && <FormHelperText>
                   <InfoOutlined />
-                  {errorMessage}
+                  {amountMessage}
                 </FormHelperText>}
               </FormControl>
-            
+
               <Table>
                 <thead>
                   <tr>
@@ -153,8 +163,13 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                   </tr>
                 </tbody>
               </Table>
-
               <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
+              {errorMessage && <FormControl error={!!errorMessage}>
+                <FormHelperText>
+                  <InfoOutlined />
+                  {errorMessage}
+                </FormHelperText>
+              </FormControl>}
             </Stack>
           </form>
         </ModalDialog>
