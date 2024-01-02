@@ -28,10 +28,13 @@ import MarketDialog from './MarketDialog';
 import TradeDialog from './TradeDialog';
 import UpdateExchangeDialog from './UpdateExchangeDialog';
 import WithdrawDialog from './WithdrawDialog';
-
+import useActiveTabEvent from '../hooks/useActiveTabEvent';
+import { useEffect } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 export default function Toolbar() {
     const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
+    const wallet = useWallet();
     const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
     const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
     const [updateExchangeDialogOpen, setUpdateExchangeDialogOpen] = useState(false);
@@ -45,15 +48,28 @@ export default function Toolbar() {
     const userAccountValue = useKrunchStore((state: any) => state.userAccountValue)
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const refresh = async () => {
-        const program = await getProgram()
-        const provider = await getProvider()
-        refreshAll()
+        if (wallet.connected) {
+            const program = await getProgram()
+            const provider = await getProvider()
+            refreshAll()
+        }
     }
     const initApp = async () => {
         const program = await getProgram()
         const provider = await getProvider()
         setup()
     }
+
+    useActiveTabEvent(async () => {
+        console.log('This message will be logged every 5 seconds if the tab is active: ' + new Date().toLocaleTimeString());
+        await refresh()
+    }, 2000);
+
+    useEffect(() => {
+        // Run the function when the component is mounted
+        refresh()
+    }, [wallet.connected]);
+
     return (
         <>
             <Box gap={1} flex={1} display={'flex'}>

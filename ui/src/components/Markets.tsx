@@ -4,11 +4,12 @@ import MarketDialog from './MarketDialog';
 import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import { useState } from 'react';
-import { AMOUNT_DECIMALS, FEE_DECIMALS, LEVERAGE_DECIMALS } from 'utils/dist/constants';
+import { FEE_DECIMALS, LEVERAGE_DECIMALS } from 'utils/dist/constants';
 import '../App.css';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, formatNumber, formatPercent, renderItem } from '../utils';
 import SectionHeader from './SectionHeader';
+import PriceLabel from './PriceLabel';
 
 export default function Markets() {
     const markets = useKrunchStore(state => state.markets)
@@ -37,7 +38,7 @@ export default function Markets() {
                             <td>{row.name}</td>
                             <td>{row.marketType}</td>
                             <td>{renderItem(row.tokenAmount)}</td>
-                            <td>{formatCurrency(row.price || 0)}</td>
+                            <td><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                             <td>{formatNumber((row.leverage || 0) / LEVERAGE_DECIMALS, 0)}x</td>
                             <td>{formatPercent((row.makerFee || 0) / FEE_DECIMALS)}</td>
                             <td>{formatPercent((row.takerFee || 0) / FEE_DECIMALS)}</td>
