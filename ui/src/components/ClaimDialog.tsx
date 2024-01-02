@@ -86,7 +86,7 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
                                    {error}
                                 </FormHelperText>
                             </FormControl>
-                            <Button disabled={submitting || !canClaim} type="submit">{submitting ? 'Claiming Rewards..' : 'Claim Rewards'}</Button>
+                            <Button disabled={submitting || !canClaim} type="submit">{submitting ? 'Claiming Rewards...' : 'Claim Rewards'}</Button>
                         </Stack>
                     </form>
                 </ModalDialog>

@@ -597,6 +597,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       })
     }
 
+    console.log(`&&&&&`, userAccount.lastRewardsClaim?.toNumber())
     set(() => ({ userAccount, userBalances: balances }))
   },
   refreshUserCollateral: async () => {
@@ -620,8 +621,10 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     let nextRewardsClaimDate: Date | undefined = undefined
     if (userAccount.lastRewardsClaim?.toNumber() > 0) {
       const numDays = exchange.rewardFrequency?.toNumber() / SLOTS_PER_DAY
+      
       const milliSecondsPerDay = 1000 * 60 * 60 * 24
       nextRewardsClaimDate = new Date(userAccount.lastRewardsClaim?.toNumber() * 1000 + numDays * milliSecondsPerDay)
+      console.log('******NUM DAYS', numDays ,nextRewardsClaimDate, new Date(userAccount.lastRewardsClaim?.toNumber() * 1000))
     }
 
     set({

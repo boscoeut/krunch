@@ -9,6 +9,7 @@ import Input from '@mui/joy/Input';
 import Chip from '@mui/joy/Chip';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
+import moment from 'moment';
 import Stack from '@mui/joy/Stack';
 import Switch from '@mui/joy/Switch';
 import * as React from 'react';
@@ -83,6 +84,9 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
                                 </FormHelperText>
                                 <FormHelperText>
                                     SLOTS_PER_DAY = ({SLOTS_PER_DAY})
+                                </FormHelperText>
+                                <FormHelperText>
+                                    Duration = {moment.duration(Number(rewardFrequency) / SLOTS_PER_DAY, 'days').humanize()} 
                                 </FormHelperText>
                             </FormControl>
                             <FormControl>
