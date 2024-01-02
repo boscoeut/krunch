@@ -36,13 +36,10 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const markets = useKrunchStore(state => state.markets)
   const userCollateral = useKrunchStore(state => state.userCollateral)
   const executeTrade = useKrunchStore(state => state.executeTrade)
-  const userAccount = useKrunchStore(state => state.userAccount)
-
+  const exchangeRewardsAvailable = useKrunchStore(state => state.exchangeRewardsAvailable)
   const selectedMarket = markets.find((position) => position.marketIndex === Number(marketIndex))
   const selectedExchangeMarket = exchangeBalances.find((position) => position.market === selectedMarket?.name)
   const selectedUserBalance = positions.find((position) => position.market === selectedMarket?.name)
-  console.log('positions', positions) 
-  console.log('selectedUserBalance', selectedUserBalance)
   const tradeValue = Number(amount) * (selectedExchangeMarket?.price || 0)
   const marketTokenAmount = (selectedMarket?.tokenAmount || 0) / AMOUNT_DECIMALS
   const userTokenAmount = (selectedUserBalance?.tokenAmount|| 0) / AMOUNT_DECIMALS
@@ -54,7 +51,13 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
     feeRate = (selectedMarket?.makerFee || 0) / FEE_DECIMALS || 0
   }
 
-  const fee = Math.abs(tradeValue) * feeRate
+  // check if fee exceeds available rewards
+  let fee = Math.abs(tradeValue) * feeRate
+  if (fee+exchangeRewardsAvailable > 0) { 
+    feeRate = (selectedMarket?.takerFee || 0) / FEE_DECIMALS || 0
+    fee = Math.abs(tradeValue) * feeRate
+  }
+
   const total = Math.abs(tradeValue) + fee
   const maxTrade = userCollateral/ AMOUNT_DECIMALS || 0
 

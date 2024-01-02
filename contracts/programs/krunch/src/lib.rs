@@ -116,7 +116,7 @@ pub mod krunch {
             let temp_maker_fee: i64 = market.maker_fee.into();
             let maker_fee = ((fbasis.abs() * temp_maker_fee as i128) / FEE_DECIMALS as i128) as i64;
             let exchange_rewards = exchange_rewards_available(&exchange);
-            if maker_fee * -1 < exchange_rewards as i64 {
+            if (maker_fee + exchange_rewards as i64) < 0{
                 fee_rate = market.maker_fee.into();
             }
         }
