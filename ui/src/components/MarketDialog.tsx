@@ -10,8 +10,9 @@ import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
 import * as React from 'react';
-import { SOL_USD_FEED } from 'utils/dist/constants';
+import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS, SOL_USD_FEED } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
+import Chip from '@mui/joy/Chip';
 
 export interface MarketDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
   const [feedAddress, setFeedAddress] = React.useState(SOL_USD_FEED.toString());
   const [submitting, setSubmitting] = React.useState(false);
   const updateMarket = useKrunchStore(state => state.updateMarket)
+  const markets = useKrunchStore(state => state.markets)
 
   const handleSubmit = async () => {
     // Handle form submission here
@@ -58,13 +60,30 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
     { label: 'Feed Address', value: feedAddress, onChange: setFeedAddress },
   ]
 
+  const refresh = () => {
+    console.log('market', marketIndex)
+    const selectedMarket = markets.find((position) => position.name === name)
+    console.log('selectedMarket', selectedMarket)
+    if (selectedMarket) {
+      setMarketIndex(selectedMarket.marketIndex.toString())
+      setName(selectedMarket.name)
+      setMarketWeight(`${(selectedMarket.marketWeight || 0) /MARKET_WEIGHT_DECIMALS}`)
+      setLeverage(`${(selectedMarket.leverage || 0) /LEVERAGE_DECIMALS}`)
+      setTakerFee(`${(selectedMarket.takerFee || 0) /FEE_DECIMALS}`)
+      setMakerFee(`${(selectedMarket.makerFee || 0) /FEE_DECIMALS}`)
+      setFeedAddress(selectedMarket.feedAddress.toString())
+    }else{
+      setMarketIndex('-1')
+    }
+  }
+
   return (
     <React.Fragment>
       <Modal open={open} onClose={() => setOpen(false)}>
         <ModalDialog>
           <ModalClose />
           <DialogTitle>Update Market</DialogTitle>
-          <DialogContent>Market Details</DialogContent>
+          <DialogContent>Enter Market Details <Chip onClick={refresh} color='success'>Refresh</Chip></DialogContent>
           <form
             onSubmit={async (event: React.FormEvent<HTMLFormElement>) => {
               event.preventDefault();

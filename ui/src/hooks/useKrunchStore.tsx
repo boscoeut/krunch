@@ -42,8 +42,8 @@ export const defaultAppInfo: AppInfo = {
 }
 
 interface KrunchState {
-  poolAccountValue:number,
-  nextRewardsClaimDate?:Date,
+  poolAccountValue: number,
+  nextRewardsClaimDate?: Date,
   setup: () => Promise<void>,
   isAdmin: boolean,
   appInfo: AppInfo,
@@ -90,7 +90,7 @@ interface KrunchState {
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
-  poolAccountValue:0,
+  poolAccountValue: 0,
   updateMarket: async (name: string, marketIndex: number, marketWeight: number,
     leverage: number, takerFee: number, makerFee: number, feedAddress: string) => {
     let accountExists = false;
@@ -103,6 +103,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       // market does not exist.  Needs to be created
     }
     if (accountExists) {
+      console.log('updating Market', marketIndex )
       const tx = await program.methods.updateMarket(
         new anchor.BN(marketIndex),
         new anchor.BN(Number(makerFee) * FEE_DECIMALS),
@@ -297,12 +298,12 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   userAccountValue: 0,
   updateExchange: async function (testMode: boolean, rewardFrequency: number, rewardRate: number, leverage: number) {
     const program = get().program
-    const tx = await program.methods.updateExchange(testMode, 
-      new anchor.BN(rewardFrequency), 
-      new anchor.BN(rewardRate), 
+    const tx = await program.methods.updateExchange(testMode,
+      new anchor.BN(rewardFrequency),
+      new anchor.BN(rewardRate),
       leverage * LEVERAGE_DECIMALS).accounts({
-      exchange: await findAddress(program, ['exchange']),
-    }).rpc();
+        exchange: await findAddress(program, ['exchange']),
+      }).rpc();
     console.log("updateExchange tx", tx);
   },
   addMarkets: async function () {
@@ -489,19 +490,19 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
 
     const poolAccountValue = Number(exchange.collateralValue)
-    + Number(exchange.fees)//
-    + Number(exchange.amountWithdrawn)//
-    + Number(exchange.amountDeposited)//
-    + Number(exchange.rebates)//
-    + Number(exchange.rewards)//
-    + Number(exchange.pnl)//
+      + Number(exchange.fees)//
+      + Number(exchange.amountWithdrawn)//
+      + Number(exchange.amountDeposited)//
+      + Number(exchange.rebates)//
+      + Number(exchange.rewards)//
+      + Number(exchange.pnl)//
 
     const exchangeTotal = (exchange.pnl.toNumber()
       + exchange.rebates.toNumber()
       + exchange.rewards.toNumber()
       + exchange.amountWithdrawn.toNumber()
       + exchange.amountDeposited.toNumber()
-      + exchange.fees.toNumber() 
+      + exchange.fees.toNumber()
       + exchange.collateralValue.toNumber())
       * exchange.leverage
       / LEVERAGE_DECIMALS
@@ -616,17 +617,18 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       + userAccount.collateralValue.toNumber();
     let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
     console.log('###uuserTotal', userTotal / AMOUNT_DECIMALS)
-    let nextRewardsClaimDate:Date|undefined = undefined
+    let nextRewardsClaimDate: Date | undefined = undefined
     if (userAccount.lastRewardsClaim?.toNumber() > 0) {
       const numDays = exchange.rewardFrequency?.toNumber() / SLOTS_PER_DAY
       const milliSecondsPerDay = 1000 * 60 * 60 * 24
       nextRewardsClaimDate = new Date(userAccount.lastRewardsClaim?.toNumber() * 1000 + numDays * milliSecondsPerDay)
     }
 
-    set({ 
+    set({
       nextRewardsClaimDate,
-      userCollateral: userTotal, 
-      userAccountValue: hardAmount })
+      userCollateral: userTotal,
+      userAccountValue: hardAmount
+    })
     return userTotal
   },
   refreshExchangeCollateral: async () => {
