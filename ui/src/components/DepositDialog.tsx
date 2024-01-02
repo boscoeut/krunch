@@ -73,18 +73,18 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
   ]
 
   let submitMessage = 'Deposit'
-  let errorMessage = ''
+  let amountMessage = ''
   let canSubmit = !submitting
 
   if (selectedBalance < Number(amount)) {
     canSubmit = false
     submitMessage = 'Insufficient Balance'
-    errorMessage = submitMessage
+    amountMessage = submitMessage
   }
   if (Number(amount) <= 0) {
     canSubmit = false
     submitMessage = 'Amount must be greater than 0'
-    errorMessage = submitMessage
+    amountMessage = submitMessage
   }
   if (submitting) {
     submitMessage = 'Depositing...'
@@ -126,7 +126,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                         onChange={(e: any) => property.onChange(e.target.value)} />
                       {!canSubmit && !submitting && <FormHelperText>
                         <InfoOutlined />
-                        {errorMessage}
+                        {amountMessage}
                       </FormHelperText>}
                     </FormControl>}
                   </Box>

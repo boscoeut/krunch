@@ -37,7 +37,6 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const markets = useKrunchStore(state => state.markets)
   const userCollateral = useKrunchStore(state => state.userCollateral)
   const executeTrade = useKrunchStore(state => state.executeTrade)
-  const exchangeRewardsAvailable = useKrunchStore(state => state.exchangeRewardsAvailable)
   const selectedMarket = markets.find((position) => position.marketIndex === Number(marketIndex))
   const selectedExchangeMarket = exchangeBalances.find((position) => position.market === selectedMarket?.name)
   const selectedUserBalance = positions.find((position) => position.market === selectedMarket?.name)
