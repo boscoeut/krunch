@@ -113,12 +113,7 @@ pub mod krunch {
             && amount.abs() <= market.token_amount.abs()
         {
             // maker
-            let temp_maker_fee: i64 = market.maker_fee.into();
-            let maker_fee = ((fbasis.abs() * temp_maker_fee as i128) / FEE_DECIMALS as i128) as i64;
-            let exchange_rewards = exchange_rewards_available(&exchange);
-            if (maker_fee + exchange_rewards as i64) < 0{
-                fee_rate = market.maker_fee.into();
-            }
+            fee_rate = market.maker_fee.into();          
         }
         let fee = ((fbasis.abs() * fee_rate as i128) / FEE_DECIMALS as i128) as i64;
 
@@ -547,7 +542,7 @@ fn calculate_exchange_total(exchange: &Exchange) -> i128 {
 }
 
 fn exchange_rewards_available(exchange: &Exchange) -> i128 {
-    let exchange_total = exchange.pnl + exchange.rebates + exchange.rewards + exchange.fees;
+    let exchange_total = exchange.pnl + exchange.rewards;
     if exchange_total < 0 {
         return 0;
     } else {

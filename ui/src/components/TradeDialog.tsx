@@ -50,19 +50,9 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   if ((nAmount > 0 && nAmount <= marketTokenAmount) || (nAmount < 0 && nAmount >= marketTokenAmount)) {
     feeRate = (selectedMarket?.makerFee || 0) / FEE_DECIMALS || 0
   }
-
-  // check if fee exceeds available rewards
-  let fee = Math.abs(tradeValue) * feeRate
-  if (fee+exchangeRewardsAvailable > 0) { 
-    feeRate = (selectedMarket?.takerFee || 0) / FEE_DECIMALS || 0
-    fee = Math.abs(tradeValue) * feeRate
-  }
-
+  const fee = Math.abs(tradeValue) * feeRate
   const total = Math.abs(tradeValue) + fee
   const maxTrade = userCollateral/ AMOUNT_DECIMALS || 0
-
-  console.log('selectedMarket', selectedMarket)
-  console.log('selectedExchangeMarket', selectedExchangeMarket)
 
   const closeAmount = ()=> {
     setAmount(Number(userTokenAmount * -1).toFixed(4))
