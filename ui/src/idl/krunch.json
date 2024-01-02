@@ -37,6 +37,10 @@
         {
           "name": "testMode",
           "type": "bool"
+        },
+        {
+          "name": "marketWeight",
+          "type": "u16"
         }
       ]
     },
@@ -143,6 +147,10 @@
         {
           "name": "leverage",
           "type": "u32"
+        },
+        {
+          "name": "marketWeight",
+          "type": "u16"
         }
       ]
     },

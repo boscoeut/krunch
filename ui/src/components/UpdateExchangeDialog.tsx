@@ -14,7 +14,7 @@ import Stack from '@mui/joy/Stack';
 import Switch from '@mui/joy/Switch';
 import * as React from 'react';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
-import { AMOUNT_DECIMALS, EXCHANGE_LEVERAGE, LEVERAGE_DECIMALS, REWARD_FREQUENCY, REWARD_RATE, SLOTS_PER_DAY } from "utils/dist/constants";
+import { AMOUNT_DECIMALS, EXCHANGE_LEVERAGE, EXCHANGE_MARKET_WEIGHT, LEVERAGE_DECIMALS, REWARD_FREQUENCY, REWARD_RATE, SLOTS_PER_DAY } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { FormHelperText } from '@mui/joy';
 import { set } from '@coral-xyz/anchor/dist/cjs/utils/features';
@@ -35,6 +35,7 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
     const [rewardFrequency, setRewardFrequency] = React.useState(slotsIn24Hours);
     const [rewardRate, setRewardRate] = React.useState(REWARD_RATE / AMOUNT_DECIMALS);
     const [leverage, setLeverage] = React.useState(EXCHANGE_LEVERAGE);
+    const [marketWeight, setMarketWeight] = React.useState(EXCHANGE_MARKET_WEIGHT);
 
     const closeDialog = () => {
         setSubmitting(false)
@@ -45,7 +46,7 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
     const handleSubmit = async () => {
         try {
             setSubmitting(true)
-            await updateExchange(testMode, rewardFrequency, rewardRate * AMOUNT_DECIMALS, leverage)
+            await updateExchange(testMode, rewardFrequency, rewardRate * AMOUNT_DECIMALS, leverage, marketWeight)
             closeDialog()
         } catch (e:any) {
             setErrorMessage(e.message)
@@ -61,6 +62,7 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
         setRewardFrequency(exchange.rewardFrequency?.toNumber() || 0)
         setRewardRate(exchange.rewardRate?.toNumber() / AMOUNT_DECIMALS)
         setLeverage(exchange.leverage / LEVERAGE_DECIMALS)
+        setMarketWeight(exchange.marketWeight / LEVERAGE_DECIMALS)
     }
 
     return (
@@ -102,6 +104,10 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
                             <FormControl>
                                 <FormLabel>Leverage</FormLabel>
                                 <Input required value={leverage} onChange={(e: any) => setLeverage(e.target.value)} />
+                            </FormControl>
+                            <FormControl>
+                                <FormLabel>Market Weight</FormLabel>
+                                <Input required value={marketWeight} onChange={(e: any) => setMarketWeight(e.target.value)} />
                             </FormControl>
                             <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
                             {errorMessage && <FormControl error={!!errorMessage}>

@@ -15,6 +15,7 @@ import {
   SLOTS_PER_DAY,
   MARKET_TYPES, MARKET_WEIGHT,
   MARKET_WEIGHT_DECIMALS,
+  EXCHANGE_MARKET_WEIGHT,
   NETWORK,
   REWARD_FREQUENCY,
   REWARD_RATE,
@@ -42,6 +43,7 @@ export const defaultAppInfo: AppInfo = {
 }
 
 interface KrunchState {
+  exchangeBalanceAvailable: number,
   poolAccountValue: number,
   nextRewardsClaimDate?: Date,
   setup: () => Promise<void>,
@@ -80,7 +82,7 @@ interface KrunchState {
   addMarkets: () => Promise<void>,
   addExchangePositions: () => Promise<void>
   userAccountValue: number,
-  updateExchange: (testMode: boolean, rewardFrequency: number, rewardRate: number, leverage: number) => Promise<void>,
+  updateExchange: (testMode: boolean, rewardFrequency: number, rewardRate: number, leverage: number, marketWeight: number) => Promise<void>,
   executeTrade: (marketIndex: number, amount: number) => Promise<void>,
   deposit: (market: string, amount: number) => Promise<void>,
   withdraw: (market: string, amount: number) => Promise<void>,
@@ -90,6 +92,7 @@ interface KrunchState {
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  exchangeBalanceAvailable: 0,
   poolAccountValue: 0,
   updateMarket: async (name: string, marketIndex: number, marketWeight: number,
     leverage: number, takerFee: number, makerFee: number, feedAddress: string) => {
@@ -103,7 +106,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       // market does not exist.  Needs to be created
     }
     if (accountExists) {
-      console.log('updating Market', marketIndex )
+      console.log('updating Market', marketIndex)
       const tx = await program.methods.updateMarket(
         new anchor.BN(marketIndex),
         new anchor.BN(Number(makerFee) * FEE_DECIMALS),
@@ -296,14 +299,16 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     console.log("executeTrade", tx);
   },
   userAccountValue: 0,
-  updateExchange: async function (testMode: boolean, rewardFrequency: number, rewardRate: number, leverage: number) {
+  updateExchange: async function (testMode: boolean, rewardFrequency: number, rewardRate: number, leverage: number, marketWeight: number) {
     const program = get().program
     const tx = await program.methods.updateExchange(testMode,
       new anchor.BN(rewardFrequency),
       new anchor.BN(rewardRate),
-      leverage * LEVERAGE_DECIMALS).accounts({
-        exchange: await findAddress(program, ['exchange']),
-      }).rpc();
+      leverage * LEVERAGE_DECIMALS,
+      marketWeight * MARKET_WEIGHT_DECIMALS,
+    ).accounts({
+      exchange: await findAddress(program, ['exchange']),
+    }).rpc();
     console.log("updateExchange tx", tx);
   },
   addMarkets: async function () {
@@ -392,7 +397,8 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,
       new anchor.BN(slotsIn24Hours),
       new anchor.BN(REWARD_RATE),
-      NETWORK === 'Localnet'
+      NETWORK === 'Localnet',
+      EXCHANGE_MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS,
     ]);
     console.log('exchange', exchange)
     console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
@@ -618,10 +624,10 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     let nextRewardsClaimDate: Date | undefined = undefined
     if (userAccount.lastRewardsClaim?.toNumber() > 0) {
       const numDays = exchange.rewardFrequency?.toNumber() / SLOTS_PER_DAY
-      
+
       const milliSecondsPerDay = 1000 * 60 * 60 * 24
       nextRewardsClaimDate = new Date(userAccount.lastRewardsClaim?.toNumber() * 1000 + numDays * milliSecondsPerDay)
-      console.log('******NUM DAYS', numDays ,nextRewardsClaimDate, new Date(userAccount.lastRewardsClaim?.toNumber() * 1000))
+      console.log('******NUM DAYS', numDays, nextRewardsClaimDate, new Date(userAccount.lastRewardsClaim?.toNumber() * 1000))
     }
 
     set({
@@ -635,20 +641,24 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
     const currentUser = get().provider.wallet.publicKey
     const isAdmin = currentUser?.toString() === exchange.admin.toString()
-    console.log('exchange', exchange)
+
+    // exchange total
     const exchangeTotal = (
       exchange.pnl.toNumber()
-      + exchange.fees.toNumber()
-      + exchange.amountWithdrawn.toNumber()
-      + exchange.amountDeposited.toNumber()
       + exchange.rebates.toNumber()
       + exchange.rewards.toNumber()
+      + exchange.fees.toNumber()
+      + exchange.amountDeposited.toNumber()
+      + exchange.amountWithdrawn.toNumber()
       + exchange.collateralValue.toNumber())
       * exchange.leverage
       / LEVERAGE_DECIMALS
       + exchange.marginUsed.toNumber()
-    console.log('###exchangeTotal', exchangeTotal / AMOUNT_DECIMALS)
-    set({ exchangeCollateral: exchangeTotal, isAdmin })
+
+    // exchange balance available    
+    const marketWeight = exchange.marketWeight  || 1
+    const exchangeBalanceAvailable = exchangeTotal * (marketWeight/ MARKET_WEIGHT_DECIMALS)
+    set({ exchangeCollateral: exchangeTotal, exchangeBalanceAvailable, isAdmin })
     return exchangeTotal
   },
   refreshAll: async () => {
@@ -670,7 +680,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     let userTotal = get().userCollateral - userAccount.rewards.toNumber();
     let exchangeTotal = get().exchangeCollateral;
     let exchangeRewards =
-      (exchange.pnl.toNumber() + exchange.rewards.toNumber()) 
+      (exchange.pnl.toNumber() + exchange.rewards.toNumber())
       * (exchange.rewardRate.toNumber()) / AMOUNT_DECIMALS;
     // get % or rewards available
     if (exchangeRewards < 0) {
@@ -679,10 +689,10 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     let amount = (exchangeRewards * userTotal) / exchangeTotal;
 
     console.log(`____
-      exchange.pnl.toNumber() ${exchange.pnl.toNumber()/ AMOUNT_DECIMALS}  
-      exchange.rewards.toNumber() ${exchange.rewards.toNumber()/ AMOUNT_DECIMALS}  
-      exchange.rebates.toNumber() ${exchange.rebates.toNumber()/ AMOUNT_DECIMALS}  
-      exchange.fees.toNumber() ${exchange.fees.toNumber()/ AMOUNT_DECIMALS}  
+      exchange.pnl.toNumber() ${exchange.pnl.toNumber() / AMOUNT_DECIMALS}  
+      exchange.rewards.toNumber() ${exchange.rewards.toNumber() / AMOUNT_DECIMALS}  
+      exchange.rebates.toNumber() ${exchange.rebates.toNumber() / AMOUNT_DECIMALS}  
+      exchange.fees.toNumber() ${exchange.fees.toNumber() / AMOUNT_DECIMALS}  
       userPercent ${userTotal / exchangeTotal}  
       exchangeRewards ${exchangeRewards} 
       userTotal ${userTotal} 
@@ -728,7 +738,9 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const exchange: any = await fetchOrCreateAccount(get().program, 'exchange', ['exchange'], 'initializeExchange', [
       EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,
       new anchor.BN(slotsIn24Hours),
-      new anchor.BN(REWARD_RATE)
+      new anchor.BN(REWARD_RATE),
+      NETWORK === 'Localnet',
+      EXCHANGE_MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS
     ]);
     set(() => ({ exchange, exchangeBalances: balances, treasuryTotal: total }))
   },

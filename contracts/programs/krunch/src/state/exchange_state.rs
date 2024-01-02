@@ -427,7 +427,6 @@ pub struct Exchange {
     pub reward_frequency: u64,
     pub reward_rate: u64,
     pub test_mode: bool,
-
 }
 
 #[account]

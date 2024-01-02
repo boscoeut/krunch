@@ -61,6 +61,7 @@ export const REWARD_FREQUENCY = rewardFrequency;
 export const PRICE_DECIMALS = 10 ** 9;
 export const FEE_DECIMALS = 10 ** 4;
 export const MARKET_WEIGHT_DECIMALS = 10 ** 4;
+export const EXCHANGE_MARKET_WEIGHT = 0.5;
 export const AMOUNT_DECIMALS = 10 ** 9;
 export const LEVERAGE_DECIMALS = 10 ** 4;
 export const MARKET_LEVERAGE = 10;

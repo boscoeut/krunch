@@ -22,12 +22,13 @@ pub mod krunch {
         reward_frequency: u64,
         reward_rate: u64,
         test_mode: bool,
+        market_weight: u16
     ) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.admin = ctx.accounts.admin.key.to_owned();
         exchange.margin_used = 0;
         exchange.number_of_markets = 0;
-        exchange.market_weight = 0;
+        exchange.market_weight = market_weight;
         exchange.basis = 0;
         exchange.pnl = 0;
         exchange.fees = 0;
@@ -66,12 +67,13 @@ pub mod krunch {
         Ok(())
     }
 
-    pub fn update_exchange(ctx: Context<UpdateExchange>, test_mode: bool,reward_frequency: u64,reward_rate: u64, leverage: u32) -> Result<()> {
+    pub fn update_exchange(ctx: Context<UpdateExchange>, test_mode: bool,reward_frequency: u64,reward_rate: u64, leverage: u32, market_weight: u16) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.test_mode = test_mode;
         exchange.reward_frequency = reward_frequency;
         exchange.reward_rate = reward_rate;
         exchange.leverage = leverage;
+        exchange.market_weight = market_weight;
         Ok(())
     }
 
@@ -517,18 +519,13 @@ pub mod krunch {
 }
 
 fn calculate_exchange_balance_available(exchange: &Exchange) -> i128 {
-    let exchange_total = exchange.pnl as i128
-        + exchange.rebates as i128
-        + exchange.rewards as i128
-        + exchange.fees as i128
-        + exchange.amount_withdrawn as i128
-        + exchange.amount_deposited as i128
-        + (exchange.margin_used as i128 * LEVERAGE_DECIMALS as i128 / exchange.leverage as i128);
-    return exchange_total;
+    let exchange_total = calculate_exchange_total(&exchange);
+    return exchange_total * exchange.market_weight as i128 / MARKET_WEIGHT_DECIMALS as i128 ;
 }
 
 fn calculate_exchange_total(exchange: &Exchange) -> i128 {
-    let exchange_hard_amount = exchange.amount_withdrawn
+    let exchange_hard_amount = 
+          exchange.amount_withdrawn
         + exchange.amount_deposited
         + exchange.pnl
         + exchange.rebates

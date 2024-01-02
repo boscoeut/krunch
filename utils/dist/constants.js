@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EXCHANGE_POSITIONS = exports.MARKETS = exports.MARKET_TYPES = exports.REWARD_RATE = exports.MAKER_FEE = exports.TAKER_FEE = exports.EXCHANGE_LEVERAGE = exports.MARKET_LEVERAGE = exports.LEVERAGE_DECIMALS = exports.AMOUNT_DECIMALS = exports.MARKET_WEIGHT_DECIMALS = exports.FEE_DECIMALS = exports.PRICE_DECIMALS = exports.REWARD_FREQUENCY = exports.MARKET_WEIGHT = exports.CHAINLINK_PROGRAM = exports.BTC_USD_FEED = exports.ETH_USD_FEED = exports.USDT_USD_FEED = exports.USDC_USD_FEED = exports.SOL_USD_FEED = exports.ETH_MINT = exports.BTC_MINT = exports.USDT_MINT = exports.SOL_MINT = exports.USDC_MINT = exports.ASSOCIATED_TOKEN_PROGRAM_ID = exports.TOKEN_PROGRAM_ID = exports.ADMIN_ADDRESS = exports.NETWORK_URL = exports.NETWORK_EXPLORER = exports.SLOTS_PER_DAY = exports.NETWORK = void 0;
+exports.EXCHANGE_POSITIONS = exports.MARKETS = exports.MARKET_TYPES = exports.REWARD_RATE = exports.MAKER_FEE = exports.TAKER_FEE = exports.EXCHANGE_LEVERAGE = exports.MARKET_LEVERAGE = exports.LEVERAGE_DECIMALS = exports.AMOUNT_DECIMALS = exports.EXCHANGE_MARKET_WEIGHT = exports.MARKET_WEIGHT_DECIMALS = exports.FEE_DECIMALS = exports.PRICE_DECIMALS = exports.REWARD_FREQUENCY = exports.MARKET_WEIGHT = exports.CHAINLINK_PROGRAM = exports.BTC_USD_FEED = exports.ETH_USD_FEED = exports.USDT_USD_FEED = exports.USDC_USD_FEED = exports.SOL_USD_FEED = exports.ETH_MINT = exports.BTC_MINT = exports.USDT_MINT = exports.SOL_MINT = exports.USDC_MINT = exports.ASSOCIATED_TOKEN_PROGRAM_ID = exports.TOKEN_PROGRAM_ID = exports.ADMIN_ADDRESS = exports.NETWORK_URL = exports.NETWORK_EXPLORER = exports.SLOTS_PER_DAY = exports.NETWORK = void 0;
 var web3_js_1 = require("@solana/web3.js");
 exports.NETWORK = "Localnet";
 exports.SLOTS_PER_DAY = 24 * 60 * 60;
@@ -59,6 +59,7 @@ exports.REWARD_FREQUENCY = rewardFrequency;
 exports.PRICE_DECIMALS = Math.pow(10, 9);
 exports.FEE_DECIMALS = Math.pow(10, 4);
 exports.MARKET_WEIGHT_DECIMALS = Math.pow(10, 4);
+exports.EXCHANGE_MARKET_WEIGHT = 0.5;
 exports.AMOUNT_DECIMALS = Math.pow(10, 9);
 exports.LEVERAGE_DECIMALS = Math.pow(10, 4);
 exports.MARKET_LEVERAGE = 10;

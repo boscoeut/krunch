@@ -22,6 +22,7 @@ export declare const REWARD_FREQUENCY: number;
 export declare const PRICE_DECIMALS: number;
 export declare const FEE_DECIMALS: number;
 export declare const MARKET_WEIGHT_DECIMALS: number;
+export declare const EXCHANGE_MARKET_WEIGHT = 0.5;
 export declare const AMOUNT_DECIMALS: number;
 export declare const LEVERAGE_DECIMALS: number;
 export declare const MARKET_LEVERAGE = 10;

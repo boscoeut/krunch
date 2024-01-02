@@ -36,6 +36,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const positions = useKrunchStore(state => state.positions)
   const markets = useKrunchStore(state => state.markets)
   const userCollateral = useKrunchStore(state => state.userCollateral)
+  const exchangeBalanceAvailable = useKrunchStore(state => state.exchangeBalanceAvailable)
   const executeTrade = useKrunchStore(state => state.executeTrade)
   const selectedMarket = markets.find((position) => position.marketIndex === Number(marketIndex))
   const selectedExchangeMarket = exchangeBalances.find((position) => position.market === selectedMarket?.name)
@@ -52,7 +53,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   }
   const fee = Math.abs(tradeValue) * feeRate
   const total = Math.abs(tradeValue) + fee
-  const maxTrade = userCollateral / AMOUNT_DECIMALS || 0
+  const maxTrade = Math.min(exchangeBalanceAvailable, userCollateral) / AMOUNT_DECIMALS || 0
 
   const closeDialog = () => {
     setErrorMessage('')
