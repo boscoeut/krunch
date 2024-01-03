@@ -15,6 +15,7 @@ import {
     MARKETS,
     MARKET_LEVERAGE,
     MARKET_WEIGHT_DECIMALS,
+    EXCHANGE_MARKET_WEIGHT,
     NETWORK,
     REWARD_FREQUENCY,
     REWARD_RATE,
@@ -91,14 +92,16 @@ const addExchangePositions = async function (provider: any, program: any) {
 
 const initializeKrunch = async function (provider: any, program: any) {
     let slotsIn24Hours = REWARD_FREQUENCY;
-    const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'],
-        'initializeExchange', [
+    console.log("ONWER/// ADDRESS", provider.wallet.publicKey.toString());
+
+    const exchange: any = await fetchOrCreateAccount(program, 'exchange', ['exchange'], 'initializeExchange', [
         EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,
         new anchor.BN(slotsIn24Hours),
         new anchor.BN(REWARD_RATE),
-        NETWORK === LOCALNET]
-        );
-    console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
+        NETWORK === LOCALNET,
+        EXCHANGE_MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS,
+    ]);
+   
     console.log("exchange collateralValue", exchange.collateralValue.toString());
     await addMarkets(provider, program);
     const marketIndex = 1;
