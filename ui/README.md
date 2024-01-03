@@ -44,3 +44,21 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+
+
+    const userAccount: any = await fetchOrCreateAccount(get().program, 'userAccount',
+      ['user_account',
+        provider.wallet.publicKey],
+      'createUserAccount', []);
+
+
+      const acct: any = await fetchOrCreateAccount(get().program, 'userPosition',
+        ['user_position',
+          provider.wallet.publicKey,
+          market.marketIndex],
+        'addUserPosition', [new anchor.BN(market.marketIndex)],
+        {
+          userAccount: await findAddress(get().program, ['user_account', provider.wallet.publicKey]),
+          market: await findAddress(get().program, ['market', market.marketIndex]),
+        });

@@ -386,12 +386,12 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   claimRewards: async () => {
     const program = get().program
     const provider = get().provider
-    
+
     await fetchOrCreateAccount(get().program, 'userAccount',
       ['user_account',
         provider.wallet.publicKey],
       'createUserAccount', []);
-    
+
     await program.methods.claimRewards().accounts({
       userAccount: await findAddress(program, ['user_account', provider.wallet.publicKey]),
       exchange: await findAddress(program, ['exchange'])
@@ -410,7 +410,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const pythPublicKey = getPythProgramKeyForCluster(PYTHNET_CLUSTER_NAME)
     const pythClient = new PythHttpClient(connection, pythPublicKey)
     const data = await pythClient.getData()
-    
+
     const tempPrices = new Map<String, number>()
     for (const market of EXCHANGE_POSITIONS) {
       const price = data.productPrice.get(`Crypto.${market.market}`)!
@@ -496,85 +496,97 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     let accountCurrentValue = 0
     let accountUnrealizedPnl = 0
     for (const market of get().markets) {
-      const acct: any = await fetchOrCreateAccount(get().program, 'userPosition',
-        ['user_position',
-          provider.wallet.publicKey,
-          market.marketIndex],
-        'addUserPosition', [new anchor.BN(market.marketIndex)],
-        {
-          userAccount: await findAddress(get().program, ['user_account', provider.wallet.publicKey]),
-          market: await findAddress(get().program, ['market', market.marketIndex]),
-        });
-      const price = get().prices.get(market.name)
-      const currValue = ((acct.tokenAmount.toNumber() * (price || 0)) / AMOUNT_DECIMALS) || 0
-      const unrealizedPnl = acct.tokenAmount.toNumber() > 0 ? currValue + acct.basis.toNumber() / AMOUNT_DECIMALS :
-        currValue - acct.basis.toNumber() / AMOUNT_DECIMALS
-      accountCurrentValue += currValue
-      accountUnrealizedPnl += unrealizedPnl
-      const entryPrice = acct.tokenAmount.toNumber() === 0 ? 0 : acct.basis.toNumber() / acct.tokenAmount.toNumber()
-      temp.push({ market: market.name, ...acct, price, currValue, unrealizedPnl, entryPrice })
+      try {
+        const acct: any = await fetchAccount(get().program, 'userPosition',
+          ['user_position',
+            provider.wallet.publicKey,
+            market.marketIndex]);
+        const price = get().prices.get(market.name)
+        const currValue = ((acct.tokenAmount.toNumber() * (price || 0)) / AMOUNT_DECIMALS) || 0
+        const unrealizedPnl = acct.tokenAmount.toNumber() > 0 ? currValue + acct.basis.toNumber() / AMOUNT_DECIMALS :
+          currValue - acct.basis.toNumber() / AMOUNT_DECIMALS
+        accountCurrentValue += currValue
+        accountUnrealizedPnl += unrealizedPnl
+        const entryPrice = acct.tokenAmount.toNumber() === 0 ? 0 : acct.basis.toNumber() / acct.tokenAmount.toNumber()
+        temp.push({ market: market.name, ...acct, price, currValue, unrealizedPnl, entryPrice })
+      } catch (x: any) {
+        console.log(`${market.name} Does not exist`, x.message)
+      }
     }
     set(() => ({ positions: temp, userCurrentValue: accountCurrentValue, userUnrealizedPnl: accountUnrealizedPnl }))
   },
   refreshUserAccount: async () => {
     const provider = get().provider
-    const userAccount: any = await fetchOrCreateAccount(get().program, 'userAccount',
-      ['user_account',
-        provider.wallet.publicKey],
-      'createUserAccount', []);
-    
-    const balances: Array<ExchangeBalance> = []
-    for (const item of EXCHANGE_POSITIONS) {
-      let tokenAccount = await getAssociatedTokenAddress(
-        item.mint, //mint
-        provider.wallet.publicKey, //owner
-      )
-      let balance = 0
-      try {
-        let tokenBalance: any = await provider.connection.getTokenAccountBalance(tokenAccount)
-        balance = Number(tokenBalance.value.amount)
-      } catch (x) {
-        console.log('could not get balance:' + item.market)
+
+    try {
+      const userAccount: any = await fetchAccount(get().program, 'userAccount',
+        ['user_account',
+          provider.wallet.publicKey]);
+
+      const balances: Array<ExchangeBalance> = []
+      for (const item of EXCHANGE_POSITIONS) {
+        try {
+          let tokenAccount = await getAssociatedTokenAddress(
+            item.mint, //mint
+            provider.wallet.publicKey, //owner
+          )
+          let balance = 0
+          try {
+            let tokenBalance: any = await provider.connection.getTokenAccountBalance(tokenAccount)
+            balance = Number(tokenBalance.value.amount)
+          } catch (x) {
+            console.log('could not get balance:' + item.market)
+          }
+          const price = get().prices.get(item.market)
+          balances.push({
+            market: item.market,
+            mint: item.mint,
+            balance,
+            decimals: item.decimals,
+            price
+          })
+        } catch (x: any) {
+          console.log(`${item.market} Does not exist`, x.message)
+        }
       }
-      const price = get().prices.get(item.market)
-      balances.push({
-        market: item.market,
-        mint: item.mint,
-        balance,
-        decimals: item.decimals,
-        price
-      })
+      set(() => ({ userAccount, userBalances: balances }))
+    } catch (x: any) {
+      console.log(`userAccount Does not exist`, x.message)
     }
-    set(() => ({ userAccount, userBalances: balances }))
   },
   refreshUserCollateral: async () => {
     // user collateral
     const provider = get().provider
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
-    const userAccount: any = await fetchOrCreateAccount(get().program, 'userAccount',
-      ['user_account',
-        provider.wallet.publicKey],
-      'createUserAccount', []);
-    const hardAmount =
-      userAccount.pnl.toNumber()
-      + userAccount.fees.toNumber()
-      + userAccount.rebates.toNumber()
-      + userAccount.rewards.toNumber()
-      + userAccount.collateralValue.toNumber();
-    let userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
-    let nextRewardsClaimDate: Date | undefined = undefined
-    if (userAccount.lastRewardsClaim?.toNumber() > 0) {
-      const numDays = exchange.rewardFrequency?.toNumber() / SLOTS_PER_DAY
-      const milliSecondsPerDay = 1000 * 60 * 60 * 24
-      nextRewardsClaimDate = new Date(userAccount.lastRewardsClaim?.toNumber() * 1000 + numDays * milliSecondsPerDay)    
-    }
+    let userTotal = 0
+    try {
+      const userAccount: any = await fetchAccount(get().program, 'userAccount',
+        ['user_account',
+          provider.wallet.publicKey]);
+      const hardAmount =
+        userAccount.pnl.toNumber()
+        + userAccount.fees.toNumber()
+        + userAccount.rebates.toNumber()
+        + userAccount.rewards.toNumber()
+        + userAccount.collateralValue.toNumber();
+      userTotal = hardAmount * (exchange.leverage / LEVERAGE_DECIMALS) + userAccount.marginUsed.toNumber();
+      let nextRewardsClaimDate: Date | undefined = undefined
+      if (userAccount.lastRewardsClaim?.toNumber() > 0) {
+        const numDays = exchange.rewardFrequency?.toNumber() / SLOTS_PER_DAY
+        const milliSecondsPerDay = 1000 * 60 * 60 * 24
+        nextRewardsClaimDate = new Date(userAccount.lastRewardsClaim?.toNumber() * 1000 + numDays * milliSecondsPerDay)
+      }
 
-    set({
-      nextRewardsClaimDate,
-      userCollateral: userTotal,
-      userAccountValue: hardAmount
-    })
-    return userTotal
+      set({
+        nextRewardsClaimDate,
+        userCollateral: userTotal,
+        userAccountValue: hardAmount
+      })
+    } catch (x: any) {
+      console.log(`userAccount Does not exist`, x.message)
+    } finally {
+      return userTotal
+    }
   },
   refreshExchangeCollateral: async () => {
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
@@ -600,6 +612,64 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     set({ exchangeCollateral: exchangeTotal, exchangeBalanceAvailable, isAdmin })
     return exchangeTotal
   },
+  refreshAwardsAvailable: async () => {
+    const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
+    try {
+      const userAccount = await fetchAccount(get().program, 'userAccount', ['user_account', get().provider.wallet.publicKey])
+      let userTotal = get().userCollateral - userAccount.rewards.toNumber();
+      let exchangeTotal = get().exchangeCollateral;
+      let exchangeRewards =
+        (exchange.pnl.toNumber() + exchange.rewards.toNumber())
+        * (exchange.rewardRate.toNumber()) / AMOUNT_DECIMALS;
+      // get % or rewards available
+      if (exchangeRewards < 0) {
+        exchangeRewards = 0
+      }
+      let amount = (exchangeRewards * userTotal) / exchangeTotal;
+      set({
+        exchangeRewardsAvailable: exchangeRewards,
+        userRewardsAvailable: amount || 0,
+      })
+    } catch (x: any) {
+      console.log(`userAccount Does not exist`, x.message)
+    }
+  },
+  refreshPool: async () => {
+    const provider = get().provider
+    const exchangeAddress = await findAddress(get().program, ['exchange'])
+
+    const balances: Array<ExchangeBalance> = []
+    let total = 0
+    for (const item of EXCHANGE_POSITIONS) {
+      try {
+        const escrowAccount = await findAddress(get().program, [
+          exchangeAddress,
+          item.mint])
+        let balance = 0
+        try {
+          let programBalance: any = await provider.connection.getTokenAccountBalance(escrowAccount)
+          balance = programBalance.value.amount
+        } catch (x: any) {
+          console.log('could not get balance:' + item.market, x.message)
+        }
+        const price = get().prices.get(item.market)
+        const currValue = (balance / (10 ** item.decimals)) * (price || 0)
+        total += currValue
+        balances.push({
+          market: item.market,
+          mint: item.mint,
+          balance,
+          decimals: item.decimals,
+          price,
+          currValue
+        })
+      } catch (x: any) {
+        console.log(`${item.market} Does not exist`, x.message)
+      }
+    }
+    const exchange: any = await fetchAccount(get().program, 'exchange', ['exchange']);
+    set(() => ({ exchange, exchangeBalances: balances, treasuryTotal: total }))
+  },
   refreshAll: async () => {
     get().getPrices()
     get().refreshMarkets()
@@ -610,63 +680,4 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     get().refreshUserCollateral()
     get().refreshAwardsAvailable()
   },
-  refreshAwardsAvailable: async () => {
-    const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
-    const userAccount = await fetchAccount(get().program, 'userAccount', ['user_account', get().provider.wallet.publicKey])
-    let userTotal = get().userCollateral - userAccount.rewards.toNumber();
-    let exchangeTotal = get().exchangeCollateral;
-    let exchangeRewards =
-      (exchange.pnl.toNumber() + exchange.rewards.toNumber())
-      * (exchange.rewardRate.toNumber()) / AMOUNT_DECIMALS;
-    // get % or rewards available
-    if (exchangeRewards < 0) {
-      exchangeRewards = 0
-    }
-    let amount = (exchangeRewards * userTotal) / exchangeTotal;
-    set({
-      exchangeRewardsAvailable: exchangeRewards,
-      userRewardsAvailable: amount || 0,
-    })
-  },
-  refreshPool: async () => {
-    const provider = get().provider
-    const exchangeAddress = await findAddress(get().program, ['exchange'])
-
-    const balances: Array<ExchangeBalance> = []
-    let total = 0
-    for (const item of EXCHANGE_POSITIONS) {
-      const escrowAccount = await findAddress(get().program, [
-        exchangeAddress,
-        item.mint])
-      let balance = 0
-      try {
-        let programBalance: any = await provider.connection.getTokenAccountBalance(escrowAccount)
-        balance = programBalance.value.amount
-      } catch (x:any) {
-        console.log('could not get balance:' + item.market, x.message)
-      }
-      const price = get().prices.get(item.market)
-      const currValue = (balance / (10 ** item.decimals)) * (price || 0)
-      total += currValue
-      balances.push({
-        market: item.market,
-        mint: item.mint,
-        balance,
-        decimals: item.decimals,
-        price,
-        currValue
-      })
-    }
-
-    let slotsIn24Hours = REWARD_FREQUENCY;
-    const exchange: any = await fetchOrCreateAccount(get().program, 'exchange', ['exchange'], 'initializeExchange', [
-      EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,
-      new anchor.BN(slotsIn24Hours),
-      new anchor.BN(REWARD_RATE),
-      NETWORK === LOCALNET,
-      EXCHANGE_MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS
-    ]);
-    set(() => ({ exchange, exchangeBalances: balances, treasuryTotal: total }))
-  },
-
 }))
