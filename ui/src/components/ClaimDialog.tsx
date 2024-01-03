@@ -24,10 +24,7 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
     const claimRewards = useKrunchStore((state: any) => state.claimRewards)
     const userAccount = useKrunchStore(state => state.userAccount)
     const nextRewardsClaimDate = useKrunchStore(state => state.nextRewardsClaimDate)
-    const { appInfo
-    } = useKrunchStore((state) => ({
-        appInfo: state.appInfo
-    }))
+    const { appInfo } = useKrunchStore((state) => ({ appInfo: state.appInfo }))
     let color = appInfo.logoColor
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     let lastRewardsClaimed = 'Never'
@@ -52,7 +49,6 @@ export default function ClaimDialog({ open, setOpen }: ClaimDialogProps) {
 
     const handleSubmit = async () => {
         try {
-            console.log('nextRewardsClaimDate', nextRewardsClaimDate)
             setError('')
             setSubmitting(true)
             await claimRewards()

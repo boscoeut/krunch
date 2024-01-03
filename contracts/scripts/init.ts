@@ -20,7 +20,8 @@ import {
     REWARD_RATE,
     MAKER_FEE,
     TAKER_FEE,
-    MARKET_WEIGHT
+    MARKET_WEIGHT,
+    LOCALNET
 } from 'utils/src/constants';
 import { Krunch } from "../target/types/krunch";
 const { getOrCreateAssociatedTokenAccount, getMint, createMintToInstruction } = require("@solana/spl-token");
@@ -95,7 +96,7 @@ const initializeKrunch = async function (provider: any, program: any) {
         EXCHANGE_LEVERAGE * LEVERAGE_DECIMALS,
         new anchor.BN(slotsIn24Hours),
         new anchor.BN(REWARD_RATE),
-        NETWORK === 'Localnet']
+        NETWORK === LOCALNET]
         );
     console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
     console.log("exchange collateralValue", exchange.collateralValue.toString());
@@ -203,7 +204,7 @@ const deposit = async function (provider: any,
 }
 
 const setupAccounts = async function (provider: any, program: any) {
-    if (NETWORK === 'Localnet') {
+    if (NETWORK === LOCALNET) {
         await mintTokens(provider);
     }
     //await deposit(provider, program, USDC_MINT, USDC_USD_FEED, 100);

@@ -23,10 +23,6 @@ export default function AccountDetails() {
     if (userAccount.lastRewardsClaim?.toNumber() > 0) {
         lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
     }
-
-    console.log('userUnrealizedPnl / AMOUNT_DECIMALS', userUnrealizedPnl / AMOUNT_DECIMALS)
-    console.log('userUnrealizedPnl', userUnrealizedPnl)
-
     return (
         <Box>
             <Stack direction={"row"} >

@@ -57,7 +57,6 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
     };
 
     const refresh = () => {
-        console.log('exchange', exchange)
         setTestMode(exchange.testMode as boolean || false)
         setRewardFrequency(exchange.rewardFrequency?.toNumber() || 0)
         setRewardRate(exchange.rewardRate?.toNumber() / AMOUNT_DECIMALS)

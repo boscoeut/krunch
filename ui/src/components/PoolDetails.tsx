@@ -21,7 +21,6 @@ export default function PoolDetails() {
         lastRewardsClaimed = `${new Date(exchange.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(exchange.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
     }
 
-
     const totalPnl = exchangeUnrealizedPnl + (exchange.pnl?.toNumber() / AMOUNT_DECIMALS || 0)
 
     return (

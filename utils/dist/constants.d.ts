@@ -1,4 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
+export declare const LOCALNET = "Localnet";
+export declare const DEVNET = "Devnet";
 export declare const NETWORK: 'Localnet' | 'Devnet' | 'Mainnet';
 export declare const SLOTS_PER_DAY: number;
 export declare const NETWORK_EXPLORER = "https://explorer.solana.com/";

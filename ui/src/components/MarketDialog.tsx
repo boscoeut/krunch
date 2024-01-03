@@ -70,9 +70,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
   ]
 
   const refresh = () => {
-    console.log('market', marketIndex)
     const selectedMarket = markets.find((position) => position.name === name)
-    console.log('selectedMarket', selectedMarket)
     if (selectedMarket) {
       setMarketIndex(selectedMarket.marketIndex.toString())
       setName(selectedMarket.name)

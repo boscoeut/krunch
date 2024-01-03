@@ -4,6 +4,7 @@ import { sha256 } from "js-sha256"
 import { PublicKey } from '@solana/web3.js';
 const bs58 = require('bs58')
 
+// NOT USED
 const useAccounts = () => {
     const { getProgram, getProvider } = useProgram();
 
@@ -50,7 +51,6 @@ const useAccounts = () => {
             return await decodeAccount(type, account.account.data)
         }));
 
-        console.log('decodedAccounts By Key '+type, decodedAccounts);  
         return decodedAccounts
     }
 

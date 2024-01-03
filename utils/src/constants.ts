@@ -1,5 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 
+export const LOCALNET = 'Localnet'; 
+export const DEVNET = 'Devnet';
 export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Localnet";
 export const SLOTS_PER_DAY = 24 * 60 * 60
 // export const SLOTS_PER_DAY = 24 * 60 * 60 * 2.5
