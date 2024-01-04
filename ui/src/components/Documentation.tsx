@@ -26,8 +26,8 @@ export default function Documentation() {
                     <li><strong>No Liquidations:</strong> Unlike other DeFi trading protocols, <AppTitle variant={"doc"} /> does not liquidate positions, so you do not have to constantly monitor your positions or fear sudden volatility.</li>
                     <li><strong>No Funding Rates: </strong><AppTitle variant={"doc"} /> eliminates funding rates, allowing you to keep your positions open without worrying about volatile funding rates that can eat into your profits.</li>
                     <li><strong>Low Trading Fees:</strong> We strive to provide trading fees that are on the low side of DeFi trading protocols, so you can keep more of your profits.</li>
-                    <li><strong>Trading Rebates:</strong> Earn money by trading and providing liquidity to the protocol</li>
-                    <li><strong>Rewards:</strong> Fees and Pool Pnl are distributed to those who hold deposits in rewards. Rewards are available every <strong>{rewardFrequency}</strong></li>
+                    <li><strong>Trading Rebates:</strong> Earn money by trading and providing liquidity to the protocol.</li>
+                    <li><strong>Rewards:</strong> Fees and Pool Pnl are distributed to those who hold deposits in rewards. Rewards are available every <strong>{rewardFrequency}</strong>.</li>
                 </ul>
                 <div><AppTitle variant={"doc"} /> is targeted towards traders who want to trade long and short positions while reducing risk to momentary fluctuations in price or volatility. With our unique features, you can trade without worrying about liquidations and focus on your trading strategy.</div>
             </>],
@@ -56,20 +56,21 @@ export default function Documentation() {
                     <div>For Users Opening Positions:</div>
                     <ul>
                         <li><strong>Price Action:</strong> If the price moves against your position, you will be exposed to losses.</li>
-                        <li><strong>Pool Liquidity:</strong> If there is not enough liquidity in the pool, new positions will not be able to be opened. In the event that the pool is substantially valued less than the opposite positions due to a sudden change in price, it might not be possible to close a position due to a lack of liquidity in the pool. This risk is mitigated by (1) enforcing an over-collateralized pool and (2) enforcing both long and short positions. However, it is possible that if an asset&apos;s price moves dramatically, the pool could hold less value than the opposite user positions.</li>
+                        <li><strong>Pool Liquidity:</strong> If there is not enough liquidity in the pool, new positions will not be able to be opened. In the event that the pool is substantially valued less than the opposite positions due to a sudden change in price, it might not be possible to close a position due to a lack of liquidity in the pool. This risk is mitigated by (1) enforcing an over-collateralized pool and (2) incentivizing both long and short positions. However, it is possible that if an asset&apos;s price moves dramatically, the pool could hold less value than the opposite user positions.</li>
                     </ul>
                 </li>
                 <li>
                     <div>For Users Depositing into the Pool:</div>
                     <ul>
-                        <li><strong>Pool Liquidity:</strong> In the event that the pool is valued less than the opposite positions due to an aggregate value of user positions, it is possible to lose a portion of your pool investment. This risk is mitigated by diverting 100% of user fees into the pool and enforcing long and short positions against the pool to be balanced.</li>
+                        <li><strong>Pool Liquidity:</strong> In the event that the pool is valued less than the opposite positions due to an aggregate value of user positions, it is possible to lose a portion of your pool investment. This risk is mitigated by diverting 100% of user fees into the pool and incentivizing long and short positions against the pool to be balanced.</li>
                     </ul>
                 </li>
                 <li>
                     <div>For All Users:</div>
                     <ul>
                         <li><strong>Smart Contract Risks:</strong> If a bug is found in the protocol, the protocol has the potential of being exploited. While every effort has been made to develop a secure application, this risk is present for every DeFi protocol.</li>
-                        <li><strong>Blockchain Risks:</strong> If the underlying protocol is exploited, then the smart contract as a whole is at risk.</li>
+                        <li><strong>Blockchain Risks:</strong> If the underlying blockchain is exploited, then the smart contract as a whole is at risk.</li>
+                        <li><strong>Oracle Risks:</strong> The protocol uses Chainlink oracles.   If the oracles were to be comprimised then the protocol's integrity would be compromised.</li>
                     </ul>
                 </li>
             </ul>
