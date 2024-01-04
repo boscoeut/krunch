@@ -45,6 +45,7 @@ export const defaultAppInfo: AppInfo = {
 
 interface KrunchState {
   exchangeBalanceAvailable: number,
+  autoRefresh:boolean,
   poolAccountValue: number,
   nextRewardsClaimDate?: Date,
   setup: () => Promise<void>,
@@ -90,9 +91,14 @@ interface KrunchState {
   exchangeDepositOrWithdraw: (market: string, amount: number) => Promise<void>,
   updateMarket: (name: string, marketIndex: number, marketWeight: number,
     leverage: number, takerFee: number, makerFee: number, feedAddress: string) => Promise<void>,
+  toggleAutoRefresh: () => void,  
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  toggleAutoRefresh: () =>{
+    set({autoRefresh:!get().autoRefresh})
+  },
+  autoRefresh:true,
   exchangeBalanceAvailable: 0,
   poolAccountValue: 0,
   updateMarket: async (name: string, marketIndex: number, marketWeight: number,

@@ -10,7 +10,9 @@ import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutlineRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import UpdateRounded from '@mui/icons-material/UpdateRounded';
+import AutoModeRoundedIcon from '@mui/icons-material/AutoModeRounded';
 import ButtonGroup from '@mui/joy/ButtonGroup';
+import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
 import Dropdown from '@mui/joy/Dropdown';
 import ListItemDecorator from '@mui/joy/ListItemDecorator';
 import Menu from '@mui/joy/Menu';
@@ -31,6 +33,7 @@ import WithdrawDialog from './WithdrawDialog';
 import useActiveTabEvent from '../hooks/useActiveTabEvent';
 import { useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 
 export default function Toolbar() {
     const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
@@ -43,8 +46,11 @@ export default function Toolbar() {
     const [depositDialogOpen, setDepositDialogOpen] = useState(false);
     const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
     const refreshAll = useKrunchStore((state: any) => state.refreshAll)
+    const toggleAutoRefresh = useKrunchStore((state: any) => state.toggleAutoRefresh)
+    const autoRefresh = useKrunchStore((state: any) => state.autoRefresh)
     const isAdmin = useKrunchStore((state: any) => state.isAdmin)
     const setup = useKrunchStore((state: any) => state.setup)
+    const walletState = useWalletModal();
     const userAccountValue = useKrunchStore((state: any) => state.userAccountValue)
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
     const refresh = async () => {
@@ -60,6 +66,15 @@ export default function Toolbar() {
         setup()
     }
 
+    const toggleConnect = () => {
+        if (wallet.connected) {
+            wallet.disconnect();
+        } else {
+            walletState.setVisible(true);
+        }
+    }
+
+
     useActiveTabEvent(async () => {
         console.log('This message will be logged every 5 seconds if the tab is active: ' + new Date().toLocaleTimeString());
         await refresh()
@@ -73,7 +88,15 @@ export default function Toolbar() {
     return (
         <>
             <Box gap={1} flex={1} display={'flex'}>
-                <ButtonGroup color="success" variant='solid'>
+                {!wallet.connected && <Button
+                    color="success"
+                    startDecorator={<LinkRoundedIcon />}
+                    size="sm"
+                    onClick={() => toggleConnect()}
+                >
+                    Connect
+                </Button>}
+                {wallet.connected && <ButtonGroup color="success" variant='solid'>
                     <Button
                         color="success"
                         startDecorator={<EmojiEventsRounded />}
@@ -81,14 +104,6 @@ export default function Toolbar() {
                         onClick={() => setClaimDialogOpen(true)}
                     >
                         {`Claim Rewards: ${formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}`}
-                    </Button>
-                    <Button
-                        color="success"
-                        startDecorator={<QueryStatsRounded />}
-                        size="sm"
-                        onClick={() => setTradeDialogOpen(true)}
-                    >
-                        Trade
                     </Button>
 
                     <Dropdown>
@@ -103,16 +118,18 @@ export default function Toolbar() {
                             <MenuItem onClick={() => setWithdrawDialogOpen(true)}><ListItemDecorator><RemoveCircleOutlineRoundedIcon /></ListItemDecorator>Withdraw</MenuItem>
                         </Menu>
                     </Dropdown>
-
                     <Button
                         color="success"
-                        startDecorator={<RefreshRoundedIcon />}
+                        startDecorator={<QueryStatsRounded />}
                         size="sm"
-                        onClick={() => refresh()}
-                    >Refresh</Button>
+                        onClick={() => setTradeDialogOpen(true)}
+                    >
+                        Trade
+                    </Button>
                 </ButtonGroup>
+                }
                 <Box flex={1}></Box>
-                <Dropdown>
+                {isAdmin && wallet.connected && <Dropdown>
                     <MenuButton
                         size="sm"
                         variant='solid'
@@ -121,11 +138,13 @@ export default function Toolbar() {
                         color="danger">Settings</MenuButton>
                     <Menu>
                         <MenuItem onClick={() => initApp()}><ListItemDecorator><SettingsRoundedIcon /></ListItemDecorator>Setup</MenuItem>
-                        {isAdmin && <MenuItem onClick={() => setExchangeDialogOpen(true)}><ListItemDecorator><CurrencyExchangeRounded /></ListItemDecorator>Exchange Deposit/Withdraw</MenuItem>}
-                        {isAdmin && <MenuItem onClick={() => setUpdateExchangeDialogOpen(true)}><ListItemDecorator><UpdateRounded /></ListItemDecorator>Update Exchange</MenuItem>}
-                        {isAdmin && <MenuItem onClick={() => setMarketDialogOpen(true)}><ListItemDecorator><CandlestickChartRoundedIcon /></ListItemDecorator>Update Market</MenuItem>}
+                        <MenuItem onClick={() => setExchangeDialogOpen(true)}><ListItemDecorator><CurrencyExchangeRounded /></ListItemDecorator>Exchange Deposit/Withdraw</MenuItem>
+                        <MenuItem onClick={() => setUpdateExchangeDialogOpen(true)}><ListItemDecorator><UpdateRounded /></ListItemDecorator>Update Exchange</MenuItem>
+                        <MenuItem onClick={() => setMarketDialogOpen(true)}><ListItemDecorator><CandlestickChartRoundedIcon /></ListItemDecorator>Update Market</MenuItem>
+                        <MenuItem onClick={() => refresh()}><ListItemDecorator><RefreshRoundedIcon /></ListItemDecorator>Refresh (Auto = {autoRefresh ? 'On':'Off'})</MenuItem>
+                        <MenuItem onClick={() => toggleAutoRefresh()}><ListItemDecorator><AutoModeRoundedIcon /></ListItemDecorator>Toggle Refresh (Auto = {autoRefresh ? 'On':'Off'})</MenuItem>
                     </Menu>
-                </Dropdown>
+                </Dropdown>}
 
             </Box>
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
