@@ -44,8 +44,9 @@ export const defaultAppInfo: AppInfo = {
 }
 
 interface KrunchState {
+  poolROI: number,
   exchangeBalanceAvailable: number,
-  autoRefresh:boolean,
+  autoRefresh: boolean,
   poolAccountValue: number,
   nextRewardsClaimDate?: Date,
   setup: () => Promise<void>,
@@ -91,14 +92,15 @@ interface KrunchState {
   exchangeDepositOrWithdraw: (market: string, amount: number) => Promise<void>,
   updateMarket: (name: string, marketIndex: number, marketWeight: number,
     leverage: number, takerFee: number, makerFee: number, feedAddress: string) => Promise<void>,
-  toggleAutoRefresh: () => void,  
+  toggleAutoRefresh: () => void,
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
-  toggleAutoRefresh: () =>{
-    set({autoRefresh:!get().autoRefresh})
+  poolROI: 0,
+  toggleAutoRefresh: () => {
+    set({ autoRefresh: !get().autoRefresh })
   },
-  autoRefresh:true,
+  autoRefresh: true,
   exchangeBalanceAvailable: 0,
   poolAccountValue: 0,
   updateMarket: async (name: string, marketIndex: number, marketWeight: number,
@@ -457,6 +459,15 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       + Number(exchange.rewards)//
       + Number(exchange.pnl)//
 
+    const poolROI = (
+      exchange.collateralValue.toNumber()
+      + Number(exchange.fees)//
+      + Number(exchange.rebates)//
+      + Number(exchange.rewards)//
+      + Number(exchange.pnl)
+    )
+      / exchange.collateralValue.toNumber()
+
     const exchangeTotal = (exchange.pnl.toNumber()
       + exchange.rebates.toNumber()
       + exchange.rewards.toNumber()
@@ -494,7 +505,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         console.log('could not get market ' + market.name)
       }
     }
-    set(() => ({ poolAccountValue, markets: tempMarkets, exchangeCurrentValue: accountCurrentValue, exchangeUnrealizedPnl: accountUnrealizedPnl }))
+    set(() => ({ poolROI, poolAccountValue, markets: tempMarkets, exchangeCurrentValue: accountCurrentValue, exchangeUnrealizedPnl: accountUnrealizedPnl }))
   },
   refreshPositions: async () => {
     const provider = get().provider

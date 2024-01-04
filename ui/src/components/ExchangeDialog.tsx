@@ -17,7 +17,6 @@ import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import * as React from 'react';
 import { EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { set } from '@coral-xyz/anchor/dist/cjs/utils/features';
 
 export interface ExchangeDialogProps {
   open: boolean;
@@ -52,16 +51,18 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
 
   const properties = [
     { label: 'Amount', value: amount, onChange: setAmount, type: 'number' },
-    { label: 'Market', value: market, onChange: setMarket, type: 'markets' },
+    { label: 'Token', value: market, onChange: setMarket, type: 'markets' },
   ]
+
+  const title = Number(amount) > 0 ? `Exchange ${market.replace("/USD","")} Desposit` : `Exchange ${market.replace("/USD","")} Withdrawal`
 
   return (
     <React.Fragment>
       <Modal open={open} onClose={() => closeDialog()}>
         <ModalDialog>
           <ModalClose />
-          <DialogTitle>Exchange Withdraw</DialogTitle>
-          <DialogContent>Withdraw from the exchange.</DialogContent>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogContent>Deposit or Withdraw from the exchange.</DialogContent>
           <form
             onSubmit={async (event: React.FormEvent<HTMLFormElement>) => {
               event.preventDefault();
@@ -78,7 +79,7 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
                         property.onChange(newValue)
                       }}>
                         {EXCHANGE_POSITIONS.map((position) => {
-                          return <Option key={position.market} value={position.market} >{position.market}</Option>
+                          return <Option key={position.market} value={position.market} >{position.market.replace("/USD","")}</Option>
                         })}
                       </Select>
 

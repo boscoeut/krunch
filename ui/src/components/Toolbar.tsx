@@ -145,7 +145,6 @@ export default function Toolbar() {
                         <MenuItem onClick={() => toggleAutoRefresh()}><ListItemDecorator><AutoModeRoundedIcon /></ListItemDecorator>Toggle Refresh (Auto = {autoRefresh ? 'On':'Off'})</MenuItem>
                     </Menu>
                 </Dropdown>}
-
             </Box>
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
             <MarketDialog open={marketDialogOpen} setOpen={setMarketDialogOpen} />

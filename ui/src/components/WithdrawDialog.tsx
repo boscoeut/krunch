@@ -20,7 +20,6 @@ import { AMOUNT_DECIMALS, EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, formatNumber } from '../utils';
 import KLabel from './KLabel';
-import { set } from '@coral-xyz/anchor/dist/cjs/utils/features';
 
 export interface WithdrawDialogProps {
   open: boolean;
@@ -89,7 +88,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   if ((selectedExchangeMarket?.currValue || 0) < Number(amount)) {
     amountMessage = <> Pool only has {formatNumber((selectedExchangeMarket?.balance || 0) / 10 ** (selectedExchangeMarket?.decimals || 0))} 
       &nbsp;of {selectedExchangeMarket?.market.replace("/USD", "")}
-      &nbsp;worth {formatCurrency((selectedExchangeMarket?.currValue || 0))}.  
+      &nbsp;worth {formatNumber((selectedExchangeMarket?.currValue || 0),4)}.  
       <br/>Do a partial withdrawal or select a different token to receive withdrawal in.</>
     canSubmit = false  
   }
