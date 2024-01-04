@@ -24,7 +24,7 @@ import { set } from '@coral-xyz/anchor/dist/cjs/utils/features';
 
 export interface WithdrawDialogProps {
   open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>; 
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
@@ -33,11 +33,13 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   const [amount, setAmount] = React.useState('0');
   const [submitting, setSubmitting] = React.useState(false);
   const userBalances = useKrunchStore(state => state.userBalances)
+  const exchangeBalances = useKrunchStore(state => state.exchangeBalances)
   const withdraw = useKrunchStore(state => state.withdraw)
   const userAccountValue = useKrunchStore(state => state.userAccountValue)
   const userAccount = useKrunchStore(state => state.userAccount)
   const withdrawValue = Number(amount)
   const selectedMarket = userBalances.find((position) => position.market === market)
+  const selectedExchangeMarket = exchangeBalances.find((position) => position.market === market)
   const balanceAfterWithdraw = userAccountValue / AMOUNT_DECIMALS - withdrawValue
   const tokenAmount = Number(amount) / (selectedMarket?.price || 0)
   const marginUsed = userAccount.marginUsed?.toNumber() || 0
@@ -52,10 +54,11 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
 
   const handleSubmit = async () => {
     try {
+      setErrorMessage('')
       setSubmitting(true)
       await withdraw(market, Number(amount))
       closeDialog()
-    } catch (e:any) {
+    } catch (e: any) {
       setErrorMessage(e.message)
       console.log("error", e);
     } finally {
@@ -64,7 +67,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   };
 
   let submitMessage = 'Withdraw'
-  let amountMessage = ''
+  let amountMessage:any = undefined
   let canSubmit = !submitting
   const selectedBalance = amountAvailable / AMOUNT_DECIMALS
   if (Number(selectedBalance.toFixed(2)) < Number(amount)) {
@@ -81,6 +84,14 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
 
   if (submitting) {
     submitMessage = 'Withdrawing...'
+  }
+
+  if ((selectedExchangeMarket?.currValue || 0) < Number(amount)) {
+    amountMessage = <> Pool only has {formatNumber((selectedExchangeMarket?.balance || 0) / 10 ** (selectedExchangeMarket?.decimals || 0))} 
+      &nbsp;of {selectedExchangeMarket?.market.replace("/USD", "")}
+      &nbsp;worth {formatCurrency((selectedExchangeMarket?.currValue || 0))}.  
+      <br/>Do a partial withdrawal or select a different token to receive withdrawal in.</>
+    canSubmit = false  
   }
 
   const setMax = () => {
@@ -119,11 +130,11 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
                   </tbody>
                 </Table>
               </FormControl>
-              <FormControl error={!canSubmit && !submitting}>
+              <FormControl error={!!amountMessage && !submitting}>
                 <FormLabel>Amount to Withdraw<Chip onClick={setMax} color="success">Max {formatCurrency(amountAvailable / AMOUNT_DECIMALS)} </Chip></FormLabel>
                 <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
-                {!canSubmit && <FormHelperText>
-                  <InfoOutlined />
+                {!!amountMessage && !canSubmit && <FormHelperText>
+                  <InfoOutlined sx={{marginRight:1}} />
                   {amountMessage}
                 </FormHelperText>}
               </FormControl>
@@ -133,7 +144,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
                   setMarket(newValue)
                 }}>
                   {EXCHANGE_POSITIONS.map((position) => {
-                    return <Option key={position.market} value={position.market} >{position.market.replace("USD/", "")}</Option>
+                    return <Option key={position.market} value={position.market} >{position.market.replace("/USD", "")}</Option>
                   })}
                 </Select>
               </FormControl>
@@ -153,7 +164,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
                     </tr>
                     <tr>
                       <td>Withdraw Amount</td>
-                      <td><KLabel numValue={Number(amount) * -1}>{formatCurrency(withdrawValue)}</KLabel> <span style={{ paddingLeft: 10, fontSize: '0.9em' }}>({tokenPhrase}) (Current Price = {formatNumber(selectedMarket?.price || 0, 4)})</span></td>
+                      <td><div><KLabel numValue={Number(amount) * -1}>{formatCurrency(withdrawValue)}</KLabel> <span style={{ paddingLeft: 10, fontSize: '0.9em' }}>({tokenPhrase}) (Current Price = {formatNumber(selectedMarket?.price || 0, 4)})</span></div></td>
                     </tr>
                     <tr>
                       <td>Balance After Withdraw</td>
