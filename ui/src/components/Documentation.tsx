@@ -3,13 +3,18 @@ import Typography from '@mui/joy/Typography';
 import Link from '@mui/joy/Link';
 import KSheet from './KSheet';
 import AppTitle from './AppTitle';
-import PageHeader from './PageHeader';
+import moment from 'moment';
 import {useKrunchStore} from '../hooks/useKrunchStore';
+import {SLOTS_PER_DAY} from 'utils/dist/constants';
 
 export default function Documentation() {
-    const { appInfo} = useKrunchStore((state) => ({
-        appInfo: state.appInfo
+    const { appInfo, exchange, exchangeBalances} = useKrunchStore((state) => ({
+        appInfo: state.appInfo,
+        exchange:state.exchange,
+        exchangeBalances: state.exchangeBalances,
     }))
+
+    const rewardFrequency = moment.duration( exchange.rewardFrequency?.toNumber() /SLOTS_PER_DAY, 'days').humanize()
 
     const leverage = appInfo.leverage;
 
@@ -21,15 +26,17 @@ export default function Documentation() {
                     <li><strong>No Liquidations:</strong> Unlike other DeFi trading protocols, <AppTitle variant={"doc"} /> does not liquidate positions, so you do not have to constantly monitor your positions or fear sudden volatility.</li>
                     <li><strong>No Funding Rates: </strong><AppTitle variant={"doc"} /> eliminates funding rates, allowing you to keep your positions open without worrying about volatile funding rates that can eat into your profits.</li>
                     <li><strong>Low Trading Fees:</strong> We strive to provide trading fees that are on the low side of DeFi trading protocols, so you can keep more of your profits.</li>
-                    <li><strong>Variety of Trading Opportunities:</strong> Crypto, Equities or Forex trading opportunities.</li>
+                    <li><strong>Trading Rebates:</strong> Earn money by trading and providing liquidity to the protocol</li>
+                    <li><strong>Rewards:</strong> Fees and Pool Pnl are distributed to those who hold deposits in rewards. Rewards are available every <strong>{rewardFrequency}</strong></li>
                 </ul>
                 <div><AppTitle variant={"doc"} /> is targeted towards traders who want to trade long and short positions while reducing risk to momentary fluctuations in price or volatility. With our unique features, you can trade without worrying about liquidations and focus on your trading strategy.</div>
             </>],
         "How It Works": [
             <>
-                <div><AppTitle variant={"doc"} /> eliminates liquidation events and funding rates by placing all trades against a funding pool. The funding pool assumes the counterparty risk to user trades, and funding pool recipients are rewarded in one of two ways:</div>
+                <div><AppTitle variant={"doc"} /> eliminates liquidation events and funding rates by placing all trades against a funding pool. The funding pool assumes the counterparty risk to user trades, and funding pool recipients are rewarded in one of three ways:</div>
                 <ul>
-                    <li><strong>Trading Fees:</strong> Funding pool participants receive 100% of all trading fees.</li>
+                    <li><strong>Trading Fees:</strong> Those who hold deposits in the protocol receive trading fees via rewards.</li>
+                    <li><strong>Trading Rebates:</strong> Earn a trading rebate by providing liquidity to the protocol.</li>
                     <li><strong>Profits:</strong> The funding pool takes the opposite side of all user-based trades. If the aggregate of all trades results in a net loss, the funding pool becomes worth more than the initial investment that was placed into the pool. Conversely, if the aggregate of all trades results in a net gain, the funding pool becomes worth less than the initial investment. However, this event is somewhat mitigated by the trading fees that the pool receives for each transaction. Additionally, the funding pool limits the opening of excess long or short positions to maintain a balanced pool of trades.</li>
                 </ul>
             </>
@@ -39,7 +46,7 @@ export default function Documentation() {
             <div>There are two ways for users to interact with {appInfo.docAppReference}:</div>
             <ul>
                 <li><strong>Opening a long or short position:</strong> Users can open a long or short position, betting that the price action of the underlying trade will move in their favor.</li>
-                <li><strong>Depositing into the Pool:</strong> Users can deposit money into the pool with the expectation that the combination of trading fees and aggregate trades will result in a positive return.</li>
+                <li><strong>Depositing into the Protocol:</strong> Users can deposit money into the protocol with the expectation that the combination of trading fees and aggregate trades will result in a positive return.</li>
             </ul>
         </>],
         "Risks": [<>
@@ -68,21 +75,21 @@ export default function Documentation() {
             </ul>
         </>],
         "Leveraged Trading": [<>Each account can open positions up to <AppTitle variant={"message"} message={`${leverage}x`} />  leverage.</>],
-        "Account Funding": [<><AppTitle variant={"doc"} /> only supports deposits and withdrawals made using {appInfo.stableCoin}.</>],
+        "Account Funding": [<><AppTitle variant={"doc"} /> only supports deposits and withdrawals made using:
+            <ul>
+            {exchangeBalances?.map((balance: any, i: any) => {
+                return <li>{balance.market.replace("/USD",'')}</li>
+            })}
+            </ul>
+        </>],
         "Price Feeds": [<><AppTitle variant={"doc"} /> relies on <Link href="https://docs.chain.link/data-feeds/price-feeds" target="_blank">ChainLink Oracles</Link> for all price feeds.</>],
         "Conclusion": [<>
-            <div>The {appInfo.appTitle} protocol was created by developers who love DeFi but have been burned too many times by hacks, exploits, and liquidations caused by momentary price fluctation. We hope users appreciate the following:</div>
+            <div>The {appInfo.appTitle} protocol was created by developers who love DeFi but have been burned too many times by hacks, exploits, and liquidations caused by momentary price fluctations. We hope users appreciate the following:</div>
             <ul>
-                <li><strong>No Protocol Token:</strong> There is no governance token, trading token, or collateral token. Users can only deposit and withdraw {appInfo.stableCoin}.</li>
-                <li><strong>Immutable Smart Contract:</strong> The contract is immutable and cannot be upgraded. Once deployed, the only functions available to the admin are:
-                    <ul>
-                        <li>Adding a new trading asset</li>
-                        <li>Disabling an asset from opening new positions against it. This may be necessary if the price feed is no longer supported for the asset.</li>
-                        <li>Adjusting the trading fee for an asset</li>
-                        <li>Changing the admin address to a new address</li>
-                    </ul>
-                 </li>
+                <li><strong>No Protocol Token:</strong> There is no governance token, trading token, or collateral token.</li>
                 <li><strong>All Trading Fees go to the Pool:</strong> The authors of the protocol use the protocol the same as every other user. Everyone is playing by the same rules, and all trading fees go to the pool.</li>
+                <li><strong>Trade Rebates:</strong> Earn by providing liquidity to the pool.</li>
+                <li><strong>Rewards:</strong> Earn rewards every <strong>{rewardFrequency}</strong> from Pnl and Fee distributions.</li>
             </ul>
         </>]
     }

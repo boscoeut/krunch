@@ -80,7 +80,7 @@ export default function WelcomeCards() {
                         <ListItemDecorator>
                             <Check />
                         </ListItemDecorator>
-                        Earn Rewards by holding deposits in the protocol
+                        Rewards are paid out to those who hold deposits (fee and pool pnl distribution)
                     </ListItem>
                 </List>
                 <Divider inset="none" />
