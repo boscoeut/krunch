@@ -1,12 +1,13 @@
 import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { LEVERAGE_DECIMALS, MARKETS, AMOUNT_DECIMALS } from 'utils/dist/constants';
+import { LEVERAGE_DECIMALS, MARKETS, AMOUNT_DECIMALS, SLOTS_PER_DAY } from 'utils/dist/constants';
 import Stat from './Stat';
 import SubStat from './SubStat';
 import { Stack } from '@mui/joy';
 import { formatCurrency, renderItem, formatNumber, formatPercent } from '../utils';
 import SectionHeader from './SectionHeader';
+import moment from 'moment';
 
 export default function PoolDetails() {
     const exchange = useKrunchStore(state => state.exchange)
@@ -85,7 +86,7 @@ export default function PoolDetails() {
                 <tbody>
                     <tr>
                         <td>Rewards Available</td>
-                        <td>{formatCurrency(exchangeRewardsAvailable / AMOUNT_DECIMALS)}</td>
+                        <td>{formatCurrency(exchangeRewardsAvailable / AMOUNT_DECIMALS)} = (Fees + Pnl - Rewards Paid - Rebates) * RewardRate</td>
                     </tr>
                     <tr>
                         <td>Last Rewards Claim</td>
@@ -93,7 +94,7 @@ export default function PoolDetails() {
                     </tr>
                     <tr>
                         <td>Reward Frequency</td>
-                        <td>{`${renderItem(exchange.rewardFrequency?.toNumber() / (24 * 60 * 60 / (400 / 1000)), 1)}x a day`}</td>
+                        <td>{`${ exchange.rewardFrequency?.toNumber()} (${moment.duration( exchange.rewardFrequency?.toNumber() /SLOTS_PER_DAY, 'days').humanize()})`}</td>
                     </tr>
 
                     <tr>

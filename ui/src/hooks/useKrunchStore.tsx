@@ -619,7 +619,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       let userTotal = get().userCollateral - userAccount.rewards.toNumber();
       let exchangeTotal = get().exchangeCollateral;
       let exchangeRewards =
-        (exchange.pnl.toNumber() + exchange.rewards.toNumber())
+        (exchange.pnl.toNumber() + exchange.rewards.toNumber() + exchange.fees.toNumber() + exchange.rebates.toNumber())
         * (exchange.rewardRate.toNumber()) / AMOUNT_DECIMALS;
       // get % or rewards available
       if (exchangeRewards < 0) {

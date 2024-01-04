@@ -60,7 +60,7 @@ export default function Sidebar() {
         onclick: () => navigate('/home')
     },{
         path: '/positions',
-        name: 'User Positions',
+        name: 'Trade',
         icon: <QueryStatsRounded />,
         onclick: () => navigate('/positions')
     },{

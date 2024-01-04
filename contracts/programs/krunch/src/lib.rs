@@ -539,7 +539,7 @@ fn calculate_exchange_total(exchange: &Exchange) -> i128 {
 }
 
 fn exchange_rewards_available(exchange: &Exchange) -> i128 {
-    let exchange_total = exchange.pnl + exchange.rewards;
+    let exchange_total = exchange.pnl + exchange.rewards + exchange.fees + exchange.rebates;
     if exchange_total < 0 {
         return 0;
     } else {

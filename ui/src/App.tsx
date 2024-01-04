@@ -53,7 +53,7 @@ const theme = extendTheme({
 export default function App() {
     const location = useLocation();
     return (
-        <CssVarsProvider disableTransitionOnChange theme={theme}>
+        <CssVarsProvider defaultMode='dark' disableTransitionOnChange theme={theme}>
             <CssBaseline />
             <Box sx={{ display: 'flex', minHeight: '100vh' }}>
                 <Header />
