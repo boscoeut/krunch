@@ -6,6 +6,7 @@ import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
 import Input from '@mui/joy/Input';
+import Chip from '@mui/joy/Chip';
 import Modal from '@mui/joy/Modal';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
@@ -15,8 +16,9 @@ import Stack from '@mui/joy/Stack';
 import FormHelperText from '@mui/joy/FormHelperText';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import * as React from 'react';
-import { EXCHANGE_POSITIONS } from "utils/dist/constants";
+import { EXCHANGE_POSITIONS, AMOUNT_DECIMALS } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
+import { formatCurrency, formatNumber } from '../utils';
 
 export interface ExchangeDialogProps {
   open: boolean;
@@ -29,6 +31,9 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
   const exchangeDepositOrWithdraw = useKrunchStore(state => state.exchangeDepositOrWithdraw)
   const [submitting, setSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState('');
+  const exchangeBalances = useKrunchStore(state => state.exchangeBalances)
+  const selectedExchangeMarket = exchangeBalances.find((position) => position.market === market)
+  const amountAvailable = selectedExchangeMarket?.balance || 0
 
   const closeDialog = () => {
     setSubmitting(false)
@@ -48,13 +53,11 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
       setSubmitting(false)
     }
   };
+  const setMax = () => {
+    setAmount(Number(-1 * amountAvailable / 10 ** (selectedExchangeMarket?.decimals || 0)).toFixed(selectedExchangeMarket?.decimals || 0))
+  }
 
-  const properties = [
-    { label: 'Amount', value: amount, onChange: setAmount, type: 'number' },
-    { label: 'Token', value: market, onChange: setMarket, type: 'markets' },
-  ]
-
-  const title = Number(amount) > 0 ? `Exchange ${market.replace("/USD","")} Desposit` : `Exchange ${market.replace("/USD","")} Withdrawal`
+  const title = Number(amount) > 0 ? `Exchange ${market.replace("/USD", "")} Desposit` : `Exchange ${market.replace("/USD", "")} Withdrawal`
 
   return (
     <React.Fragment>
@@ -70,27 +73,21 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
             }}
           >
             <Stack spacing={2}>
-              {properties.map((property) => {
-                return (
-                  <Box key={property.label}>
-                    {property.type === 'markets' && <FormControl key={property.label}>
-                      <FormLabel>{property.label}</FormLabel>
-                      <Select value={property.value} onChange={(e: any, newValue: any) => {
-                        property.onChange(newValue)
-                      }}>
-                        {EXCHANGE_POSITIONS.map((position) => {
-                          return <Option key={position.market} value={position.market} >{position.market.replace("/USD","")}</Option>
-                        })}
-                      </Select>
 
-                    </FormControl>}
-                    {property.type === 'number' && <FormControl key={property.label}>
-                      <FormLabel>{property.label}</FormLabel>
-                      <Input autoFocus required value={property.value} onChange={(e: any) => property.onChange(e.target.value)} />
-                    </FormControl>}
-                  </Box>
-                );
-              })}
+              <FormControl>
+                <FormLabel>Amount <Chip onClick={setMax} color="success">Max {formatNumber(amountAvailable / 10 ** (selectedExchangeMarket?.decimals || 1), selectedExchangeMarket?.decimals || 1)} </Chip></FormLabel>
+                <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Token</FormLabel>
+                <Select value={market} onChange={(e: any, newValue: any) => {
+                  setMarket(newValue)
+                }}>
+                  {EXCHANGE_POSITIONS.map((position) => {
+                    return <Option key={position.market} value={position.market} >{position.market.replace("/USD", "")}</Option>
+                  })}
+                </Select>
+              </FormControl>
               <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
               {errorMessage && <FormControl error={!!errorMessage}>
                 <FormHelperText>

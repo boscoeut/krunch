@@ -94,7 +94,8 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
   }
 
   const setMax = () => {
-    setAmount(Number(amountAvailable / AMOUNT_DECIMALS).toFixed(2))
+    const numberOfZeros = AMOUNT_DECIMALS.toString().split('0').length - 1;
+    setAmount(Number(amountAvailable / AMOUNT_DECIMALS).toFixed(numberOfZeros))
   }
 
   return (

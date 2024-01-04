@@ -416,7 +416,7 @@ pub mod krunch {
         exchange.amount_withdrawn -= amount as i64;
 
         // validate enough funds are available
-        let exchange_total = calculate_exchange_balance_available(&exchange);
+        let exchange_total = calculate_exchange_balance_available(&exchange) - exchange.collateral_value as i128;
         if exchange_total < 0 {
             return err!(KrunchErrors::ExchangeMarginInsufficient);
         }
