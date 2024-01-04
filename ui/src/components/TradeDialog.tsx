@@ -46,14 +46,24 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   const userTokenAmount = (selectedUserBalance?.tokenAmount || 0) / AMOUNT_DECIMALS
 
   let feeRate = (selectedMarket?.takerFee || 0) / FEE_DECIMALS || 0
-
   const nAmount = Number(amount)
-  if ((nAmount > 0 && nAmount <= marketTokenAmount) || (nAmount < 0 && nAmount >= marketTokenAmount)) {
+  
+  if ((nAmount > 0 && nAmount <= marketTokenAmount && nAmount + marketTokenAmount >=0) 
+    || (nAmount < 0 && nAmount >= marketTokenAmount && nAmount + marketTokenAmount <=0)) {
     feeRate = (selectedMarket?.makerFee || 0) / FEE_DECIMALS || 0
   }
+
+  let showMaxTrade =true
+  console.log("userTokenAmount", userTokenAmount);
+  console.log("nAmount", nAmount);
+  if ((nAmount > 0 && nAmount <= userTokenAmount*-1 && nAmount + userTokenAmount*-1 >=0) 
+    || (nAmount < 0 && nAmount >= userTokenAmount*-1 && nAmount + userTokenAmount*-1 <=0)) {
+    showMaxTrade = false
+  }
+
   const fee = Math.abs(tradeValue) * feeRate
   const total = Math.abs(tradeValue) + fee
-  const maxTrade = Math.min(exchangeBalanceAvailable, userCollateral) / AMOUNT_DECIMALS || 0
+  const maxTrade = Math.min(exchangeBalanceAvailable, showMaxTrade?userCollateral:exchangeBalanceAvailable) / AMOUNT_DECIMALS || 0
 
   const closeDialog = () => {
     setErrorMessage('')
@@ -84,7 +94,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   let selectedBalance = maxTrade
 
   let amountMessage = ''
-  if (selectedBalance < Number(total)) {
+  if (selectedBalance < Number(total) && showMaxTrade) {
     canSubmit = false
     amountMessage = 'Insufficient Balance'
   }
@@ -159,7 +169,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                   <tr>
                     <th>Total </th>
                     <th>{formatCurrency(total, 4)} </th>
-                    <td><Chip color={maxTrade > total ? "success" : "danger"}>Max Margin Available: {formatCurrency(maxTrade)}</Chip></td>
+                    <td>{showMaxTrade && <Chip color={maxTrade > total ? "success" : "danger"}>Max Margin Available: {formatCurrency(maxTrade)}</Chip>}</td>
                   </tr>
                 </tbody>
               </Table>
