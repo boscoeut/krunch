@@ -165,9 +165,6 @@ pub mod krunch {
                 / 10i128.pow(price_decimals.into());
 
             let pnl = abasis - tbasis as i64;
-            // if (token_delta<0){
-            //     pnl = tbasis - abasis as i64;
-            // }
             let basis_adjustment = abasis * -1;
 
             user_position.basis -= basis_adjustment as i64;
@@ -193,7 +190,7 @@ pub mod krunch {
         market.basis += basis_increase as i64;
         exchange.basis += basis_increase as i64;
 
-        let exchange_total = calculate_exchange_total(&exchange);
+        let exchange_total = calculate_exchange_balance_available(&exchange);
         if exchange_total < 0 {
             return err!(KrunchErrors::ExchangeMarginInsufficient);
         }
@@ -362,7 +359,7 @@ pub mod krunch {
         exchange.collateral_value -= amount as i64;
 
         // validate enough funds are available
-        let exchange_total = calculate_exchange_total(&exchange);
+        let exchange_total = calculate_exchange_balance_available(&exchange);
         if exchange_total < 0 {
             return err!(KrunchErrors::ExchangeMarginInsufficient);
         }
@@ -416,7 +413,12 @@ pub mod krunch {
         exchange.amount_withdrawn -= amount as i64;
 
         // validate enough funds are available
-        let exchange_total = calculate_exchange_balance_available(&exchange) - exchange.collateral_value as i128;
+        let exchange_margin_total = calculate_exchange_balance_available(&exchange) - exchange.collateral_value as i128;
+        if exchange_margin_total < 0 && exchange.margin_used > 0{
+            return err!(KrunchErrors::ExchangeMarginInsufficient);
+        }
+
+        let exchange_total = calculate_exchange_total(&exchange) - exchange.collateral_value as i128;
         if exchange_total < 0 {
             return err!(KrunchErrors::ExchangeMarginInsufficient);
         }
@@ -520,21 +522,16 @@ pub mod krunch {
 
 fn calculate_exchange_balance_available(exchange: &Exchange) -> i128 {
     let exchange_total = calculate_exchange_total(&exchange);
-    return exchange_total * exchange.market_weight as i128 / MARKET_WEIGHT_DECIMALS as i128 ;
+    return exchange_total * exchange.market_weight as i128 / MARKET_WEIGHT_DECIMALS as i128 + exchange.margin_used as i128;
 }
 
 fn calculate_exchange_total(exchange: &Exchange) -> i128 {
     let exchange_hard_amount = 
           exchange.amount_withdrawn
         + exchange.amount_deposited
-        + exchange.pnl
-        + exchange.rebates
-        + exchange.rewards
-        + exchange.fees
         + exchange.collateral_value;
     let exchange_total = exchange_hard_amount as i128 * exchange.leverage as i128
-        / LEVERAGE_DECIMALS as i128
-        + exchange.margin_used as i128;
+        / LEVERAGE_DECIMALS as i128;
     return exchange_total;
 }
 

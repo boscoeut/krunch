@@ -1,6 +1,7 @@
 import Box from '@mui/joy/Box';
 import Link from '@mui/joy/Link';
 import Table from '@mui/joy/Table';
+import Typography from '@mui/joy/Typography';
 import { EXCHANGE_POSITIONS, MARKETS } from 'utils/dist/constants';
 import { useKrunchStore } from '../hooks/useKrunchStore';
 import idl from '../idl/krunch.json';
@@ -26,7 +27,7 @@ export default function Contracts() {
        }})
    
     const exchangeContracts:Array<Contract> = EXCHANGE_POSITIONS.map(map=> {return { 
-        name: `${map.market}`,
+        name: `${map.market.replace('/USD','')}`,
         address: map.mint.toString(),
         type:'Token',
         link: `${explorer}address/${map.mint.toString()}`
@@ -61,11 +62,7 @@ export default function Contracts() {
                             return <tr key={`${c.name}_${c.type}`}>
                                 <td>{c.name}</td>
                                 <td>{c.type}</td>
-                                <td style={{
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis'
-                                }}><Link target="_blank" href={c.link} >{c.address}</Link></td>
+                                <td><Typography sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Link target="_blank" href={c.link} >{c.address}</Link></Typography></td>
                             </tr>
                         })}
                     </tbody>

@@ -451,22 +451,24 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
 
-    const poolAccountValue = Number(exchange.collateralValue)
-      + Number(exchange.fees)//
+    const poolAccountValue =
+      Number(exchange.fees)//
       + Number(exchange.amountWithdrawn)//
       + Number(exchange.amountDeposited)//
       + Number(exchange.rebates)//
       + Number(exchange.rewards)//
       + Number(exchange.pnl)//
 
+    const poolDeposits = 
+      Math.max(exchange.amountDeposited.toNumber() +  exchange.amountWithdrawn.toNumber(),0)
+      + exchange.collateralValue.toNumber()
     const poolROI = (
-      exchange.collateralValue.toNumber()
+      poolDeposits
       + Number(exchange.fees)//
       + Number(exchange.rebates)//
       + Number(exchange.rewards)//
       + Number(exchange.pnl)
-    )
-      / exchange.collateralValue.toNumber()
+    ) / poolDeposits;
 
     const exchangeTotal = (exchange.pnl.toNumber()
       + exchange.rebates.toNumber()
@@ -501,8 +503,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         const marketType = MARKET_TYPES.find((x: any) => x.id === market.marketTypeId || 1)
         tempMarkets.push({ market: market.name, ...market, ...acct, price, entryPrice, marketTotal, unrealizedPnl, currValue, marketType: marketType?.name })
       } catch (x: any) {
-        console.log(x.message)
-        console.log('could not get market ' + market.name)
+        // could not get market
       }
     }
     set(() => ({ poolROI, poolAccountValue, markets: tempMarkets, exchangeCurrentValue: accountCurrentValue, exchangeUnrealizedPnl: accountUnrealizedPnl }))
@@ -527,7 +528,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         const entryPrice = acct.tokenAmount.toNumber() === 0 ? 0 : acct.basis.toNumber() / acct.tokenAmount.toNumber()
         temp.push({ market: market.name, ...acct, price, currValue, unrealizedPnl, entryPrice })
       } catch (x: any) {
-        console.log(`${market.name} Does not exist`, x.message)
+        // market does not exist
       }
     }
     set(() => ({ positions: temp, userCurrentValue: accountCurrentValue, userUnrealizedPnl: accountUnrealizedPnl }))
@@ -552,7 +553,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
             let tokenBalance: any = await provider.connection.getTokenAccountBalance(tokenAccount)
             balance = Number(tokenBalance.value.amount)
           } catch (x) {
-            console.log('could not get balance:' + item.market)
+            // could not get balance
           }
           const price = get().prices.get(item.market)
           balances.push({
@@ -563,12 +564,12 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
             price
           })
         } catch (x: any) {
-          console.log(`${item.market} Does not exist`, x.message)
+          // market does not exist
         }
       }
       set(() => ({ userAccount, userBalances: balances }))
     } catch (x: any) {
-      console.log(`userAccount Does not exist`, x.message)
+      // userAccount Does not exist
     }
   },
   refreshUserCollateral: async () => {
@@ -600,7 +601,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         userAccountValue: hardAmount
       })
     } catch (x: any) {
-      console.log(`userAccount Does not exist`, x.message)
+      // userAccount Does not exist
     } finally {
       return userTotal
     }
@@ -612,20 +613,15 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     // exchange total
     const exchangeTotal = (
-      exchange.pnl.toNumber()
-      + exchange.rebates.toNumber()
-      + exchange.rewards.toNumber()
-      + exchange.fees.toNumber()
       + exchange.amountDeposited.toNumber()
       + exchange.amountWithdrawn.toNumber()
       + exchange.collateralValue.toNumber())
       * exchange.leverage
       / LEVERAGE_DECIMALS
-      + exchange.marginUsed.toNumber()
-
+      
     // exchange balance available    
     const marketWeight = exchange.marketWeight || 1
-    const exchangeBalanceAvailable = exchangeTotal * (marketWeight / MARKET_WEIGHT_DECIMALS)
+    const exchangeBalanceAvailable = exchangeTotal * (marketWeight / MARKET_WEIGHT_DECIMALS)+ exchange.marginUsed.toNumber()
     set({ exchangeCollateral: exchangeTotal, exchangeBalanceAvailable, isAdmin })
     return exchangeTotal
   },
@@ -648,7 +644,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
         userRewardsAvailable: amount || 0,
       })
     } catch (x: any) {
-      console.log(`userAccount Does not exist`, x.message)
+      // user account does not exist
     }
   },
   refreshPool: async () => {
@@ -667,7 +663,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
           let programBalance: any = await provider.connection.getTokenAccountBalance(escrowAccount)
           balance = programBalance.value.amount
         } catch (x: any) {
-          console.log('could not get balance:' + item.market, x.message)
+          // could not get balance
         }
         const price = get().prices.get(item.market)
         const currValue = (balance / (10 ** item.decimals)) * (price || 0)
@@ -681,7 +677,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
           currValue
         })
       } catch (x: any) {
-        console.log(`${item.market} Does not exist`, x.message)
+        // market does not exist
       }
     }
     const exchange: any = await fetchAccount(get().program, 'exchange', ['exchange']);

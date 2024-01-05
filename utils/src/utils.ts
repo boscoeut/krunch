@@ -13,26 +13,20 @@ export const fetchOrCreateAccount = async (program: any,
         const acct = await program.account[name].fetch(address);
         return acct;
     } catch (err) {
-        console.log(`Account not found: ${name} Address: ${address} `);
-        console.log('Initializing ' + name);
         const accounts = { [name]: address, ...(additionalAccounts || {}), }
-        console.log('Initializing accounts ' + JSON.stringify(accounts));
         const tx = await program?.methods[createMethod](...args).accounts(accounts).rpc();
-        console.log("fetchOrCreateAccount", tx);
         return await program.account[name].fetch(address);
     }
 }
 
 export const fetchAccount = async (program: any, name: string, seeds: Array<String | PublicKey | Number>) => {
     const address = await findAddress(program, seeds);
-    console.log('fetchAccount', name)
     const acct = await program.account[name].fetch(address);
     return acct;
 }
 
 
 export const findAddress = async (program: any, args: any) => {
-    console.log('findAddress args',args)
     const buffer = args.map((arg:any) => {
         if (typeof arg === 'string') {
             return Buffer.from(arg)
@@ -41,8 +35,6 @@ export const findAddress = async (program: any, args: any) => {
         } else if (typeof arg === 'number') {
             return new anchor.BN(arg.toString()).toArrayLike(Buffer, "le", 2)
         } else {
-
-            console.log("invalid type", arg)
             throw new Error("invalid type")
         }
     });
@@ -51,6 +43,5 @@ export const findAddress = async (program: any, args: any) => {
             buffer,
             program.programId as any
         );
-    console.log(`findAddress ${args[0]} ${account.toString()}`)
     return account
 }

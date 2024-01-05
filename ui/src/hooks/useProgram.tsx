@@ -45,7 +45,6 @@ const useProgram = () => {
                 const _program = new Program(idl as any, programID as any, _provider);
                 setProgram(_program);
                 setProvider(_provider);
-                console.log('*********** program set up');
                 initialize(_program, _provider);
                 return {
                     program: _program,

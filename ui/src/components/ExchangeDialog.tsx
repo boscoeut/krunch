@@ -44,13 +44,15 @@ export default function ExchangeDialog({ open, setOpen }: ExchangeDialogProps) {
   const handleSubmit = async () => {
     try {
       setSubmitting(true)
+      setErrorMessage('')
       await exchangeDepositOrWithdraw(market, Number(amount))
-      setOpen(false)
+      closeDialog()
     } catch (e: any) {
       setErrorMessage(e.message)
       console.log("error", e);
     } finally {
       setSubmitting(false)
+      setErrorMessage('')
     }
   };
   const setMax = () => {

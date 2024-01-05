@@ -54,8 +54,6 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
   }
 
   let showMaxTrade =true
-  console.log("userTokenAmount", userTokenAmount);
-  console.log("nAmount", nAmount);
   if ((nAmount > 0 && nAmount <= userTokenAmount*-1 && nAmount + userTokenAmount*-1 >=0) 
     || (nAmount < 0 && nAmount >= userTokenAmount*-1 && nAmount + userTokenAmount*-1 <=0)) {
     showMaxTrade = false

@@ -17,7 +17,8 @@ export default function PoolDetails() {
     const exchangeCurrentValue = useKrunchStore(state => state.exchangeCurrentValue)
     const exchangeUnrealizedPnl = useKrunchStore(state => state.exchangeUnrealizedPnl)
     const exchangeRewardsAvailable = useKrunchStore(state => state.exchangeRewardsAvailable)
-   
+    const treasuryTotal = useKrunchStore(state => state.treasuryTotal)
+
     let lastRewardsClaimed = 'Never'
     if (exchange.lastRewardsClaim?.toNumber() > 0) {
         lastRewardsClaimed = `${new Date(exchange.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(exchange.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
@@ -28,12 +29,13 @@ export default function PoolDetails() {
     return (
         <Box>
             <Stack direction={"row"} >
+                <Stat numValue={treasuryTotal} title="Pool Treasury" value={formatCurrency(treasuryTotal)} />
                 <Stat numValue={poolAccountValue} title="Pool Value" value={formatCurrency(poolAccountValue / AMOUNT_DECIMALS)} />
                 <Stat numValue={exchange.fees?.toNumber()} title="Fees" value={formatCurrency(exchange.fees?.toNumber()  / AMOUNT_DECIMALS)} />
                 <Stat numValue={totalPnl} title="Pnl" value={formatCurrency(totalPnl)} />
             </Stack>
             <Stack direction={"row"} >
-                <SubStat numValue={poolAccountValue} title="Pool ROI" value={formatPercent((poolROI) - 1)} />
+                <SubStat numValue={poolROI} title="Pool ROI" value={formatPercent((poolROI) - 1)} />
                 <SubStat numValue={exchange.rewards?.toNumber() + exchange.rebates?.toNumber()} title="Rewards Paid" value={formatCurrency((exchange.rewards || 0 ) / AMOUNT_DECIMALS)} />
                 <SubStat numValue={exchange.rebates?.toNumber()} title="Rebates Paid" value={formatCurrency(( exchange.rebates || 0) / AMOUNT_DECIMALS)} />
                 <SubStat numValue={exchangeUnrealizedPnl / exchange.basis} title="Pnl ROI" value={formatPercent(exchangeUnrealizedPnl / (Math.abs(exchange.basis) / AMOUNT_DECIMALS))} />
@@ -46,10 +48,6 @@ export default function PoolDetails() {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>+ User Deposits</td>
-                        <td>{formatCurrency(exchange.collateralValue / AMOUNT_DECIMALS)}</td>
-                    </tr>
                     <tr>
                         <td>+ Pnl</td>
                         <td>{formatCurrency(exchange.pnl / AMOUNT_DECIMALS)}</td>

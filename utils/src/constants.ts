@@ -1,5 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 
+export const AUTO_REFRESH_INTERVAL = 1000 * 2 // 2 seconds
 export const LOCALNET = 'Localnet'; 
 export const DEVNET = 'Devnet';
 export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Localnet";

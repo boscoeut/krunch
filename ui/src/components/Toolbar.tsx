@@ -19,7 +19,7 @@ import Menu from '@mui/joy/Menu';
 import MenuButton from '@mui/joy/MenuButton';
 import MenuItem from '@mui/joy/MenuItem';
 import { useState } from 'react';
-import { AMOUNT_DECIMALS } from 'utils/dist/constants';
+import { AMOUNT_DECIMALS, AUTO_REFRESH_INTERVAL } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from '../hooks/useProgram';
 import { formatCurrency } from '../utils';
@@ -76,9 +76,8 @@ export default function Toolbar() {
 
 
     useActiveTabEvent(async () => {
-        console.log('This message will be logged every 5 seconds if the tab is active: ' + new Date().toLocaleTimeString());
         await refresh()
-    }, 2000);
+    }, AUTO_REFRESH_INTERVAL);
 
     useEffect(() => {
         // Run the function when the component is mounted

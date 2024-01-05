@@ -66,14 +66,10 @@ var fetchOrCreateAccount = function (program, name, seeds, createMethod, args, a
                 return [2 /*return*/, acct];
             case 4:
                 err_1 = _c.sent();
-                console.log("Account not found: ".concat(name, " Address: ").concat(address, " "));
-                console.log('Initializing ' + name);
                 accounts = __assign((_a = {}, _a[name] = address, _a), (additionalAccounts || {}));
-                console.log('Initializing accounts ' + JSON.stringify(accounts));
                 return [4 /*yield*/, (program === null || program === void 0 ? void 0 : (_b = program.methods)[createMethod].apply(_b, args).accounts(accounts).rpc())];
             case 5:
                 tx = _c.sent();
-                console.log("fetchOrCreateAccount", tx);
                 return [4 /*yield*/, program.account[name].fetch(address)];
             case 6: return [2 /*return*/, _c.sent()];
             case 7: return [2 /*return*/];
@@ -88,7 +84,6 @@ var fetchAccount = function (program, name, seeds) { return __awaiter(void 0, vo
             case 0: return [4 /*yield*/, (0, exports.findAddress)(program, seeds)];
             case 1:
                 address = _a.sent();
-                console.log('fetchAccount', name);
                 return [4 /*yield*/, program.account[name].fetch(address)];
             case 2:
                 acct = _a.sent();
@@ -102,7 +97,6 @@ var findAddress = function (program, args) { return __awaiter(void 0, void 0, vo
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                console.log('findAddress args', args);
                 buffer = args.map(function (arg) {
                     if (typeof arg === 'string') {
                         return Buffer.from(arg);
@@ -114,14 +108,12 @@ var findAddress = function (program, args) { return __awaiter(void 0, void 0, vo
                         return new anchor.BN(arg.toString()).toArrayLike(Buffer, "le", 2);
                     }
                     else {
-                        console.log("invalid type", arg);
                         throw new Error("invalid type");
                     }
                 });
                 return [4 /*yield*/, anchor.web3.PublicKey.findProgramAddress(buffer, program.programId)];
             case 1:
                 account = (_a.sent())[0];
-                console.log("findAddress ".concat(args[0], " ").concat(account.toString()));
                 return [2 /*return*/, account];
         }
     });
