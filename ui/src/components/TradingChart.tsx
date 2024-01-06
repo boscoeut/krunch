@@ -55,7 +55,6 @@ export default function TradingChart({ symbol }: { symbol: string }) {
         if (market !== selectedMarket) {
             const tvSymbol = symbolMap[market.name] as string || "SOLUSD"            
             container.current.innerHTML = ''
-            console.log('changeMarket', tvSymbol, market.name)
             refreshChart(tvSymbol)
             setSelectedMarket(market)
         }
@@ -107,7 +106,7 @@ export default function TradingChart({ symbol }: { symbol: string }) {
                     </tbody>
                 </Table></Box>            
                 {/* Chart */}
-                <Box flex={1} height={450}>
+                <Box flex={1} height={500}>
                     <ErrorBoundary fallback={<div>Something went wrong</div>}>
                         <div
                             ref={container}

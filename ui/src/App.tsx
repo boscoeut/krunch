@@ -64,7 +64,7 @@ export default function App() {
                     sx={{
                         px: {
                             xs: 2,
-                            md: 6,
+                            md: 2,
                         },
                         pt: {
                             xs: 'calc(12px + var(--Header-height))',
@@ -74,7 +74,7 @@ export default function App() {
                         pb: {
                             xs: 2,
                             sm: 2,
-                            md: 3,
+                            md: 2,
                         },
                         flex: 1,
                         display: 'flex',

@@ -21,10 +21,10 @@ export default function UserPositions() {
                 <SubStat numValue={userAccount.rebates || 0} title="Rebates Earned" value={formatCurrency(userAccount.rebates / AMOUNT_DECIMALS)} />
                 <SubStat numValue={userUnrealizedPnl} title="Trading ROI" value={formatPercent(userUnrealizedPnl / (Math.abs(userAccount.basis) / AMOUNT_DECIMALS))} />
             </Stack>
-            <Box margin={1}>
+            <Box>
                 <TradingChart symbol={'BTC/USD'} />
             </Box>
-            <Box margin={1}>
+            <Box marginTop={1}>
                 <Positions positions={positions} />
             </Box>
         </Box>
