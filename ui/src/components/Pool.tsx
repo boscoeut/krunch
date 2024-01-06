@@ -8,7 +8,13 @@ export default function Pool() {
     const markets = useKrunchStore(state => state.markets)
     
     return (
-        <Box>
+        <Box sx={{
+            minHeight: 0,
+            flexGrow: 1,
+            overflow: 'hidden auto',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
             <PoolDetails />
             <PoolPositions positions={markets} />
             <ExchangeBalances />

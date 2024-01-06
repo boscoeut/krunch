@@ -53,22 +53,22 @@ export default function Sidebar() {
         name: 'Trade',
         icon: <QueryStatsRounded />,
         onclick: () => navigate('/positions')
-    },{
+    }, {
         path: '/welcome',
         name: 'Welcome',
         icon: <HomeRoundedIcon />,
         onclick: () => navigate('/welcome')
-    },{
+    }, {
         path: '/home',
         name: 'Account',
         icon: <DashboardRoundedIcon />,
         onclick: () => navigate('/home')
-    },{
+    }, {
         path: '/pool',
         name: 'Pool',
         icon: <WavesRoundedIcon />,
         onclick: () => navigate('/pool')
-    },{
+    }, {
         path: '/markets',
         name: 'Markets',
         icon: <CandlestickChartRoundedIcon />,
@@ -80,7 +80,7 @@ export default function Sidebar() {
         name: 'Contracts',
         icon: <GavelIcon />,
         onclick: () => navigate('/contracts')
-    },{
+    }, {
         path: '/documentation',
         name: 'Documentation',
         icon: <ArticleRoundedIcon />,
@@ -90,7 +90,7 @@ export default function Sidebar() {
         bottomPages.push({
             path: '/new-path',
             name: mode === 'dark' ? 'Light Mode' : 'Dark Mode',
-            icon: mode === 'dark' ?  <LightModeIcon />: <DarkModeRoundedIcon /> ,
+            icon: mode === 'dark' ? <LightModeIcon /> : <DarkModeRoundedIcon />,
             onclick: () => {
                 if (mode === 'light') {
                     setMode('dark');
@@ -101,62 +101,26 @@ export default function Sidebar() {
         });
     }
     return (
-        <Sheet
-            className="Sidebar"
-            sx={{
-                position: {
-                    xs: 'fixed',
-                    md: 'sticky',
-                },
-                transform: {
-                    xs: 'translateX(calc(100% * (var(--SideNavigation-slideIn, 0) - 1)))',
-                    md: 'none',
-                },
-                transition: 'transform 0.4s, width 0.4s',
-                zIndex: 1000,
-                height: '100dvh',
-                width: 'var(--Sidebar-width)',
-                top: 0,
-                p: 2,
-                flexShrink: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-                borderRight: '1px solid',
-                borderColor: 'divider',
-            }}
-        >
-            <GlobalStyles
+        <Sheet sx={{
+            width: 'var(--Sidebar-width)',
+            top: 0,
+            p: 2,
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            borderRight: '1px solid',
+            borderColor: 'divider',
+        }}>
+             <GlobalStyles
                 styles={(theme) => ({
                     ':root': {
                         '--Sidebar-width': '220px',
-                        [theme.breakpoints.up('lg')]: {
-                            '--Sidebar-width': '240px',
-                        },
                     },
                 })}
             />
-            <Box
-                className="Sidebar-overlay"
-                sx={{
-                    position: 'fixed',
-                    zIndex: 1250,
-                    top: 0,
-                    left: 0,
-                    width: '100vw',
-                    height: '100vh',
-                    opacity: 'var(--SideNavigation-slideIn)',
-                    backgroundColor: 'var(--joy-palette-background-backdrop)',
-                    transition: 'opacity 0.4s',
-                    transform: {
-                        xs: 'translateX(calc(100% * (var(--SideNavigation-slideIn, 0) - 1) + var(--SideNavigation-slideIn, 0) * var(--Sidebar-width, 0px)))',
-                        lg: 'translateX(-100%)',
-                    },
-                }}
-                onClick={() => closeSidebar()}
-            />
-            <Box onClick={()=>navigate('/home')} sx={{ cursor:'pointer', display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Logo/>
+            <Box onClick={() => navigate('/home')} sx={{ cursor: 'pointer', display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Logo />
             </Box>
 
             <Box
@@ -179,15 +143,15 @@ export default function Sidebar() {
                         '--ListItem-radius': (theme) => theme.vars.radius.sm,
                     }}
                 >
-                    {pages.map((page) => ( <ListItem key={page.name}>
-                        <ListItemButton selected={location.pathname.startsWith(page.path)} 
+                    {pages.map((page) => (<ListItem key={page.name}>
+                        <ListItemButton selected={location.pathname.startsWith(page.path)}
                             onClick={page.onclick}>
                             {page.icon}
                             <ListItemContent>
                                 <Typography level="title-sm">{page.name}</Typography>
                             </ListItemContent>
                         </ListItemButton>
-                    </ListItem> ))}
+                    </ListItem>))}
                 </List>
 
                 <List
@@ -201,16 +165,16 @@ export default function Sidebar() {
                     }}
                 >
 
-                 {bottomPages.map((page) => ( <ListItem key={page.name}>
-                        <ListItemButton selected={location.pathname.startsWith(page.path)} 
+                    {bottomPages.map((page) => (<ListItem key={page.name}>
+                        <ListItemButton selected={location.pathname.startsWith(page.path)}
                             onClick={page.onclick}>
                             {page.icon}
                             <ListItemContent>
                                 <Typography level="title-sm">{page.name}</Typography>
                             </ListItemContent>
                         </ListItemButton>
-                    </ListItem> ))}
-                  
+                    </ListItem>))}
+
                 </List>
             </Box>
             <Divider />
@@ -218,13 +182,13 @@ export default function Sidebar() {
                 <Box sx={{ minWidth: 0, flex: 1 }}>
                     {wallet.connected &&
                         <>
-                        <Typography sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} level="title-sm">Account: {wallet.publicKey?.toString()}</Typography>
-                        <Typography display={provider.connection?.rpcEndpoint?'inline':'none'} sx={{ display:'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} level="body-xs">RPC: {provider.connection?.rpcEndpoint}</Typography>
+                            <Typography sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} level="title-sm">Account: {wallet.publicKey?.toString()}</Typography>
+                            <Typography display={provider.connection?.rpcEndpoint ? 'inline' : 'none'} sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} level="body-xs">RPC: {provider.connection?.rpcEndpoint}</Typography>
                         </>
                     }
                     {!wallet.connected &&
                         <>
-                        <Typography onClick={toggleConnect} level="body-xs">Connect to Wallet</Typography>
+                            <Typography onClick={toggleConnect} level="body-xs">Connect to Wallet</Typography>
                         </>
                     }
                 </Box>
@@ -237,7 +201,7 @@ export default function Sidebar() {
                             <LoginRoundedIcon />
                         }
                     </IconButton>
-                    
+
                 </Stack>
             </Box>
         </Sheet>

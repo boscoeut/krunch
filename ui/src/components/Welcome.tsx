@@ -3,7 +3,13 @@ import WelcomeCards from './WelcomeCards';
 export default function Welcome() {
 
     return (
-        <Box>
+        <Box sx={{
+            minHeight: 0,
+            flexGrow: 1,
+            overflow: 'hidden auto',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
             <WelcomeCards />
         </Box>
     );

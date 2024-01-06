@@ -1,5 +1,6 @@
 import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRounded';
 import Box from '@mui/joy/Box';
+import Sheet from '@mui/joy/Sheet';
 import Button from '@mui/joy/Button';
 import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
 import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
@@ -83,21 +84,25 @@ export default function Toolbar() {
     }, [wallet.connected]);
 
     return (
-        <>
+        <Sheet variant="outlined" sx={{
+            borderLeft: 'none',
+            borderRight: 'none'
+        }} >
             <Box gap={1} flex={1} display={'flex'}>
                 {!wallet.connected && <Button
-                    color="success"
                     startDecorator={<LinkRoundedIcon />}
                     size="sm"
+                    sx={{padding:1,paddingLeft:2,paddingRight:2}}
+                    variant='plain'
                     onClick={() => toggleConnect()}
                 >
                     Connect
                 </Button>}
-                {wallet.connected && <ButtonGroup color="success" variant='solid'>
+                {wallet.connected && <ButtonGroup  variant='plain'>
                     <Button
-                        color="success"
+                        sx={{padding:1,paddingLeft:2,paddingRight:2}}
                         startDecorator={<EmojiEventsRounded />}
-                        size="sm"
+                        size="md"
                         onClick={() => setClaimDialogOpen(true)}
                     >
                         {`Claim Rewards: ${formatCurrency(userRewardsAvailable / AMOUNT_DECIMALS)}`}
@@ -106,19 +111,21 @@ export default function Toolbar() {
                     <Dropdown>
                         <MenuButton
                             size="sm"
-                            variant='solid'
+                            variant='plain'
+                            sx={{padding:1,paddingLeft:2,paddingRight:2}}   
                             startDecorator={<CurrencyExchangeRounded />}
                             endDecorator={<ArrowDropDown />}
-                            color="success">Wallet: {formatCurrency(userAccountValue / AMOUNT_DECIMALS)}</MenuButton>
+                        >Wallet: {formatCurrency(userAccountValue / AMOUNT_DECIMALS)}</MenuButton>
                         <Menu>
                             <MenuItem onClick={() => setDepositDialogOpen(true)}><ListItemDecorator><AddCircleOutlineRoundedIcon /></ListItemDecorator>Deposit</MenuItem>
                             <MenuItem onClick={() => setWithdrawDialogOpen(true)}><ListItemDecorator><RemoveCircleOutlineRoundedIcon /></ListItemDecorator>Withdraw</MenuItem>
                         </Menu>
                     </Dropdown>
                     <Button
-                        color="success"
                         startDecorator={<QueryStatsRounded />}
                         size="sm"
+                        sx={{padding:1,paddingLeft:2,paddingRight:2}}
+                        variant='plain'
                         onClick={() => setTradeDialogOpen(true)}
                     >
                         Trade
@@ -129,16 +136,17 @@ export default function Toolbar() {
                 {isAdmin && wallet.connected && <Dropdown>
                     <MenuButton
                         size="sm"
-                        variant='solid'
+                        variant='plain'
+                        sx={{padding:1,paddingLeft:2,paddingRight:2}}
                         startDecorator={<SettingsRoundedIcon />}
                         endDecorator={<ArrowDropDown />}
-                        color="danger">Settings</MenuButton>
+                    >Settings</MenuButton>
                     <Menu>
                         <MenuItem onClick={() => initApp()}><ListItemDecorator><SettingsRoundedIcon /></ListItemDecorator>Setup</MenuItem>
                         <MenuItem onClick={() => setUpdateExchangeDialogOpen(true)}><ListItemDecorator><UpdateRounded /></ListItemDecorator>Update Exchange</MenuItem>
                         <MenuItem onClick={() => setMarketDialogOpen(true)}><ListItemDecorator><CandlestickChartRoundedIcon /></ListItemDecorator>Update Market</MenuItem>
-                        <MenuItem onClick={() => refresh()}><ListItemDecorator><RefreshRoundedIcon /></ListItemDecorator>Refresh (Auto = {autoRefresh ? 'On':'Off'})</MenuItem>
-                        <MenuItem onClick={() => toggleAutoRefresh()}><ListItemDecorator><AutoModeRoundedIcon /></ListItemDecorator>Toggle Refresh (Auto = {autoRefresh ? 'On':'Off'})</MenuItem>
+                        <MenuItem onClick={() => refresh()}><ListItemDecorator><RefreshRoundedIcon /></ListItemDecorator>Refresh (Auto = {autoRefresh ? 'On' : 'Off'})</MenuItem>
+                        <MenuItem onClick={() => toggleAutoRefresh()}><ListItemDecorator><AutoModeRoundedIcon /></ListItemDecorator>Toggle Refresh (Auto = {autoRefresh ? 'On' : 'Off'})</MenuItem>
                     </Menu>
                 </Dropdown>}
             </Box>
@@ -148,6 +156,6 @@ export default function Toolbar() {
             <ClaimDialog open={claimDialogOpen} setOpen={setClaimDialogOpen} />
             <WithdrawDialog open={withdrawDialogOpen} setOpen={setWithdrawDialogOpen} />
             <UpdateExchangeDialog open={updateExchangeDialogOpen} setOpen={setUpdateExchangeDialogOpen} />
-        </>
+        </Sheet>
     );
 }

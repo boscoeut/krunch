@@ -14,7 +14,13 @@ export default function UserPositions() {
     const positions = useKrunchStore(state => state.positions)
 
     return (
-        <Box>
+        <Box sx={{
+            minHeight: 0,
+            flexGrow: 1,
+            overflow: 'hidden auto',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
             <Stack direction={"row"} >
                 <SubStat numValue={userUnrealizedPnl} title="Unrealized Pnl" value={formatCurrency(userUnrealizedPnl)} />
                 <SubStat numValue={userAccount.rewards || 0} title="Rewards Earned" value={formatCurrency(userAccount.rewards / AMOUNT_DECIMALS)} />

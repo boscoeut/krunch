@@ -4,17 +4,17 @@ import Link from '@mui/joy/Link';
 import KSheet from './KSheet';
 import AppTitle from './AppTitle';
 import moment from 'moment';
-import {useKrunchStore} from '../hooks/useKrunchStore';
-import {SLOTS_PER_DAY} from 'utils/dist/constants';
+import { useKrunchStore } from '../hooks/useKrunchStore';
+import { SLOTS_PER_DAY } from 'utils/dist/constants';
 
 export default function Documentation() {
-    const { appInfo, exchange, exchangeBalances} = useKrunchStore((state) => ({
+    const { appInfo, exchange, exchangeBalances } = useKrunchStore((state) => ({
         appInfo: state.appInfo,
-        exchange:state.exchange,
+        exchange: state.exchange,
         exchangeBalances: state.exchangeBalances,
     }))
 
-    const rewardFrequency = moment.duration( exchange.rewardFrequency?.toNumber() /SLOTS_PER_DAY, 'days').humanize()
+    const rewardFrequency = moment.duration(exchange.rewardFrequency?.toNumber() / SLOTS_PER_DAY, 'days').humanize()
 
     const leverage = appInfo.leverage;
 
@@ -78,9 +78,9 @@ export default function Documentation() {
         "Leveraged Trading": [<>Each account can open positions up to <AppTitle variant={"message"} message={`${leverage}x`} />  leverage.</>],
         "Account Funding": [<><AppTitle variant={"doc"} /> only supports deposits and withdrawals made using:
             <ul>
-            {exchangeBalances?.map((balance: any, i: any) => {
-                return <li>{balance.market.replace("/USD",'')}</li>
-            })}
+                {exchangeBalances?.map((balance: any, i: any) => {
+                    return <li>{balance.market.replace("/USD", '')}</li>
+                })}
             </ul>
         </>],
         "Price Feeds": [<><AppTitle variant={"doc"} /> relies on <Link href="https://docs.chain.link/data-feeds/price-feeds" target="_blank">ChainLink Oracles</Link> for all price feeds.</>],
@@ -95,33 +95,34 @@ export default function Documentation() {
         </>]
     }
     return (
-        <Box
-            sx={{
-                flex: 1,
-                width: '100%',
-                p: 0,
-            }}
-        >
-            <KSheet>
-                <Typography level="title-lg">Table of Contents</Typography>
-                <ol>
-                    {Object.keys(docs).map((key: any) => {
-                        return <li key={key}><Link href={`#${key}`}>{key}</Link></li>
-                    })}
-                </ol>
+        <Box sx={{
+            minHeight: 0,
+            flexGrow: 1,
+            overflow: 'hidden auto',
+            display: 'flex',
+            flexDirection: 'column',
+            padding:2
+        }}>
 
-                {Object.entries(docs).map(([key, value], i) => {
-                    return <Box key={i}>
-                        <Typography id={key} sx={{ mb: 1, mt: 1 }} level="title-md">{i + 1}. {key}</Typography>
-                        <Box key={i} sx={{ marginLeft: 2 }}>
-                            {value.map((v: any, i: any) => {
-                                return <div key={i}>{v}</div>
-                            })}
-                        </Box>
-                    </Box>
+            <Typography level="title-lg">Table of Contents</Typography>
+            <ol>
+                {Object.keys(docs).map((key: any) => {
+                    return <li key={key}><Link href={`#${key}`}>{key}</Link></li>
                 })}
+            </ol>
 
-            </KSheet>
+            {Object.entries(docs).map(([key, value], i) => {
+                return <Box key={i}>
+                    <Typography id={key} sx={{ mb: 1, mt: 1 }} level="title-md">{i + 1}. {key}</Typography>
+                    <Box key={i} sx={{ marginLeft: 2 }}>
+                        {value.map((v: any, i: any) => {
+                            return <div key={i}>{v}</div>
+                        })}
+                    </Box>
+                </Box>
+            })}
+
+
         </Box>
     )
 } 

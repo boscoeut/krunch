@@ -1,3 +1,4 @@
+import { Sheet } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import CssBaseline from '@mui/joy/CssBaseline';
 import { CssVarsProvider, extendTheme } from '@mui/joy/styles';
@@ -26,8 +27,8 @@ const theme = extendTheme({
                     // mainChannel: 'red', // Change this to the color you want for primary in dark mode
                 },
                 success: {
-                    mainChannel:colors.logoColor,
-                    500:colors.logoColor
+                    mainChannel: colors.logoColor,
+                    500: colors.logoColor
                     // mainChannel: '#440808', // Change this to the color you want for errors in dark mode
                     // 50:'#440808',
                     // 100:'#440808',
@@ -51,73 +52,33 @@ const theme = extendTheme({
 });
 
 export default function App() {
-    const location = useLocation();
     return (
         <CssVarsProvider defaultMode='dark' disableTransitionOnChange theme={theme}>
             <CssBaseline />
-            <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-                <Header />
+            <Box flexDirection={'row'} sx={{ display: 'flex', height: '100vh' }}>
                 <Sidebar />
-                <Box
-                    component="main"
-                    className="MainContent"
-                    sx={{
-                        px: {
-                            xs: 2,
-                            md: 2,
-                        },
-                        pt: {
-                            xs: 'calc(12px + var(--Header-height))',
-                            sm: 'calc(12px + var(--Header-height))',
-                            md: 3,
-                        },
-                        pb: {
-                            xs: 2,
-                            sm: 2,
-                            md: 2,
-                        },
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        minWidth: 0,
-                        height: '100dvh',
-                        gap: 1,
-                    }}
-                >
-                    {location.pathname !== '/welcome' && <Box
-                        sx={{
-                            display: 'flex',
-                            my: 1,
-                            gap: 1,
-                            flexDirection: { xs: 'column', sm: 'row' },
-                            alignItems: { xs: 'start', sm: 'center' },
-                            flexWrap: 'wrap',
-                            justifyContent: 'space-between',
-                        }}
-                        hidden={true}
-                    >
-                        {/* <PageHeader title={location.pathname} />*/}
-                        <Toolbar />
 
-                    </Box>}
-                    <Box sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 1,
-                        overflowY: 'auto',
-                    }}>
-                        <Routes >
-                            <Route path="/welcome" Component={Welcome} />
-                            <Route path="/home" Component={Account} />
-                            <Route path="/pool" Component={Pool} />
-                            <Route path="/documentation" Component={Documentation} />
-                            <Route path="/contracts" Component={Contracts} />
-                            <Route path="/positions" Component={UserPositions} />
-                            <Route path="/markets" Component={Markets} />
-                            <Route path="/" element={<Navigate replace to="/home" />} />
-                        </Routes>
-                    </Box>
-                </Box>
+                <Sheet sx={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                    border: 'none',
+                    borderLeft: '0px solid',
+                    borderColor: 'divider',
+                }}>
+                    <Toolbar />
+                    <Routes >
+                        <Route path="/welcome" Component={Welcome} />
+                        <Route path="/home" Component={Account} />
+                        <Route path="/pool" Component={Pool} />
+                        <Route path="/documentation" Component={Documentation} />
+                        <Route path="/contracts" Component={Contracts} />
+                        <Route path="/positions" Component={UserPositions} />
+                        <Route path="/markets" Component={Markets} />
+                        <Route path="/" element={<Navigate replace to="/home" />} />
+                    </Routes>
+                </Sheet>
             </Box>
         </CssVarsProvider>
     );

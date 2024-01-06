@@ -16,7 +16,13 @@ export default function Markets() {
     const [open, setOpen] = useState(false);
 
     return (
-        <Box>
+        <Box sx={{
+            minHeight: 0,
+            flexGrow: 1,
+            overflow: 'hidden auto',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
             <Table>
                 <thead>
                     <tr>
