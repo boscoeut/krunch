@@ -49,6 +49,11 @@ export default function Sidebar() {
     }
 
     const pages = [{
+        path: '/positions',
+        name: 'Trade',
+        icon: <QueryStatsRounded />,
+        onclick: () => navigate('/positions')
+    },{
         path: '/welcome',
         name: 'Welcome',
         icon: <HomeRoundedIcon />,
@@ -58,11 +63,6 @@ export default function Sidebar() {
         name: 'Account',
         icon: <DashboardRoundedIcon />,
         onclick: () => navigate('/home')
-    },{
-        path: '/positions',
-        name: 'Trade',
-        icon: <QueryStatsRounded />,
-        onclick: () => navigate('/positions')
     },{
         path: '/pool',
         name: 'Pool',
