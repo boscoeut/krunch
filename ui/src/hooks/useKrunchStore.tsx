@@ -453,15 +453,11 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     const poolAccountValue =
       Number(exchange.fees)//
-      + Number(exchange.amountWithdrawn)//
-      + Number(exchange.amountDeposited)//
       + Number(exchange.rebates)//
       + Number(exchange.rewards)//
       + Number(exchange.pnl)//
 
-    const poolDeposits = 
-      Math.max(exchange.amountDeposited.toNumber() +  exchange.amountWithdrawn.toNumber(),0)
-      + exchange.collateralValue.toNumber()
+    const poolDeposits = exchange.collateralValue.toNumber()
     const poolROI = (
       poolDeposits
       + Number(exchange.fees)//
@@ -473,8 +469,6 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     const exchangeTotal = (exchange.pnl.toNumber()
       + exchange.rebates.toNumber()
       + exchange.rewards.toNumber()
-      + exchange.amountWithdrawn.toNumber()
-      + exchange.amountDeposited.toNumber()
       + exchange.fees.toNumber()
       + exchange.collateralValue.toNumber())
       * exchange.leverage
@@ -613,8 +607,6 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
 
     // exchange total
     const exchangeTotal = (
-      + exchange.amountDeposited.toNumber()
-      + exchange.amountWithdrawn.toNumber()
       + exchange.collateralValue.toNumber())
       * exchange.leverage
       / LEVERAGE_DECIMALS

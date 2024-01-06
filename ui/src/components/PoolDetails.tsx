@@ -55,11 +55,7 @@ export default function PoolDetails() {
                     <tr>
                         <td>+ Fees Earned</td>
                         <td>{formatCurrency(exchange.fees / AMOUNT_DECIMALS)}</td>
-                    </tr>
-                    <tr>
-                        <td>+ Insurance Fund Deposits</td>
-                        <td>{formatCurrency(exchange.amountDeposited / AMOUNT_DECIMALS)}</td>
-                    </tr>
+                    </tr>                  
                     <tr>
                         <td>- Rebates Paid</td>
                         <td>{formatCurrency(exchange.rebates / AMOUNT_DECIMALS)}</td>
@@ -68,10 +64,7 @@ export default function PoolDetails() {
                         <td>- Rewards Paid</td>
                         <td>{formatCurrency(exchange.rewards / AMOUNT_DECIMALS)}</td>
                     </tr>
-                    <tr>
-                        <td>- Insurance Fund  Withdrawls</td>
-                        <td>{formatCurrency(exchange.amountWithdrawn / AMOUNT_DECIMALS)}</td>
-                    </tr>
+            
                 </tbody>
             </Table>
 

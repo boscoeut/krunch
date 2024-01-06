@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EXCHANGE_POSITIONS = exports.MARKETS = exports.MARKET_TYPES = exports.REWARD_RATE = exports.MAKER_FEE = exports.TAKER_FEE = exports.EXCHANGE_LEVERAGE = exports.MARKET_LEVERAGE = exports.LEVERAGE_DECIMALS = exports.AMOUNT_DECIMALS = exports.EXCHANGE_MARKET_WEIGHT = exports.MARKET_WEIGHT_DECIMALS = exports.FEE_DECIMALS = exports.PRICE_DECIMALS = exports.REWARD_FREQUENCY = exports.MARKET_WEIGHT = exports.CHAINLINK_PROGRAM = exports.BTC_USD_FEED = exports.ETH_USD_FEED = exports.USDT_USD_FEED = exports.USDC_USD_FEED = exports.SOL_USD_FEED = exports.ETH_MINT = exports.BTC_MINT = exports.USDT_MINT = exports.SOL_MINT = exports.USDC_MINT = exports.ASSOCIATED_TOKEN_PROGRAM_ID = exports.TOKEN_PROGRAM_ID = exports.ADMIN_ADDRESS = exports.NETWORK_URL = exports.NETWORK_EXPLORER = exports.SLOTS_PER_DAY = exports.NETWORK = exports.DEVNET = exports.LOCALNET = exports.AUTO_REFRESH_INTERVAL = void 0;
+exports.TV_MARKETS = exports.EXCHANGE_POSITIONS = exports.MARKETS = exports.MARKET_TYPES = exports.REWARD_RATE = exports.MAKER_FEE = exports.TAKER_FEE = exports.EXCHANGE_LEVERAGE = exports.MARKET_LEVERAGE = exports.LEVERAGE_DECIMALS = exports.AMOUNT_DECIMALS = exports.EXCHANGE_MARKET_WEIGHT = exports.MARKET_WEIGHT_DECIMALS = exports.FEE_DECIMALS = exports.PRICE_DECIMALS = exports.REWARD_FREQUENCY = exports.MARKET_WEIGHT = exports.CHAINLINK_PROGRAM = exports.BTC_USD_FEED = exports.ETH_USD_FEED = exports.USDT_USD_FEED = exports.USDC_USD_FEED = exports.SOL_USD_FEED = exports.ETH_MINT = exports.BTC_MINT = exports.USDT_MINT = exports.SOL_MINT = exports.USDC_MINT = exports.ASSOCIATED_TOKEN_PROGRAM_ID = exports.TOKEN_PROGRAM_ID = exports.ADMIN_ADDRESS = exports.NETWORK_URL = exports.NETWORK_EXPLORER = exports.SLOTS_PER_DAY = exports.NETWORK = exports.DEVNET = exports.LOCALNET = exports.AUTO_REFRESH_INTERVAL = void 0;
 var web3_js_1 = require("@solana/web3.js");
 exports.AUTO_REFRESH_INTERVAL = 1000 * 2; // 2 seconds
 exports.LOCALNET = 'Localnet';
@@ -122,3 +122,8 @@ exports.EXCHANGE_POSITIONS = [{
         feedAddress: exports.ETH_USD_FEED,
         market: "ETH/USD",
     }];
+exports.TV_MARKETS = {
+    "SOL/USD": "SOLUSD",
+    "ETH/USD": "ETHUSD",
+    "BTC/USD": "BTCUSD",
+};

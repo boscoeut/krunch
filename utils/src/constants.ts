@@ -128,3 +128,11 @@ export const EXCHANGE_POSITIONS = [{
     market: "ETH/USD",
 }]
 
+
+
+export const TV_MARKETS = {
+    "SOL/USD":"SOLUSD",
+    "ETH/USD":"ETHUSD",
+    "BTC/USD":"BTCUSD",
+    
+}

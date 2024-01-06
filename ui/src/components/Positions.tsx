@@ -39,8 +39,7 @@ export default function Positions({ positions }: { positions: Array<any> }) {
                             <td>{formatCurrency(entryPrice)}</td>
                             <td><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                         </tr>
-                    })}
-                    
+                    })}                    
                 </tbody>
             </Table>
         </Box>

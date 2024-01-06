@@ -25,7 +25,6 @@ import useProgram from '../hooks/useProgram';
 import { formatCurrency } from '../utils';
 import ClaimDialog from './ClaimDialog';
 import DepositDialog from './DepositDialog';
-import ExchangeDialog from './ExchangeDialog';
 import MarketDialog from './MarketDialog';
 import TradeDialog from './TradeDialog';
 import UpdateExchangeDialog from './UpdateExchangeDialog';
@@ -44,7 +43,6 @@ export default function Toolbar() {
     const [claimDialogOpen, setClaimDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
     const [depositDialogOpen, setDepositDialogOpen] = useState(false);
-    const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
     const refreshAll = useKrunchStore((state: any) => state.refreshAll)
     const toggleAutoRefresh = useKrunchStore((state: any) => state.toggleAutoRefresh)
     const autoRefresh = useKrunchStore((state: any) => state.autoRefresh)
@@ -137,7 +135,6 @@ export default function Toolbar() {
                         color="danger">Settings</MenuButton>
                     <Menu>
                         <MenuItem onClick={() => initApp()}><ListItemDecorator><SettingsRoundedIcon /></ListItemDecorator>Setup</MenuItem>
-                        <MenuItem onClick={() => setExchangeDialogOpen(true)}><ListItemDecorator><CurrencyExchangeRounded /></ListItemDecorator>Exchange Deposit/Withdraw</MenuItem>
                         <MenuItem onClick={() => setUpdateExchangeDialogOpen(true)}><ListItemDecorator><UpdateRounded /></ListItemDecorator>Update Exchange</MenuItem>
                         <MenuItem onClick={() => setMarketDialogOpen(true)}><ListItemDecorator><CandlestickChartRoundedIcon /></ListItemDecorator>Update Market</MenuItem>
                         <MenuItem onClick={() => refresh()}><ListItemDecorator><RefreshRoundedIcon /></ListItemDecorator>Refresh (Auto = {autoRefresh ? 'On':'Off'})</MenuItem>
@@ -148,7 +145,6 @@ export default function Toolbar() {
             <TradeDialog open={tradeDialogOpen} setOpen={setTradeDialogOpen} />
             <MarketDialog open={marketDialogOpen} setOpen={setMarketDialogOpen} />
             <DepositDialog open={depositDialogOpen} setOpen={setDepositDialogOpen} />
-            <ExchangeDialog open={exchangeDialogOpen} setOpen={setExchangeDialogOpen} />
             <ClaimDialog open={claimDialogOpen} setOpen={setClaimDialogOpen} />
             <WithdrawDialog open={withdrawDialogOpen} setOpen={setWithdrawDialogOpen} />
             <UpdateExchangeDialog open={updateExchangeDialogOpen} setOpen={setUpdateExchangeDialogOpen} />

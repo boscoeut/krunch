@@ -23,8 +23,6 @@ pub struct InitializeExchange<'info> {
                 + 8 // collateral_value:i64
                 + 4 // leverage:u32
                 + 8 // rebates:i64
-                + 8 // amount_withdrawn:i64
-                + 8 // amount_deposited:i64
                 + 8 // rewards:i64
                 + 8 // last_rewards_claim:i64
                 + 8 // reward_frequency:u64
@@ -420,8 +418,6 @@ pub struct Exchange {
     pub collateral_value: i64,
     pub leverage: u32,
     pub rebates: i64,
-    pub amount_withdrawn: i64,
-    pub amount_deposited: i64,
     pub rewards: i64,
     pub last_rewards_claim: i64,
     pub reward_frequency: u64,

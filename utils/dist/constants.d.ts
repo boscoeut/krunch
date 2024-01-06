@@ -49,3 +49,8 @@ export declare const EXCHANGE_POSITIONS: {
     feedAddress: PublicKey;
     market: string;
 }[];
+export declare const TV_MARKETS: {
+    "SOL/USD": string;
+    "ETH/USD": string;
+    "BTC/USD": string;
+};

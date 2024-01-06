@@ -3,6 +3,7 @@ import Stack from '@mui/joy/Stack';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, formatPercent } from '../utils';
+import TradingChart from './TradingChart';
 import Positions from './Positions';
 import Stat from './Stat';
 
@@ -19,6 +20,8 @@ export default function UserPositions() {
                 <Stat numValue={userAccount.rebates || 0} title="Rebates Earned" value={formatCurrency(userAccount.rebates / AMOUNT_DECIMALS)} />
                 <Stat numValue={userUnrealizedPnl} title="Trading ROI" value={formatPercent(userUnrealizedPnl / (Math.abs(userAccount.basis) / AMOUNT_DECIMALS))} />
             </Stack>
+            <TradingChart symbol={'BTC/USD'} />
+            <br/>
             <Positions positions={positions} />
         </Box>
     );
