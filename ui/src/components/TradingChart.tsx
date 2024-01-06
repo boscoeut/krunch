@@ -17,10 +17,9 @@ export default function TradingChart({ symbol }: { symbol: string }) {
     const container: any = useRef();
     let symbolMap: any = TV_MARKETS
 
-    let tvSymbol = symbolMap[selectedMarket.name] as string || "SOLUSD"
     let entryPrice = 0
     if (selectedMarket) {
-        tvSymbol = symbolMap[selectedMarket.name] as string || "SOLUSD"
+    
         entryPrice = Math.abs(selectedMarket.tokenAmount === 0 ? 0 : (selectedMarket.basis || 0) / (selectedMarket.tokenAmount || 0))
     }
 
@@ -51,12 +50,14 @@ export default function TradingChart({ symbol }: { symbol: string }) {
             container.current.appendChild(script);
         }
     }
-    const changeMarket = (market: any) => {
-        console.log('changeMarket', market)
+
+    const changeMarket = (market: any) => {       
         if (market !== selectedMarket) {
-            setSelectedMarket(market)
+            const tvSymbol = symbolMap[market.name] as string || "SOLUSD"            
             container.current.innerHTML = ''
+            console.log('changeMarket', tvSymbol, market.name)
             refreshChart(tvSymbol)
+            setSelectedMarket(market)
         }
     }
 
@@ -65,7 +66,7 @@ export default function TradingChart({ symbol }: { symbol: string }) {
         // refreshChart(tvSymbol)
     }, []);
 
-    if (!selectedMarket || !tvSymbol) {
+    if (!selectedMarket) {
         return <></>
     }
     return (
