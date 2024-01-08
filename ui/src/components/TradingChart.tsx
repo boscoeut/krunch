@@ -1,7 +1,7 @@
 import DoubleArrowRoundedIcon from '@mui/icons-material/DoubleArrowRounded';
 import { Typography } from '@mui/joy';
 import Box from '@mui/joy/Box';
-import Sheet from '@mui/joy/Sheet';
+import Button from '@mui/joy/Button';
 import Table from '@mui/joy/Table';
 import { useEffect, useRef, useState } from 'react';
 import { ErrorBoundary } from "react-error-boundary";
@@ -15,6 +15,7 @@ import SectionHeader from './SectionHeader';
 export default function TradingChart() {
     const markets = useKrunchStore(state => state.markets)
     const appInfo = useKrunchStore(state => state.appInfo)
+    const setTradeDialogOpen = useKrunchStore(state => state.setTradeDialogOpen)
     const [selectedMarket, setSelectedMarket] = useState(markets[0]);
     const container: any = useRef();
     const [mounted, setMounted] = useState(false);
@@ -97,7 +98,7 @@ export default function TradingChart() {
                 <Table>
                     <thead>
                         <tr >
-                            <th><Typography level='h4' sx={{ textTransform: 'capitalize', fontFamily: 'BrunoAceSC' }}>{marketDetails.name}</Typography></th>
+                            <th><Button onClick={()=>setTradeDialogOpen(true)} variant="plain"><Typography level='h4' sx={{ textTransform: 'capitalize', fontFamily: 'BrunoAceSC' }}>{marketDetails.name}</Typography></Button></th>
                             <th>Price: <PriceLabel value={marketDetails.price}>{formatCurrency(marketDetails.price || 0)}</PriceLabel></th>
                             <th>Amount: <br />{renderItem(marketDetails.tokenAmount || 0, AMOUNT_DECIMALS, 4)}</th>
                             <th>Basis: <br />{renderItem(marketDetails.basis || 0)}</th>
@@ -136,13 +137,7 @@ export default function TradingChart() {
                                     </td>
                                     <td style={{ width: '125px' }}><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                                 </tr>
-                            })}
-                            <tr><td>1</td><td>2</td></tr>
-                            <tr><td>1</td><td>2</td></tr>
-                            <tr><td>1</td><td>2</td></tr>
-                            <tr><td>1</td><td>2</td></tr>
-                            <tr><td>1</td><td>2</td></tr>
-                            <tr><td>1</td><td>2</td></tr>
+                            })}                         
                         </tbody>
                     </Table>
                 </Box>

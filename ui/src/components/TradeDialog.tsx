@@ -24,7 +24,7 @@ import PriceLabel from './PriceLabel';
 
 export interface TradeDialogProps {
   open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>; // Definition of setOpen prop    
+  setOpen: (open:boolean)=>void; // Definition of setOpen prop    
 }
 
 export default function TradeDialog({ open, setOpen }: TradeDialogProps) {

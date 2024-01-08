@@ -1,14 +1,11 @@
 import Box from '@mui/joy/Box';
 import Stack from '@mui/joy/Stack';
-import Sheet from '@mui/joy/Sheet';
-import Table from '@mui/joy/Table';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, formatPercent } from '../utils';
-import TradingChart from './TradingChart';
 import Positions from './Positions';
-import Stat from './Stat';
 import SubStat from './SubStat';
+import TradingChart from './TradingChart';
 
 export default function UserPositions() {
     const userAccount = useKrunchStore(state => state.userAccount)

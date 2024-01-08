@@ -38,7 +38,7 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 export default function Toolbar() {
     const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
     const wallet = useWallet();
-    const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
+
     const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
     const [updateExchangeDialogOpen, setUpdateExchangeDialogOpen] = useState(false);
     const [claimDialogOpen, setClaimDialogOpen] = useState(false);
@@ -52,6 +52,8 @@ export default function Toolbar() {
     const walletState = useWalletModal();
     const userAccountValue = useKrunchStore((state: any) => state.userAccountValue)
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
+    const tradeDialogOpen = useKrunchStore(state => state.tradeDialogOpen)
+    const setTradeDialogOpen = useKrunchStore(state => state.setTradeDialogOpen)
     const refresh = async () => {
         if (wallet.connected) {
             const program = await getProgram()

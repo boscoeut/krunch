@@ -46,6 +46,8 @@ export const defaultAppInfo: AppInfo = {
 }
 
 interface KrunchState {
+  tradeDialogOpen:boolean,
+  setTradeDialogOpen: (open:boolean) => void,
   poolROI: number,
   exchangeBalanceAvailable: number,
   autoRefresh: boolean,
@@ -98,6 +100,10 @@ interface KrunchState {
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  tradeDialogOpen:false,
+  setTradeDialogOpen: (open:boolean) => {
+    set({ tradeDialogOpen: open })
+  },
   poolROI: 0,
   toggleAutoRefresh: () => {
     set({ autoRefresh: !get().autoRefresh })
