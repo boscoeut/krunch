@@ -5,6 +5,7 @@ import '../App.css';
 import { renderItem, formatCurrency } from '../utils';
 import SectionHeader from './SectionHeader';
 import PriceLabel from './PriceLabel';
+import StaticPriceLabel from './StaticPriceLabel';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 
 export default function Positions({ positions }: { positions: Array<any> }) {
@@ -35,7 +36,7 @@ export default function Positions({ positions }: { positions: Array<any> }) {
                             <td>{renderItem(row.tokenAmount,AMOUNT_DECIMALS,4)}</td>
                             <td>{renderItem(row.basis)}</td>
                             <td>{formatCurrency(row.currValue)}</td>
-                            <td>{formatCurrency(row.unrealizedPnl)}</td>
+                            <td><StaticPriceLabel value={row.unrealizedPnl}>{formatCurrency(row.unrealizedPnl || 0)}</StaticPriceLabel></td>
                             <td>{formatCurrency(entryPrice)}</td>
                             <td><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                         </tr>

@@ -57,6 +57,7 @@ export default function TradingChart({ symbol }: { symbol: string }) {
               "backgroundColor": "#000000",
               "allow_symbol_change": false,
               "hide_top_toolbar": false,
+              
               "withdateranges": true,
               "hide_legend": true,
               "save_image": false
