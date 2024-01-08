@@ -119,37 +119,46 @@ export default function TradingChart() {
                 </Table>
             </Box>
             <Box flex={1} flexGrow={1} overflow={'hidden'} display={'flex'}>
-                {/* MarketList */}
+                {/* MarketList */}                
                 <Box sx={{
                     background: appInfo.toolbarBackground, borderWidth: 'thin',
                     borderLeftWidth: 0,
                     width:240,
                     borderRightWidth: 0,
+                    borderBottomWidth:'thin',
                     borderStyle: 'solid',
                     borderColor: appInfo.toolbarBorderColor,
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'auto'
                 }}>
-                    <Table stickyHeader
-                       >
-                        <thead style={{ background: appInfo.toolbarBackground }}>
-                            <tr style={{ background: appInfo.toolbarBackground }}>
-                                <th colSpan={2} style={{ background: appInfo.toolbarBackground }}>
-                                    <Input 
+                    <Input 
                                         onChange={(e:any)=>{setFilter(e.target.value)}} 
                                         value={filter} 
-                                        sx={{margin:0, opacity:0.75  }} 
+                                        
+                                        sx={{m:0, opacity:0.75,pt:1,pb:1.1,
+                                            borderColor: appInfo.toolbarBorderColor,
+                                            borderBottomWidth: 'thin',
+                                            borderBottomStyle: 'solid',
+                                            borderRadius:0,
+                                             background: appInfo.toolbarBackground,  }} 
                                         endDecorator={filter && <HighlightOffRoundedIcon onClick={()=>{setFilter('')}}/>}
                                         startDecorator={<FilterListRoundedIcon />} size='sm' variant='plain' placeholder='Available Markets' />
+                    <Table stickyHeader size='sm'
+                       >
+                        <thead >
+                            <tr>
+                                <th>
+                                    Market
                                 </th>
+                                <th>Price</th>
                             </tr>
                         </thead>
                         <tbody>
                             {marketsToList.map((row: any) => {
                                 return <tr key={row.marketIndex} style={{ cursor: 'pointer' }} >
                                     <td style={{ width: '100px' }} onClick={() => changeMarket(row)}>
-                                        <Typography startDecorator={row.name === marketDetails.name && <DoubleArrowRoundedIcon />}>{row.name}</Typography>
+                                        <Button size='sm' variant='plain'><Typography startDecorator={row.name === marketDetails.name && <DoubleArrowRoundedIcon />}>{row.name}</Typography></Button>
                                     </td>
                                     <td style={{ width: '125px' }}><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                                 </tr>
