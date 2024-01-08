@@ -44,8 +44,11 @@ pub mod krunch {
 
     pub fn create_user_account(ctx: Context<CreateUserAccount>) -> Result<()> {
         let user_account = &mut ctx.accounts.user_account;
+        let clock = Clock::get()?;
+        let current_unix_timestamp = clock.unix_timestamp;
         user_account.owner = ctx.accounts.owner.key.to_owned();
         user_account.collateral_value = 0;
+        user_account.last_rewards_claim = current_unix_timestamp;
         Ok(())
     }
 
@@ -296,6 +299,9 @@ pub mod krunch {
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         // get price
+        let clock = Clock::get()?;
+        let current_unix_timestamp = clock.unix_timestamp;
+
         let round = chainlink::latest_round_data(
             ctx.accounts.chainlink_program.to_account_info(),
             ctx.accounts.chainlink_feed.to_account_info(),
@@ -314,6 +320,7 @@ pub mod krunch {
         // update collateral value
         let user_account = &mut ctx.accounts.user_account;
         user_account.collateral_value += collateral_amount as i64;
+        user_account.last_rewards_claim = current_unix_timestamp;
 
         let exchange = &mut ctx.accounts.exchange;
         exchange.collateral_value += collateral_amount as i64;
@@ -341,6 +348,9 @@ pub mod krunch {
     }
 
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+        let clock = Clock::get()?;
+        let current_unix_timestamp = clock.unix_timestamp;
+
         // get price
         let round = chainlink::latest_round_data(
             ctx.accounts.chainlink_program.to_account_info(),
@@ -354,6 +364,7 @@ pub mod krunch {
         let user_account = &mut ctx.accounts.user_account;
         let exchange = &mut ctx.accounts.exchange;
         user_account.collateral_value -= amount as i64;
+        user_account.last_rewards_claim = current_unix_timestamp;
         exchange.collateral_value -= amount as i64;
 
         // validate enough funds are available

@@ -631,14 +631,6 @@
             "type": "i64"
           },
           {
-            "name": "amountWithdrawn",
-            "type": "i64"
-          },
-          {
-            "name": "amountDeposited",
-            "type": "i64"
-          },
-          {
             "name": "rewards",
             "type": "i64"
           },

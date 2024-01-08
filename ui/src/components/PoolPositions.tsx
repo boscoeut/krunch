@@ -6,6 +6,7 @@ import { renderItem, formatCurrency } from '../utils';
 import SectionHeader from './SectionHeader';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import PriceLabel from './PriceLabel';
+import StaticPriceLabel from './StaticPriceLabel';
 
 export default function PoolPositions({ positions }: { positions: Array<any> }) {
     const openPositions = positions.filter(p => p.tokenAmount?.toNumber() != 0)
@@ -37,7 +38,7 @@ export default function PoolPositions({ positions }: { positions: Array<any> }) 
                             <td>{formatCurrency(entryPrice)}</td>
                             <td><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                             <td>{formatCurrency(row.currValue)}</td>
-                            <td>{formatCurrency(row.unrealizedPnl)}</td>
+                            <td><StaticPriceLabel value={row.unrealizedPnl}>{formatCurrency(row.unrealizedPnl || 0)}</StaticPriceLabel></td>
                         </tr>
                     })}
                     {openPositions.length === 0 && <tr><td colSpan={11}>No Positions</td></tr>}

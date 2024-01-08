@@ -51,15 +51,15 @@ export default function Sidebar() {
     }
 
     const pages = [{
-        path: '/positions',
-        name: 'Trade',
-        icon: <QueryStatsRounded />,
-        onclick: () => navigate('/positions')
-    }, {
         path: '/welcome',
         name: 'Welcome',
         icon: <HomeRoundedIcon />,
         onclick: () => navigate('/welcome')
+    }, {
+        path: '/positions',
+        name: 'Trade',
+        icon: <QueryStatsRounded />,
+        onclick: () => navigate('/positions')
     }, {
         path: '/home',
         name: 'Account',
