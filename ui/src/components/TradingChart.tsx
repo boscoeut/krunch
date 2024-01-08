@@ -13,13 +13,28 @@ import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 
 export default function TradingChart({ symbol }: { symbol: string }) {
     const markets = useKrunchStore(state => state.markets)
+    const appInfo = useKrunchStore(state => state.appInfo)
     const [selectedMarket, setSelectedMarket] = useState(markets[0]);
     const container: any = useRef();
+    const [mounted, setMounted] = useState(false);
     let symbolMap: any = TV_MARKETS
+    let useEffectCount = 0
+
+    useEffect(() => {
+        console.log('useEffect', mounted)
+        setMounted(true);
+        if (useEffectCount ===0 ){
+            useEffectCount++
+            console.log('bout to refresh chart', selectedMarket.name    )
+            const tvSymbol = symbolMap[selectedMarket.name] as string || "SOLUSD"            
+            refreshChart(tvSymbol)
+        }
+    }, []);
+
+    
 
     let entryPrice = 0
     if (selectedMarket) {
-    
         entryPrice = Math.abs(selectedMarket.tokenAmount === 0 ? 0 : (selectedMarket.basis || 0) / (selectedMarket.tokenAmount || 0))
     }
 
@@ -60,11 +75,6 @@ export default function TradingChart({ symbol }: { symbol: string }) {
         }
     }
 
-    useEffect(() => {
-        // strict mode is on so it calls useEffect twice
-        // refreshChart(tvSymbol)
-    }, []);
-
     if (!selectedMarket) {
         return <></>
     }
@@ -88,10 +98,15 @@ export default function TradingChart({ symbol }: { symbol: string }) {
             </Box>
             <Box flex={1} display={'flex'}>
                 {/* Markets */}
-                <Box sx={{background:'#131723',borderWidth:'thin',borderRightWidth:0, borderStyle:'solid', borderColor:'#8c919763'}}><Table style={{ width: 'auto' }}>
-                    <thead style={{background:'#131723'}}>
-                        <tr style={{background:'#131723'}}>
-                            <th colSpan={2} style={{ width: '100px',background:'#131723' }}>Available Markets</th>                    
+                <Box sx={{background:appInfo.toolbarBackground,borderWidth:'thin',
+                    borderLeftWidth:0, 
+                    borderRightWidth:0, 
+                    borderStyle:'solid', 
+                    borderColor:appInfo.toolbarBorderColor}}><Table 
+                        style={{ width: 'auto' }}>
+                    <thead style={{background:appInfo.toolbarBackground}}>
+                        <tr style={{background:appInfo.toolbarBackground}}>
+                            <th colSpan={2} style={{ width: '100px',background:appInfo.toolbarBackground }}>Available Markets</th>                    
                         </tr>
                     </thead>
                     <tbody>
@@ -106,6 +121,7 @@ export default function TradingChart({ symbol }: { symbol: string }) {
                     </tbody>
                 </Table></Box>            
                 {/* Chart */}
+
                 <Box flex={1} height={500}>
                     <ErrorBoundary fallback={<div>Something went wrong</div>}>
                         <div
@@ -113,7 +129,6 @@ export default function TradingChart({ symbol }: { symbol: string }) {
                             style={{ height: "100%", width: "100%" }} />
                     </ErrorBoundary>
                 </Box>
-                
             </Box>
         </Stack>
     )

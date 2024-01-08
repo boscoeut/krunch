@@ -63,4 +63,6 @@ export type AppInfo = {
     logoColor:string,
     dangerColor:string,
     leverage:number,
+    toolbarBackground:string,
+    toolbarBorderColor: string,
   }

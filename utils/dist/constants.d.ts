@@ -1,4 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
+export declare const SHOW_LIGHT_MODE = false;
 export declare const AUTO_REFRESH_INTERVAL: number;
 export declare const LOCALNET = "Localnet";
 export declare const DEVNET = "Devnet";

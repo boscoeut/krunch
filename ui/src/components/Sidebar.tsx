@@ -24,7 +24,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { closeSidebar } from '../utils';
+import { SHOW_LIGHT_MODE } from 'utils/dist/constants';
 import Logo from './Logo';
 import * as React from 'react';
 import { useColorScheme } from '@mui/joy/styles';
@@ -37,6 +37,8 @@ export default function Sidebar() {
     const provider = useKrunchStore(state => state.provider)
     const [mounted, setMounted] = React.useState(false);
     const { mode, setMode } = useColorScheme();
+    const showLightModeToggle = SHOW_LIGHT_MODE;
+
     React.useEffect(() => {
         setMounted(true);
     }, []);
@@ -86,7 +88,7 @@ export default function Sidebar() {
         icon: <ArticleRoundedIcon />,
         onclick: () => navigate('/documentation')
     }]
-    if (mounted) {
+    if (mounted && showLightModeToggle) {
         bottomPages.push({
             path: '/new-path',
             name: mode === 'dark' ? 'Light Mode' : 'Dark Mode',

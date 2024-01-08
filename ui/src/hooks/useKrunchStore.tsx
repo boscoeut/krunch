@@ -33,6 +33,8 @@ export const defaultAppInfo: AppInfo = {
   appSubTitle: "Defi",
   logoColor: colors.logoColor,
   dangerColor: colors.dangerColor,
+  toolbarBackground:colors.toolbarBackground,
+  toolbarBorderColor: colors.toolbarBorderColor,
   leverage: 10,
   docAppReference: "Krunch Defi",
   appDescription: 'Decentralized Trading',

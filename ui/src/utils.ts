@@ -63,4 +63,6 @@ export const formatCurrency = (amount: number, decimals:number=2, currency: stri
 export const colors = {
   logoColor: '#37c437',
   dangerColor: 'red',
+  toolbarBackground: "#131723",
+  toolbarBorderColor: "#8c919763"
 }
