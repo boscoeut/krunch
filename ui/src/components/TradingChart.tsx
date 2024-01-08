@@ -2,6 +2,9 @@ import DoubleArrowRoundedIcon from '@mui/icons-material/DoubleArrowRounded';
 import { Typography } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
+import Input from '@mui/joy/Input';
+import FilterListRoundedIcon from '@mui/icons-material/FilterListRounded';
+import HighlightOffRoundedIcon from '@mui/icons-material/HighlightOffRounded';
 import Table from '@mui/joy/Table';
 import { useEffect, useRef, useState } from 'react';
 import { ErrorBoundary } from "react-error-boundary";
@@ -19,6 +22,7 @@ export default function TradingChart() {
     const [selectedMarket, setSelectedMarket] = useState(markets[0]);
     const container: any = useRef();
     const [mounted, setMounted] = useState(false);
+    const [filter, setFilter] = useState('');
     let symbolMap: any = TV_MARKETS
     let useEffectCount = 0
     let marketDetails = markets.find((market) => market.name === selectedMarket.name) || markets[0]
@@ -82,6 +86,10 @@ export default function TradingChart() {
         return <></>
     }
 
+    let marketsToList = markets.filter((market) => {
+        return market.name.toLowerCase().includes(filter.toLowerCase())
+    })
+
     return (
         <Box
             display={'flex'}
@@ -111,10 +119,11 @@ export default function TradingChart() {
                 </Table>
             </Box>
             <Box flex={1} flexGrow={1} overflow={'hidden'} display={'flex'}>
-                {/* Chart */}
+                {/* MarketList */}
                 <Box sx={{
                     background: appInfo.toolbarBackground, borderWidth: 'thin',
                     borderLeftWidth: 0,
+                    width:240,
                     borderRightWidth: 0,
                     borderStyle: 'solid',
                     borderColor: appInfo.toolbarBorderColor,
@@ -123,14 +132,21 @@ export default function TradingChart() {
                     overflow: 'auto'
                 }}>
                     <Table stickyHeader
-                        style={{ width: 'auto' }}>
+                       >
                         <thead style={{ background: appInfo.toolbarBackground }}>
                             <tr style={{ background: appInfo.toolbarBackground }}>
-                                <th colSpan={2} style={{ width: '100px', background: appInfo.toolbarBackground }}><SectionHeader fontSize='1em' title="Available Markets" /></th>
+                                <th colSpan={2} style={{ background: appInfo.toolbarBackground }}>
+                                    <Input 
+                                        onChange={(e:any)=>{setFilter(e.target.value)}} 
+                                        value={filter} 
+                                        sx={{margin:0, opacity:0.75  }} 
+                                        endDecorator={filter && <HighlightOffRoundedIcon onClick={()=>{setFilter('')}}/>}
+                                        startDecorator={<FilterListRoundedIcon />} size='sm' variant='plain' placeholder='Available Markets' />
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
-                            {markets.map((row: any) => {
+                            {marketsToList.map((row: any) => {
                                 return <tr key={row.marketIndex} style={{ cursor: 'pointer' }} >
                                     <td style={{ width: '100px' }} onClick={() => changeMarket(row)}>
                                         <Typography startDecorator={row.name === marketDetails.name && <DoubleArrowRoundedIcon />}>{row.name}</Typography>
@@ -142,7 +158,7 @@ export default function TradingChart() {
                     </Table>
                 </Box>
 
-                {/* Markets */}
+                {/* Chart */}
                 <Box flexGrow={1} >
                     <ErrorBoundary fallback={<div>Something went wrong</div>}>
                         <div
