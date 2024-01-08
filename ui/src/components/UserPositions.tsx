@@ -1,5 +1,7 @@
 import Box from '@mui/joy/Box';
 import Stack from '@mui/joy/Stack';
+import Sheet from '@mui/joy/Sheet';
+import Table from '@mui/joy/Table';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import { formatCurrency, formatPercent } from '../utils';
@@ -17,7 +19,6 @@ export default function UserPositions() {
         <Box sx={{
             minHeight: 0,
             flexGrow: 1,
-            overflow: 'hidden auto',
             display: 'flex',
             flexDirection: 'column'
         }}>
@@ -27,10 +28,9 @@ export default function UserPositions() {
                 <SubStat numValue={userAccount.rebates || 0} title="Rebates Earned" value={formatCurrency(userAccount.rebates / AMOUNT_DECIMALS)} />
                 <SubStat numValue={userUnrealizedPnl} title="Trading ROI" value={formatPercent(userUnrealizedPnl / (Math.abs(userAccount.basis) / AMOUNT_DECIMALS))} />
             </Stack>
-            <Box>
-                <TradingChart symbol={'BTC/USD'} />
-            </Box>
-            <Box marginTop={1}>
+            <TradingChart />
+
+            <Box marginTop={1} display={'flex'} maxHeight={200}>
                 <Positions positions={positions} />
             </Box>
         </Box>

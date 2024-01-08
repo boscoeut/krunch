@@ -1,18 +1,18 @@
+import DoubleArrowRoundedIcon from '@mui/icons-material/DoubleArrowRounded';
+import { Typography } from '@mui/joy';
 import Box from '@mui/joy/Box';
+import Sheet from '@mui/joy/Sheet';
 import Table from '@mui/joy/Table';
-import Stack from '@mui/joy/Stack';
 import { useEffect, useRef, useState } from 'react';
+import { ErrorBoundary } from "react-error-boundary";
 import { AMOUNT_DECIMALS, TV_MARKETS } from 'utils/dist/constants';
 import { useKrunchStore } from '../hooks/useKrunchStore';
 import '../index.css';
 import { formatCurrency, renderItem } from '../utils';
 import PriceLabel from './PriceLabel';
 import SectionHeader from './SectionHeader';
-import { Typography } from '@mui/joy';
-import { ErrorBoundary } from "react-error-boundary";
-import DoubleArrowRoundedIcon from '@mui/icons-material/DoubleArrowRounded';
 
-export default function TradingChart({ symbol }: { symbol: string }) {
+export default function TradingChart() {
     const markets = useKrunchStore(state => state.markets)
     const appInfo = useKrunchStore(state => state.appInfo)
     const [selectedMarket, setSelectedMarket] = useState(markets[0]);
@@ -80,9 +80,13 @@ export default function TradingChart({ symbol }: { symbol: string }) {
     if (!selectedMarket) {
         return <></>
     }
-    
+
     return (
-        <Stack>
+        <Box
+            display={'flex'}
+            flexDirection={'column'}
+            overflow={'hidden'}
+            flexGrow={1}>
             <Box style={{
                 borderStyle: 'solid',
                 borderWidth: 0,
@@ -105,36 +109,46 @@ export default function TradingChart({ symbol }: { symbol: string }) {
                     </thead>
                 </Table>
             </Box>
-            <Box flex={1} display={'flex'}>
-                {/* Chart */}                
+            <Box flex={1} flexGrow={1} overflow={'hidden'} display={'flex'}>
+                {/* Chart */}
                 <Box sx={{
                     background: appInfo.toolbarBackground, borderWidth: 'thin',
                     borderLeftWidth: 0,
                     borderRightWidth: 0,
                     borderStyle: 'solid',
-                    borderColor: appInfo.toolbarBorderColor
-                }}><Table
-                    style={{ width: 'auto' }}>
+                    borderColor: appInfo.toolbarBorderColor,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'auto'
+                }}>
+                    <Table stickyHeader
+                        style={{ width: 'auto' }}>
                         <thead style={{ background: appInfo.toolbarBackground }}>
                             <tr style={{ background: appInfo.toolbarBackground }}>
-                                <th colSpan={2} style={{ width: '100px', background: appInfo.toolbarBackground }}><SectionHeader fontSize='1em' title="Available Markets"/></th>
+                                <th colSpan={2} style={{ width: '100px', background: appInfo.toolbarBackground }}><SectionHeader fontSize='1em' title="Available Markets" /></th>
                             </tr>
                         </thead>
                         <tbody>
                             {markets.map((row: any) => {
-                                return <tr key={row.marketIndex} style={{cursor:'pointer'}} >
+                                return <tr key={row.marketIndex} style={{ cursor: 'pointer' }} >
                                     <td style={{ width: '100px' }} onClick={() => changeMarket(row)}>
                                         <Typography startDecorator={row.name === marketDetails.name && <DoubleArrowRoundedIcon />}>{row.name}</Typography>
                                     </td>
                                     <td style={{ width: '125px' }}><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                                 </tr>
                             })}
+                            <tr><td>1</td><td>2</td></tr>
+                            <tr><td>1</td><td>2</td></tr>
+                            <tr><td>1</td><td>2</td></tr>
+                            <tr><td>1</td><td>2</td></tr>
+                            <tr><td>1</td><td>2</td></tr>
+                            <tr><td>1</td><td>2</td></tr>
                         </tbody>
                     </Table>
                 </Box>
-               
+
                 {/* Markets */}
-                <Box flex={1} height={500}>
+                <Box flexGrow={1} >
                     <ErrorBoundary fallback={<div>Something went wrong</div>}>
                         <div
                             ref={container}
@@ -142,6 +156,6 @@ export default function TradingChart({ symbol }: { symbol: string }) {
                     </ErrorBoundary>
                 </Box>
             </Box>
-        </Stack>
+        </Box>
     )
 } 
