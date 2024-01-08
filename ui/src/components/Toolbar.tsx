@@ -89,7 +89,7 @@ export default function Toolbar() {
             borderRight: 'none'
         }} >
             <Box gap={1} flex={1} display={'flex'}>
-                {!wallet.connected && <Button
+                {!wallet.connected &&  <ButtonGroup  variant='plain'><Button
                     startDecorator={<LinkRoundedIcon />}
                     size="sm"
                     sx={{padding:1,paddingLeft:2,paddingRight:2}}
@@ -97,7 +97,7 @@ export default function Toolbar() {
                     onClick={() => toggleConnect()}
                 >
                     Connect
-                </Button>}
+                </Button></ButtonGroup>}
                 {wallet.connected && <ButtonGroup  variant='plain'>
                     <Button
                         sx={{padding:1,paddingLeft:2,paddingRight:2}}

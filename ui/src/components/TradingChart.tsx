@@ -7,9 +7,10 @@ import { useKrunchStore } from '../hooks/useKrunchStore';
 import '../index.css';
 import { formatCurrency, renderItem } from '../utils';
 import PriceLabel from './PriceLabel';
+import SectionHeader from './SectionHeader';
 import { Typography } from '@mui/joy';
 import { ErrorBoundary } from "react-error-boundary";
-import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
+import DoubleArrowRoundedIcon from '@mui/icons-material/DoubleArrowRounded';
 
 export default function TradingChart({ symbol }: { symbol: string }) {
     const markets = useKrunchStore(state => state.markets)
@@ -56,6 +57,7 @@ export default function TradingChart({ symbol }: { symbol: string }) {
               "backgroundColor": "#000000",
               "allow_symbol_change": false,
               "hide_top_toolbar": false,
+              "hide_volume": true,
 
               "withdateranges": true,
               "hide_legend": true,
@@ -115,14 +117,14 @@ export default function TradingChart({ symbol }: { symbol: string }) {
                     style={{ width: 'auto' }}>
                         <thead style={{ background: appInfo.toolbarBackground }}>
                             <tr style={{ background: appInfo.toolbarBackground }}>
-                                <th colSpan={2} style={{ width: '100px', background: appInfo.toolbarBackground }}>Available Markets</th>
+                                <th colSpan={2} style={{ width: '100px', background: appInfo.toolbarBackground }}><SectionHeader fontSize='1em' title="Available Markets"/></th>
                             </tr>
                         </thead>
                         <tbody>
                             {markets.map((row: any) => {
-                                return <tr key={row.marketIndex}>
+                                return <tr key={row.marketIndex} style={{cursor:'pointer'}} >
                                     <td style={{ width: '100px' }} onClick={() => changeMarket(row)}>
-                                        <Typography startDecorator={row.name === marketDetails.name && <ChevronRightRoundedIcon />}>{row.name}</Typography>
+                                        <Typography startDecorator={row.name === marketDetails.name && <DoubleArrowRoundedIcon />}>{row.name}</Typography>
                                     </td>
                                     <td style={{ width: '125px' }}><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                                 </tr>

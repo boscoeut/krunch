@@ -63,6 +63,12 @@ export default function WelcomeCards() {
                             <ListItemDecorator>
                                 <Check />
                             </ListItemDecorator>
+                            Low Trading Fees
+                        </ListItem>
+                        <ListItem>
+                            <ListItemDecorator>
+                                <Check />
+                            </ListItemDecorator>
                             Trade Long or Short Positions on Crypto, Equities and Forex
                         </ListItem>
                         <ListItem>
@@ -77,12 +83,7 @@ export default function WelcomeCards() {
                             </ListItemDecorator>
                             Trade up to {`${leverage}`}x Leverage
                         </ListItem>
-                        <ListItem>
-                            <ListItemDecorator>
-                                <Check />
-                            </ListItemDecorator>
-                            Low Fees
-                        </ListItem>
+                       
                         <ListItem>
                             <ListItemDecorator>
                                 <Check />

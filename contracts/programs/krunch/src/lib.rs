@@ -5,7 +5,7 @@ use chainlink_solana as chainlink;
 pub mod state;
 use state::*;
 
-declare_id!("6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5"); 
+declare_id!("6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5");
 const LEVERAGE_DECIMALS: u128 = 10u128.pow(4);
 const MARKET_WEIGHT_DECIMALS: u128 = 10u128.pow(4);
 const FEE_DECIMALS: u128 = 10u128.pow(4);
@@ -22,7 +22,7 @@ pub mod krunch {
         reward_frequency: u64,
         reward_rate: u64,
         test_mode: bool,
-        market_weight: u16
+        market_weight: u16,
     ) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.admin = ctx.accounts.admin.key.to_owned();
@@ -44,11 +44,8 @@ pub mod krunch {
 
     pub fn create_user_account(ctx: Context<CreateUserAccount>) -> Result<()> {
         let user_account = &mut ctx.accounts.user_account;
-        let clock = Clock::get()?;
-        let current_unix_timestamp = clock.unix_timestamp;
         user_account.owner = ctx.accounts.owner.key.to_owned();
         user_account.collateral_value = 0;
-        user_account.last_rewards_claim = current_unix_timestamp;
         Ok(())
     }
 
@@ -68,7 +65,14 @@ pub mod krunch {
         Ok(())
     }
 
-    pub fn update_exchange(ctx: Context<UpdateExchange>, test_mode: bool,reward_frequency: u64,reward_rate: u64, leverage: u32, market_weight: u16) -> Result<()> {
+    pub fn update_exchange(
+        ctx: Context<UpdateExchange>,
+        test_mode: bool,
+        reward_frequency: u64,
+        reward_rate: u64,
+        leverage: u32,
+        market_weight: u16,
+    ) -> Result<()> {
         let exchange = &mut ctx.accounts.exchange;
         exchange.test_mode = test_mode;
         exchange.reward_frequency = reward_frequency;
@@ -116,7 +120,7 @@ pub mod krunch {
             && amount.abs() <= market.token_amount.abs()
         {
             // maker
-            fee_rate = market.maker_fee.into();          
+            fee_rate = market.maker_fee.into();
         }
         let fee = ((fbasis.abs() * fee_rate as i128) / FEE_DECIMALS as i128) as i64;
 
@@ -271,37 +275,12 @@ pub mod krunch {
     pub fn claim_rewards(ctx: Context<ClaimRewards>) -> Result<()> {
         let user_account = &mut ctx.accounts.user_account;
         let exchange = &mut ctx.accounts.exchange;
-        let clock = Clock::get()?;
-        let current_unix_timestamp = clock.unix_timestamp;
-
-        if user_account.last_rewards_claim + exchange.reward_frequency as i64
-            > current_unix_timestamp
-        {
-            return err!(KrunchErrors::RewardsClaimUnavailable);
-        }
-
-        let user_total = calculate_user_total(&user_account, exchange.leverage.into())
-            - user_account.rewards as i128; // don't double count rewards
-        let exchange_total = calculate_exchange_total(&exchange);
-        let exchange_rewards = exchange_rewards_available(&exchange);
-        // get % or rewards available
-        let amount = (exchange_rewards * user_total) / exchange_total;
-
-        if amount < 0 {
-            return err!(KrunchErrors::NoRewardsAvailable);
-        }
-        exchange.rewards -= amount as i64;
-        user_account.rewards += amount as i64;
-        exchange.last_rewards_claim = current_unix_timestamp;
-        user_account.last_rewards_claim = current_unix_timestamp;
+        execute_claim(user_account, exchange, true)?;
         Ok(())
     }
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         // get price
-        let clock = Clock::get()?;
-        let current_unix_timestamp = clock.unix_timestamp;
-
         let round = chainlink::latest_round_data(
             ctx.accounts.chainlink_program.to_account_info(),
             ctx.accounts.chainlink_feed.to_account_info(),
@@ -319,10 +298,11 @@ pub mod krunch {
 
         // update collateral value
         let user_account = &mut ctx.accounts.user_account;
-        user_account.collateral_value += collateral_amount as i64;
-        user_account.last_rewards_claim = current_unix_timestamp;
-
         let exchange = &mut ctx.accounts.exchange;
+
+        execute_claim(user_account, exchange, false)?;
+
+        user_account.collateral_value += collateral_amount as i64;
         exchange.collateral_value += collateral_amount as i64;
 
         // do token transfer
@@ -348,9 +328,6 @@ pub mod krunch {
     }
 
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
-        let clock = Clock::get()?;
-        let current_unix_timestamp = clock.unix_timestamp;
-
         // get price
         let round = chainlink::latest_round_data(
             ctx.accounts.chainlink_program.to_account_info(),
@@ -364,7 +341,6 @@ pub mod krunch {
         let user_account = &mut ctx.accounts.user_account;
         let exchange = &mut ctx.accounts.exchange;
         user_account.collateral_value -= amount as i64;
-        user_account.last_rewards_claim = current_unix_timestamp;
         exchange.collateral_value -= amount as i64;
 
         // validate enough funds are available
@@ -435,13 +411,14 @@ pub mod krunch {
 
 fn calculate_exchange_balance_available(exchange: &Exchange) -> i128 {
     let exchange_total = calculate_exchange_total(&exchange);
-    return exchange_total * exchange.market_weight as i128 / MARKET_WEIGHT_DECIMALS as i128 + exchange.margin_used as i128;
+    return exchange_total * exchange.market_weight as i128 / MARKET_WEIGHT_DECIMALS as i128
+        + exchange.margin_used as i128;
 }
 
 fn calculate_exchange_total(exchange: &Exchange) -> i128 {
     let exchange_hard_amount = exchange.collateral_value;
-    let exchange_total = exchange_hard_amount as i128 * exchange.leverage as i128
-        / LEVERAGE_DECIMALS as i128;
+    let exchange_total =
+        exchange_hard_amount as i128 * exchange.leverage as i128 / LEVERAGE_DECIMALS as i128;
     return exchange_total;
 }
 
@@ -471,6 +448,40 @@ fn calculate_user_total(user_account: &UserAccount, leverage: i128) -> i128 {
     let user_total = user_hard_amount as i128 * leverage as i128 / LEVERAGE_DECIMALS as i128
         + user_account.margin_used as i128;
     return user_total;
+}
+
+fn execute_claim(
+    user_account: &mut UserAccount,
+    exchange: &mut Exchange,
+    throw_error: bool,
+) -> Result<i128> {
+    let clock = Clock::get()?;
+    let current_unix_timestamp = clock.unix_timestamp;
+    if user_account.last_rewards_claim + exchange.reward_frequency as i64 > current_unix_timestamp {
+        if throw_error {
+            return err!(KrunchErrors::RewardsClaimUnavailable);
+        } else {
+            return Ok(0);
+        }
+    }
+    let user_total = calculate_user_total(&user_account, exchange.leverage.into())
+        - user_account.rewards as i128; // don't double count rewards
+    let exchange_total = calculate_exchange_total(&exchange);
+    let exchange_rewards = exchange_rewards_available(&exchange);
+    // get % or rewards available
+    let amount = (exchange_rewards * user_total) / exchange_total;
+    if amount < 0 {
+        if throw_error {
+            return err!(KrunchErrors::NoRewardsAvailable);
+        } else {
+            return Ok(0);
+        }
+    }
+    exchange.rewards -= amount as i64;
+    user_account.rewards += amount as i64;
+    exchange.last_rewards_claim = current_unix_timestamp;
+    user_account.last_rewards_claim = current_unix_timestamp;
+    return Ok(amount);
 }
 
 #[error_code]
