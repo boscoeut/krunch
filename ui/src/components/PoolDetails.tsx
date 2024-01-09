@@ -125,7 +125,7 @@ export default function PoolDetails() {
                         <td>{formatNumber(exchange.leverage / LEVERAGE_DECIMALS, 0)}x</td>
                     </tr>
                     <tr>
-                        <td># of Markets</td>
+                        <td># of Active Markets</td>
                         <td>{MARKETS.length}</td>
                     </tr>
                 </tbody>

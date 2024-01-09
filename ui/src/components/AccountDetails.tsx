@@ -51,7 +51,7 @@ export default function AccountDetails() {
                         <tr>
                             <td>+ Amount Deposited</td>
                             <td>{formatCurrency(userAccount.collateralValue / AMOUNT_DECIMALS)} 
-                                <Stack display={'inline-block'} direction={'row'} spacing={1} marginLeft={1}>
+                                <Stack display={'inline-block'} direction={'row'} spacing={1} marginLeft={2}>
                                     <Button onClick={()=>setDepositDialogOpen(true)} size='sm' variant='soft' endDecorator={<ICONS.DEPOSIT/>}>Deposit</Button> 
                                     <Button onClick={()=>setWithdrawDialogOpen(true)} size='sm' variant='soft' endDecorator={<ICONS.WITHDRAW/>}>Withdraw</Button>
                                 </Stack>

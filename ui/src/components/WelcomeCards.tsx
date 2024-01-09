@@ -104,7 +104,7 @@ export default function WelcomeCards() {
                         <Button
                             onClick={startNow}
                             variant="soft"
-                            sx={{ display: wallet.connected ? 'none' : 'inline' }}
+                            sx={{ display: wallet.connected ? 'none' : 'inherit' }}
                             endDecorator={<ICONS.LOGIN />}
                         >
                             Start now
