@@ -3,7 +3,7 @@ import MarketDialog from './MarketDialog';
 
 import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
-import { useState } from 'react';
+import Button from '@mui/joy/Button';
 import { FEE_DECIMALS, LEVERAGE_DECIMALS } from 'utils/dist/constants';
 import '../App.css';
 import { useKrunchStore } from "../hooks/useKrunchStore";
@@ -13,7 +13,7 @@ import PriceLabel from './PriceLabel';
 
 export default function Markets() {
     const markets = useKrunchStore(state => state.markets)
-    const [open, setOpen] = useState(false);
+    const setTradeDialogOpen = useKrunchStore(state => state.setTradeDialogOpen)
 
     return (
         <Box sx={{
@@ -41,7 +41,7 @@ export default function Markets() {
                 <tbody>
                     {markets.map(row => {
                         return <tr key={row.marketIndex}>
-                            <td>{row.name}</td>
+                            <td><Button onClick={()=>setTradeDialogOpen(true)} size='sm' variant='plain'>{row.name} </Button></td>
                             <td>{row.marketType}</td>
                             <td>{renderItem(row.tokenAmount)}</td>
                             <td><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
@@ -52,7 +52,6 @@ export default function Markets() {
                     })}
                 </tbody>
             </Table>
-            <MarketDialog open={open} setOpen={setOpen} />
         </Box>
     );
 }
