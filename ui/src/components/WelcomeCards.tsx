@@ -1,5 +1,4 @@
-import Check from '@mui/icons-material/Check';
-import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
+
 import Button from '@mui/joy/Button';
 import Card from '@mui/joy/Card';
 import Box from '@mui/joy/Box';
@@ -15,6 +14,7 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useNavigate } from 'react-router-dom';
 import { useKrunchStore } from '../hooks/useKrunchStore';
 import AppTitle from './AppTitle';
+import {ICONS} from "../utils";
 
 export default function WelcomeCards() {
     const wallet = useWallet();
@@ -49,44 +49,44 @@ export default function WelcomeCards() {
                     <List size="sm" sx={{ mx: 'calc(-1 * var(--ListItem-paddingX))' }}>
                         <ListItem>
                             <ListItemDecorator>
-                                <Check />
+                                <ICONS.CHECK />
                             </ListItemDecorator>
                             No Liquidations
                         </ListItem>
                         <ListItem>
                             <ListItemDecorator>
-                                <Check />
+                                <ICONS.CHECK />
                             </ListItemDecorator>
                             No Funding Fees
                         </ListItem>
                         <ListItem>
                             <ListItemDecorator>
-                                <Check />
+                                <ICONS.CHECK />
                             </ListItemDecorator>
                             Low Trading Fees
                         </ListItem>
                         <ListItem>
                             <ListItemDecorator>
-                                <Check />
+                                <ICONS.CHECK />
                             </ListItemDecorator>
                             Trade Long or Short Positions on Crypto, Equities and Forex
                         </ListItem>
                         <ListItem>
                             <ListItemDecorator>
-                                <Check />
+                                <ICONS.CHECK />
                             </ListItemDecorator>
                             Earn trading rebates by providing liquidity
                         </ListItem>
                         <ListItem>
                             <ListItemDecorator>
-                                <Check />
+                                <ICONS.CHECK />
                             </ListItemDecorator>
                             Trade up to {`${leverage}`}x Leverage
                         </ListItem>
                        
                         <ListItem>
                             <ListItemDecorator>
-                                <Check />
+                                <ICONS.CHECK />
                             </ListItemDecorator>
                             Rewards are paid out to those who hold deposits (fee and pool pnl distribution)
                         </ListItem>
@@ -105,7 +105,7 @@ export default function WelcomeCards() {
                             onClick={startNow}
                             variant="soft"
                             sx={{ display: wallet.connected ? 'none' : 'inline' }}
-                            endDecorator={<LoginRoundedIcon />}
+                            endDecorator={<ICONS.LOGIN />}
                         >
                             Start now
                         </Button>

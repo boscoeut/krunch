@@ -1,6 +1,3 @@
-import DoubleArrowRoundedIcon from '@mui/icons-material/DoubleArrowRounded';
-import FilterListRoundedIcon from '@mui/icons-material/FilterListRounded';
-import HighlightOffRoundedIcon from '@mui/icons-material/HighlightOffRounded';
 import { Typography } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
@@ -11,7 +8,7 @@ import { ErrorBoundary } from "react-error-boundary";
 import { AMOUNT_DECIMALS, TV_MARKETS } from 'utils/dist/constants';
 import { useKrunchStore } from '../hooks/useKrunchStore';
 import '../index.css';
-import { formatCurrency, renderItem } from '../utils';
+import {ICONS, formatCurrency, renderItem } from '../utils';
 import PriceLabel from './PriceLabel';
 
 export default function TradingChart() {
@@ -143,8 +140,8 @@ export default function TradingChart() {
                             borderRadius: 0,
                             background: appInfo.toolbarBackground,
                         }}
-                        endDecorator={filter && <HighlightOffRoundedIcon onClick={() => { setFilter('') }} />}
-                        startDecorator={<FilterListRoundedIcon />} size='sm' variant='plain' placeholder='Available Markets' />
+                        endDecorator={filter && <ICONS.FILTER onClick={() => { setFilter('') }} />}
+                        startDecorator={<ICONS.CLOSE />} size='sm' variant='plain' placeholder='Available Markets' />
                     <Table stickyHeader size='sm'
                     >
                         <thead >
@@ -159,7 +156,7 @@ export default function TradingChart() {
                             {marketsToList.map((row: any) => {
                                 return <tr key={row.marketIndex} style={{ cursor: 'pointer' }} >
                                     <td style={{ width: '100px' }} onClick={() => changeMarket(row)}>
-                                        <Button size='sm' startDecorator={row.name === marketDetails.name && <DoubleArrowRoundedIcon />} variant='plain'>{row.name}</Button>
+                                        <Button size='sm' startDecorator={row.name === marketDetails.name && <ICONS.DOUBLE_ARROW />} variant='plain'>{row.name}</Button>
                                     </td>
                                     <td style={{ width: '125px' }}><PriceLabel value={row.price}>{formatCurrency(row.price || 0)}</PriceLabel></td>
                                 </tr>

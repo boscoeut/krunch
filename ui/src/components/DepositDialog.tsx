@@ -1,5 +1,4 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
 import DialogContent from '@mui/joy/DialogContent';
@@ -19,13 +18,13 @@ import Typography from '@mui/joy/Typography';
 import * as React from 'react';
 import { AMOUNT_DECIMALS, EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { formatCurrency, renderItem, formatNumber } from '../utils';
+import { formatCurrency, renderItem, formatNumber, ICONS } from '../utils';
 import PriceLabel from './PriceLabel';
 import KLabel from './KLabel';
 
 export interface DepositDialogProps {
   open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>; // Definition of setOpen prop    
+  setOpen: (open:boolean) => void;
 }
 
 export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
@@ -52,7 +51,6 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
 
   const handleSubmit = async () => {
     const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
-
     try {
       setSubmitting(true)
       if (position) {
@@ -125,7 +123,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
                         value={property.value}
                         onChange={(e: any) => property.onChange(e.target.value)} />
                       {!canSubmit && !submitting && <FormHelperText>
-                        <InfoOutlined />
+                        <ICONS.INFO />
                         {amountMessage}
                       </FormHelperText>}
                     </FormControl>}
@@ -154,7 +152,7 @@ export default function DepositDialog({ open, setOpen }: DepositDialogProps) {
               <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
               {errorMessage && <FormControl error={!!errorMessage}>
                 <FormHelperText>
-                  <InfoOutlined />
+                  <ICONS.INFO />
                   {errorMessage}
                 </FormHelperText>
               </FormControl>}

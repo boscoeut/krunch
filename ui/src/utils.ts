@@ -1,7 +1,69 @@
 import { PublicKey } from "@solana/web3.js";
 import { AMOUNT_DECIMALS } from "utils/dist/constants";
 import * as anchor from "@coral-xyz/anchor";
+import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
+import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutlineRounded';
+import CurrencyExchangeRounded from '@mui/icons-material/CurrencyExchangeRounded';
+import EmojiEventsRounded from '@mui/icons-material/EmojiEventsRounded';
+import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
+import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import UpdateRounded from '@mui/icons-material/UpdateRounded';
+import AutoModeRoundedIcon from '@mui/icons-material/AutoModeRounded';
+import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
+import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRounded';
+import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import MenuIcon from '@mui/icons-material/Menu';
+import NorthIcon from '@mui/icons-material/North';
+import SouthIcon from '@mui/icons-material/South';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
+import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
+import GavelIcon from '@mui/icons-material/Gavel';
+import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
+import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
+import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
+import WavesRoundedIcon from '@mui/icons-material/WavesRounded';
+import PaidRoundedIcon from '@mui/icons-material/PaidRounded';
+import DoubleArrowRoundedIcon from '@mui/icons-material/DoubleArrowRounded';
+import FilterListRoundedIcon from '@mui/icons-material/FilterListRounded';
+import HighlightOffRoundedIcon from '@mui/icons-material/HighlightOffRounded';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 
+export const ICONS = {
+  DEPOSIT: AddCircleOutlineRoundedIcon,
+  WITHDRAW: RemoveCircleOutlineRoundedIcon,
+  WALLET: CurrencyExchangeRounded,
+  REWARDS: EmojiEventsRounded,
+  ARROW_DROP_DOWN: ArrowDropDown ,
+  TRADE: QueryStatsRounded,
+  REFRESH: RefreshRoundedIcon,
+  SETTINGS: SettingsRoundedIcon,
+  UPDATE_EXCHANGE: UpdateRounded,
+  AUTO_REFRESH: AutoModeRoundedIcon,
+  CONNECT:LinkRoundedIcon,
+  MARKET: CandlestickChartRoundedIcon,
+  DARK_MODE: DarkModeRoundedIcon,
+  LIGHT_MODE: LightModeIcon,
+  MENU: MenuIcon,
+  NORTH: NorthIcon,
+  SOUTH: SouthIcon,
+  INFO: InfoOutlined,
+  DOCUMENTATION: ArticleRoundedIcon,
+  ACCOUNT: DashboardRoundedIcon,
+  CONTRACTS: GavelIcon,
+  HOME: HomeRoundedIcon,
+  LOGIN: LoginRoundedIcon,
+  LOGOUT: LogoutRoundedIcon,
+  POOL: WavesRoundedIcon,
+  MONEY: PaidRoundedIcon,
+  DOUBLE_ARROW: DoubleArrowRoundedIcon,
+  FILTER: FilterListRoundedIcon,
+  CLOSE: HighlightOffRoundedIcon,
+  CHECK: CheckRoundedIcon
+}
 export const openSidebar = () => {
   if (typeof document !== 'undefined') {
     document.body.style.overflow = 'hidden';

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import Typeography from '@mui/joy/Typography';
-import NorthIcon from '@mui/icons-material/North';
-import SouthIcon from '@mui/icons-material/South';
+import { ICONS } from '../utils';
 
 function PriceLabel({ children, value = 0 }: { children:any, value: number | undefined }) {
     const [previousValue, setPreviousValue] = useState(value);
@@ -13,10 +12,10 @@ function PriceLabel({ children, value = 0 }: { children:any, value: number | und
     useEffect(() => {
         if (value > previousValue) {
             setColor(appInfo.logoColor);
-            setDecorator(<NorthIcon style={{ color: appInfo.logoColor }} />)  
+            setDecorator(<ICONS.NORTH style={{ color: appInfo.logoColor }} />)  
         } else if (value < previousValue) {
             setColor(appInfo.dangerColor);
-            setDecorator(<SouthIcon style={{ color: appInfo.dangerColor }} />)  
+            setDecorator(<ICONS.SOUTH style={{ color: appInfo.dangerColor }} />)  
         } else {
             setColor('inherit');
             setDecorator(null);

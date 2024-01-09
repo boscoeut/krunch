@@ -1,16 +1,13 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import Button from '@mui/joy/Button';
 import Chip from '@mui/joy/Chip';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
 import FormHelperText from '@mui/joy/FormHelperText';
-import Typography from '@mui/joy/Typography';
 import FormLabel from '@mui/joy/FormLabel';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
-import PaidRoundedIcon from '@mui/icons-material/PaidRounded';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Option from '@mui/joy/Option';
@@ -20,7 +17,7 @@ import Table from '@mui/joy/Table';
 import * as React from 'react';
 import { AMOUNT_DECIMALS, FEE_DECIMALS, MARKETS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { formatCurrency, formatNumber, formatPercent } from "../utils";
+import {ICONS, formatCurrency, formatNumber, formatPercent } from "../utils";
 import KLabel from "./KLabel";
 import PriceLabel from './PriceLabel';
 
@@ -132,7 +129,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                 <FormLabel>Amount <Chip color='success' onClick={closeAmount} style={{ display: userTokenAmount !== 0 ? 'inherit' : 'none', marginLeft: 10 }}>Current Amount: {userTokenAmount}</Chip></FormLabel>
                 <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
                 {amountMessage && !submitting && <FormHelperText>
-                  <InfoOutlined />
+                  <ICONS.INFO />
                   {amountMessage}
                 </FormHelperText>}
               </FormControl>
@@ -162,7 +159,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                     <td></td>
                   </tr>
                   <tr>
-                    <td>{fee > 0 ? 'Fee' : <KLabel numValue={fee * -1} endDecorator={<PaidRoundedIcon color='success' />}>Trading Rebate</KLabel>}</td>
+                    <td>{fee > 0 ? 'Fee' : <KLabel numValue={fee * -1} endDecorator={<ICONS.MONEY color='success' />}>Trading Rebate</KLabel>}</td>
                     <td><KLabel fontWeight="bold" numValue={fee * -1}>{formatCurrency(fee, 4)}</KLabel>  </td>
                     <td><Chip color={fee > 0 ? "danger" : "success"}>Rate: {formatPercent(feeRate)}</Chip></td>
                   </tr>
@@ -176,7 +173,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
               <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
               {errorMessage && <FormControl error={!!errorMessage}>
                 <FormHelperText>
-                  <InfoOutlined />
+                  <ICONS.INFO />
                   {errorMessage}
                 </FormHelperText>
               </FormControl>}

@@ -1,5 +1,4 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import Button from '@mui/joy/Button';
 import Chip from '@mui/joy/Chip';
 import DialogContent from '@mui/joy/DialogContent';
@@ -18,12 +17,12 @@ import Table from '@mui/joy/Table';
 import * as React from 'react';
 import { AMOUNT_DECIMALS, EXCHANGE_POSITIONS } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { formatCurrency, formatNumber } from '../utils';
+import { formatCurrency, formatNumber, ICONS } from '../utils';
 import KLabel from './KLabel';
 
 export interface WithdrawDialogProps {
   open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setOpen: (open:boolean)=>void; 
 }
 
 export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
@@ -134,7 +133,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
                 <FormLabel>Amount to Withdraw<Chip onClick={setMax} color="success">Max {formatCurrency(amountAvailable / AMOUNT_DECIMALS)} </Chip></FormLabel>
                 <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
                 {!!amountMessage && !canSubmit && <FormHelperText>
-                  <InfoOutlined sx={{marginRight:1}} />
+                  <ICONS.INFO sx={{marginRight:1}} />
                   {amountMessage}
                 </FormHelperText>}
               </FormControl>
@@ -151,7 +150,7 @@ export default function WithdrawDialog({ open, setOpen }: WithdrawDialogProps) {
               <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
               {errorMessage && <FormControl error={!!errorMessage}>
                 <FormHelperText>
-                  <InfoOutlined />
+                  <ICONS.INFO />
                   {errorMessage}
                 </FormHelperText>
               </FormControl>}

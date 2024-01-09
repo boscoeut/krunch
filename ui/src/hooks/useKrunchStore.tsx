@@ -46,6 +46,10 @@ export const defaultAppInfo: AppInfo = {
 }
 
 interface KrunchState {
+  depositDialogOpen: boolean,
+  setDepositDialogOpen: (open: boolean) => void,
+  withdrawDialogOpen: boolean,
+  setWithdrawDialogOpen: (open: boolean) => void,
   tradeDialogOpen:boolean,
   setTradeDialogOpen: (open:boolean) => void,
   poolROI: number,
@@ -100,10 +104,12 @@ interface KrunchState {
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  depositDialogOpen: false,
+  setDepositDialogOpen: (open: boolean) => { set({ depositDialogOpen: open }) },
+  withdrawDialogOpen: false,
+  setWithdrawDialogOpen: (open: boolean) => { set({ withdrawDialogOpen: open }) },
   tradeDialogOpen:false,
-  setTradeDialogOpen: (open:boolean) => {
-    set({ tradeDialogOpen: open })
-  },
+  setTradeDialogOpen: (open:boolean) => { set({ tradeDialogOpen: open })},
   poolROI: 0,
   toggleAutoRefresh: () => {
     set({ autoRefresh: !get().autoRefresh })

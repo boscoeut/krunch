@@ -1,9 +1,10 @@
 import { Stack } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Table from '@mui/joy/Table';
+import Button from '@mui/joy/Button';
 import { AMOUNT_DECIMALS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { formatCurrency, formatPercent } from '../utils';
+import { formatCurrency, formatPercent, ICONS } from '../utils';
 import SectionHeader from './SectionHeader';
 import Stat from './Stat';
 import SubStat from './SubStat';
@@ -18,7 +19,9 @@ export default function AccountDetails() {
     const exchangeBalanceAvailable = useKrunchStore(state => state.exchangeBalanceAvailable)
     const userAccountValue = useKrunchStore(state => state.userAccountValue)
     const totalPnl = userUnrealizedPnl + (userAccount.pnl?.toNumber() / AMOUNT_DECIMALS || 0)
-
+    const setWithdrawDialogOpen = useKrunchStore(state => state.setWithdrawDialogOpen)
+    const setDepositDialogOpen = useKrunchStore(state => state.setDepositDialogOpen)
+    
     let lastRewardsClaimed = 'Never'
     if (userAccount.lastRewardsClaim?.toNumber() > 0) {
         lastRewardsClaimed = `${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleDateString()} ${new Date(userAccount.lastRewardsClaim?.toNumber() * 1000).toLocaleTimeString()}`
@@ -47,7 +50,12 @@ export default function AccountDetails() {
                     <tbody>
                         <tr>
                             <td>+ Amount Deposited</td>
-                            <td>{formatCurrency(userAccount.collateralValue / AMOUNT_DECIMALS)}</td>
+                            <td>{formatCurrency(userAccount.collateralValue / AMOUNT_DECIMALS)} 
+                                <Stack display={'inline-block'} direction={'row'} spacing={1} marginLeft={1}>
+                                    <Button onClick={()=>setDepositDialogOpen(true)} size='sm' variant='soft' endDecorator={<ICONS.DEPOSIT/>}>Deposit</Button> 
+                                    <Button onClick={()=>setWithdrawDialogOpen(true)} size='sm' variant='soft' endDecorator={<ICONS.WITHDRAW/>}>Withdraw</Button>
+                                </Stack>
+                            </td>
                         </tr>
                         <tr>
                             <td>+ Pnl</td>

@@ -1,23 +1,22 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
+import { FormHelperText } from '@mui/joy';
 import Button from '@mui/joy/Button';
+import Chip from '@mui/joy/Chip';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
-import Modal from '@mui/joy/Modal';
 import Input from '@mui/joy/Input';
-import Chip from '@mui/joy/Chip';
+import Modal from '@mui/joy/Modal';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
-import moment from 'moment';
 import Stack from '@mui/joy/Stack';
 import Switch from '@mui/joy/Switch';
+import moment from 'moment';
 import * as React from 'react';
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import {ICONS} from "../utils";
 import { AMOUNT_DECIMALS, EXCHANGE_LEVERAGE, EXCHANGE_MARKET_WEIGHT, LEVERAGE_DECIMALS, REWARD_FREQUENCY, REWARD_RATE, SLOTS_PER_DAY } from "utils/dist/constants";
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { FormHelperText } from '@mui/joy';
-import { set } from '@coral-xyz/anchor/dist/cjs/utils/features';
 
 export interface UpdateExchangeDialogProps {
     open: boolean;
@@ -48,7 +47,7 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
             setSubmitting(true)
             await updateExchange(testMode, rewardFrequency, rewardRate * AMOUNT_DECIMALS, leverage, marketWeight)
             closeDialog()
-        } catch (e:any) {
+        } catch (e: any) {
             setErrorMessage(e.message)
             console.log("error", e);
         } finally {
@@ -111,7 +110,7 @@ export default function UpdateExchangeDialog({ open, setOpen }: UpdateExchangeDi
                             <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
                             {errorMessage && <FormControl error={!!errorMessage}>
                                 <FormHelperText>
-                                    <InfoOutlined />
+                                    <ICONS.INFO />
                                     {errorMessage}
                                 </FormHelperText>
                             </FormControl>}

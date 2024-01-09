@@ -1,20 +1,20 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import Button from '@mui/joy/Button';
+import Chip from '@mui/joy/Chip';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
+import FormHelperText from '@mui/joy/FormHelperText';
 import FormLabel from '@mui/joy/FormLabel';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Stack from '@mui/joy/Stack';
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
-import FormHelperText from '@mui/joy/FormHelperText';
 import * as React from 'react';
 import { FEE_DECIMALS, LEVERAGE_DECIMALS, MARKET_WEIGHT_DECIMALS, SOL_USD_FEED } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import Chip from '@mui/joy/Chip';
+import { ICONS } from '../utils';
 
 export interface MarketDialogProps {
   open: boolean;
@@ -50,8 +50,8 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
         Number(takerFee),
         Number(makerFee),
         feedAddress)
-        closeDialog()
-    } catch (e:any) {
+      closeDialog()
+    } catch (e: any) {
       setErrorMessage(e.message)
       console.log("error", e);
     } finally {
@@ -74,12 +74,12 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
     if (selectedMarket) {
       setMarketIndex(selectedMarket.marketIndex.toString())
       setName(selectedMarket.name)
-      setMarketWeight(`${(selectedMarket.marketWeight || 0) /MARKET_WEIGHT_DECIMALS}`)
-      setLeverage(`${(selectedMarket.leverage || 0) /LEVERAGE_DECIMALS}`)
-      setTakerFee(`${(selectedMarket.takerFee || 0) /FEE_DECIMALS}`)
-      setMakerFee(`${(selectedMarket.makerFee || 0) /FEE_DECIMALS}`)
+      setMarketWeight(`${(selectedMarket.marketWeight || 0) / MARKET_WEIGHT_DECIMALS}`)
+      setLeverage(`${(selectedMarket.leverage || 0) / LEVERAGE_DECIMALS}`)
+      setTakerFee(`${(selectedMarket.takerFee || 0) / FEE_DECIMALS}`)
+      setMakerFee(`${(selectedMarket.makerFee || 0) / FEE_DECIMALS}`)
       setFeedAddress(selectedMarket.feedAddress.toString())
-    }else{
+    } else {
       setMarketIndex('-1')
     }
   }
@@ -109,7 +109,7 @@ export default function MarketDialog({ open, setOpen }: MarketDialogProps) {
               <Button disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Submit'}</Button>
               {errorMessage && <FormControl error={!!errorMessage}>
                 <FormHelperText>
-                  <InfoOutlined />
+                  <ICONS.INFO />
                   {errorMessage}
                 </FormHelperText>
               </FormControl>}

@@ -1,19 +1,8 @@
-import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRounded';
+
 import Box from '@mui/joy/Box';
 import Sheet from '@mui/joy/Sheet';
 import Button from '@mui/joy/Button';
-import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
-import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
-import CurrencyExchangeRounded from '@mui/icons-material/CurrencyExchangeRounded';
-import EmojiEventsRounded from '@mui/icons-material/EmojiEventsRounded';
-import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
-import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
-import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutlineRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import UpdateRounded from '@mui/icons-material/UpdateRounded';
-import AutoModeRoundedIcon from '@mui/icons-material/AutoModeRounded';
 import ButtonGroup from '@mui/joy/ButtonGroup';
-import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
 import Dropdown from '@mui/joy/Dropdown';
 import ListItemDecorator from '@mui/joy/ListItemDecorator';
 import Menu from '@mui/joy/Menu';
@@ -23,7 +12,7 @@ import { useState } from 'react';
 import { AMOUNT_DECIMALS, AUTO_REFRESH_INTERVAL } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
 import useProgram from '../hooks/useProgram';
-import { formatCurrency } from '../utils';
+import { formatCurrency, ICONS } from '../utils';
 import ClaimDialog from './ClaimDialog';
 import DepositDialog from './DepositDialog';
 import MarketDialog from './MarketDialog';
@@ -39,11 +28,9 @@ export default function Toolbar() {
     const { getProgram, getProvider } = useProgram() // initialize the program (do not remove)
     const wallet = useWallet();
 
-    const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
     const [updateExchangeDialogOpen, setUpdateExchangeDialogOpen] = useState(false);
     const [claimDialogOpen, setClaimDialogOpen] = useState(false);
     const [marketDialogOpen, setMarketDialogOpen] = useState(false);
-    const [depositDialogOpen, setDepositDialogOpen] = useState(false);
     const refreshAll = useKrunchStore((state: any) => state.refreshAll)
     const toggleAutoRefresh = useKrunchStore((state: any) => state.toggleAutoRefresh)
     const autoRefresh = useKrunchStore((state: any) => state.autoRefresh)
@@ -52,8 +39,12 @@ export default function Toolbar() {
     const walletState = useWalletModal();
     const userAccountValue = useKrunchStore((state: any) => state.userAccountValue)
     const userRewardsAvailable = useKrunchStore(state => state.userRewardsAvailable)
-    const tradeDialogOpen = useKrunchStore(state => state.tradeDialogOpen)
+    const withdrawDialogOpen = useKrunchStore(state => state.withdrawDialogOpen)
+    const setWithdrawDialogOpen = useKrunchStore(state => state.setWithdrawDialogOpen)
     const setTradeDialogOpen = useKrunchStore(state => state.setTradeDialogOpen)
+    const setDepositDialogOpen = useKrunchStore(state => state.setDepositDialogOpen)
+    const depositDialogOpen = useKrunchStore(state => state.depositDialogOpen)
+    const tradeDialogOpen = useKrunchStore(state => state.tradeDialogOpen)
     const refresh = async () => {
         if (wallet.connected) {
             const program = await getProgram()
@@ -92,7 +83,7 @@ export default function Toolbar() {
         }} >
             <Box gap={1} flex={1} display={'flex'}>
                 {!wallet.connected &&  <ButtonGroup  variant='plain'><Button
-                    startDecorator={<LinkRoundedIcon />}
+                    startDecorator={<ICONS.CONNECT />}
                     size="sm"
                     sx={{padding:1,paddingLeft:2,paddingRight:2}}
                     variant='plain'
@@ -103,7 +94,7 @@ export default function Toolbar() {
                 {wallet.connected && <ButtonGroup  variant='plain'>
                     <Button
                         sx={{padding:1,paddingLeft:2,paddingRight:2}}
-                        startDecorator={<EmojiEventsRounded />}
+                        startDecorator={<ICONS.REWARDS />}
                         size="md"
                         onClick={() => setClaimDialogOpen(true)}
                     >
@@ -115,16 +106,16 @@ export default function Toolbar() {
                             size="sm"
                             variant='plain'
                             sx={{padding:1,paddingLeft:2,paddingRight:2}}   
-                            startDecorator={<CurrencyExchangeRounded />}
-                            endDecorator={<ArrowDropDown />}
+                            startDecorator={<ICONS.WALLET />}
+                            endDecorator={<ICONS.ARROW_DROP_DOWN />}
                         >Wallet: {formatCurrency(userAccountValue / AMOUNT_DECIMALS)}</MenuButton>
                         <Menu>
-                            <MenuItem onClick={() => setDepositDialogOpen(true)}><ListItemDecorator><AddCircleOutlineRoundedIcon /></ListItemDecorator>Deposit</MenuItem>
-                            <MenuItem onClick={() => setWithdrawDialogOpen(true)}><ListItemDecorator><RemoveCircleOutlineRoundedIcon /></ListItemDecorator>Withdraw</MenuItem>
+                            <MenuItem onClick={() => setDepositDialogOpen(true)}><ListItemDecorator><ICONS.DEPOSIT /></ListItemDecorator>Deposit</MenuItem>
+                            <MenuItem onClick={() => setWithdrawDialogOpen(true)}><ListItemDecorator><ICONS.WITHDRAW /></ListItemDecorator>Withdraw</MenuItem>
                         </Menu>
                     </Dropdown>
                     <Button
-                        startDecorator={<QueryStatsRounded />}
+                        startDecorator={<ICONS.TRADE />}
                         size="sm"
                         sx={{padding:1,paddingLeft:2,paddingRight:2}}
                         variant='plain'
@@ -140,15 +131,15 @@ export default function Toolbar() {
                         size="sm"
                         variant='plain'
                         sx={{padding:1,paddingLeft:2,paddingRight:2}}
-                        startDecorator={<SettingsRoundedIcon />}
-                        endDecorator={<ArrowDropDown />}
+                        startDecorator={<ICONS.SETTINGS />}
+                        endDecorator={<ICONS.ARROW_DROP_DOWN />}
                     >Settings</MenuButton>
                     <Menu>
-                        <MenuItem onClick={() => initApp()}><ListItemDecorator><SettingsRoundedIcon /></ListItemDecorator>Setup</MenuItem>
-                        <MenuItem onClick={() => setUpdateExchangeDialogOpen(true)}><ListItemDecorator><UpdateRounded /></ListItemDecorator>Update Exchange</MenuItem>
-                        <MenuItem onClick={() => setMarketDialogOpen(true)}><ListItemDecorator><CandlestickChartRoundedIcon /></ListItemDecorator>Update Market</MenuItem>
-                        <MenuItem onClick={() => refresh()}><ListItemDecorator><RefreshRoundedIcon /></ListItemDecorator>Refresh (Auto = {autoRefresh ? 'On' : 'Off'})</MenuItem>
-                        <MenuItem onClick={() => toggleAutoRefresh()}><ListItemDecorator><AutoModeRoundedIcon /></ListItemDecorator>Toggle Refresh (Auto = {autoRefresh ? 'On' : 'Off'})</MenuItem>
+                        <MenuItem onClick={() => initApp()}><ListItemDecorator><ICONS.SETTINGS /></ListItemDecorator>Setup</MenuItem>
+                        <MenuItem onClick={() => setUpdateExchangeDialogOpen(true)}><ListItemDecorator><ICONS.UPDATE_EXCHANGE /></ListItemDecorator>Update Exchange</MenuItem>
+                        <MenuItem onClick={() => setMarketDialogOpen(true)}><ListItemDecorator><ICONS.MARKET /></ListItemDecorator>Update Market</MenuItem>
+                        <MenuItem onClick={() => refresh()}><ListItemDecorator><ICONS.REFRESH /></ListItemDecorator>Refresh (Auto = {autoRefresh ? 'On' : 'Off'})</MenuItem>
+                        <MenuItem onClick={() => toggleAutoRefresh()}><ListItemDecorator><ICONS.AUTO_REFRESH /></ListItemDecorator>Toggle Refresh (Auto = {autoRefresh ? 'On' : 'Off'})</MenuItem>
                     </Menu>
                 </Dropdown>}
             </Box>

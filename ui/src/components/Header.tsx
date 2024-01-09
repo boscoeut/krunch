@@ -1,8 +1,8 @@
-import MenuIcon from '@mui/icons-material/Menu';
+
 import GlobalStyles from '@mui/joy/GlobalStyles';
 import IconButton from '@mui/joy/IconButton';
 import Sheet from '@mui/joy/Sheet';
-
+import {ICONS} from '../utils';
 import { toggleSidebar } from '../utils';
 
 export default function Header() {
@@ -40,7 +40,7 @@ export default function Header() {
         color="neutral"
         size="sm"
       >
-        <MenuIcon />
+        <ICONS.MENU />
       </IconButton>
     </Sheet>
   );

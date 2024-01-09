@@ -1,20 +1,9 @@
-import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
-import CandlestickChartRoundedIcon from '@mui/icons-material/CandlestickChartRounded';
-import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
-import GavelIcon from '@mui/icons-material/Gavel';
-import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
-import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
-import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import QueryStatsRounded from '@mui/icons-material/QueryStatsRounded';
-import WavesRoundedIcon from '@mui/icons-material/WavesRounded';
 import Box from '@mui/joy/Box';
 import Divider from '@mui/joy/Divider';
 import GlobalStyles from '@mui/joy/GlobalStyles';
 import IconButton from '@mui/joy/IconButton';
 import List from '@mui/joy/List';
 import ListItem from '@mui/joy/ListItem';
-import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
-import LightModeIcon from '@mui/icons-material/LightMode';
 import ListItemButton, { listItemButtonClasses } from '@mui/joy/ListItemButton';
 import ListItemContent from '@mui/joy/ListItemContent';
 import Sheet from '@mui/joy/Sheet';
@@ -27,6 +16,7 @@ import { useKrunchStore } from "../hooks/useKrunchStore";
 import { SHOW_LIGHT_MODE } from 'utils/dist/constants';
 import Logo from './Logo';
 import * as React from 'react';
+import {ICONS} from '../utils';
 import { useColorScheme } from '@mui/joy/styles';
 
 export default function Sidebar() {
@@ -53,46 +43,46 @@ export default function Sidebar() {
     const pages = [{
         path: '/welcome',
         name: 'Welcome',
-        icon: <HomeRoundedIcon />,
+        icon: <ICONS.HOME />,
         onclick: () => navigate('/welcome')
     }, {
         path: '/positions',
         name: 'Trade',
-        icon: <QueryStatsRounded />,
+        icon: <ICONS.TRADE />,
         onclick: () => navigate('/positions')
     }, {
         path: '/home',
         name: 'Account',
-        icon: <DashboardRoundedIcon />,
+        icon: <ICONS.ACCOUNT />,
         onclick: () => navigate('/home')
     }, {
         path: '/pool',
         name: 'Pool',
-        icon: <WavesRoundedIcon />,
+        icon: <ICONS.POOL />,
         onclick: () => navigate('/pool')
     }, {
         path: '/markets',
         name: 'Markets',
-        icon: <CandlestickChartRoundedIcon />,
+        icon: <ICONS.MARKET />,
         onclick: () => navigate('/markets')
     }]
 
     const bottomPages = [{
         path: '/contracts',
         name: 'Contracts',
-        icon: <GavelIcon />,
+        icon: <ICONS.CONTRACTS />,
         onclick: () => navigate('/contracts')
     }, {
         path: '/documentation',
         name: 'Documentation',
-        icon: <ArticleRoundedIcon />,
+        icon: <ICONS.DOCUMENTATION />,
         onclick: () => navigate('/documentation')
     }]
     if (mounted && showLightModeToggle) {
         bottomPages.push({
             path: '/new-path',
             name: mode === 'dark' ? 'Light Mode' : 'Dark Mode',
-            icon: mode === 'dark' ? <LightModeIcon /> : <DarkModeRoundedIcon />,
+            icon: mode === 'dark' ? <ICONS.LIGHT_MODE /> : <ICONS.DARK_MODE />,
             onclick: () => {
                 if (mode === 'light') {
                     setMode('dark');
@@ -197,10 +187,10 @@ export default function Sidebar() {
                 <Stack direction={'row-reverse'}>
                     <IconButton onClick={toggleConnect} size="sm" variant="plain" color="neutral">
                         {!wallet.connected &&
-                            <LogoutRoundedIcon />
+                            <ICONS.LOGOUT />
                         }
                         {wallet.connected &&
-                            <LoginRoundedIcon />
+                            <ICONS.LOGIN />
                         }
                     </IconButton>
 
