@@ -5,7 +5,7 @@ export declare const LOCALNET = "Localnet";
 export declare const DEVNET = "Devnet";
 export declare const NETWORK: 'Localnet' | 'Devnet' | 'Mainnet';
 export declare const SLOTS_PER_DAY: number;
-export declare const NETWORK_EXPLORER = "https://explorer.solana.com/";
+export declare const NETWORK_EXPLORER: string;
 export declare const NETWORK_URL: string;
 export declare const ADMIN_ADDRESS: string;
 export declare const TOKEN_PROGRAM_ID: string;
