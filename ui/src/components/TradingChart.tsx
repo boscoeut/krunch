@@ -105,7 +105,7 @@ export default function TradingChart() {
                 <Table>
                     <thead>
                         <tr >
-                            <th><Button onClick={() => setTradeDialogOpen(true)} variant="plain"><Typography level='h4' sx={{ textTransform: 'capitalize', fontFamily: 'BrunoAceSC' }}>{marketDetails.name}</Typography></Button></th>
+                            <th><Button onClick={() => setTradeDialogOpen(true)} variant="soft"><Typography level='h4' sx={{ textTransform: 'capitalize', fontFamily: 'BrunoAceSC' }}>{marketDetails.name}</Typography></Button></th>
                             <th>Price: <PriceLabel value={marketDetails.price}>{formatCurrency(marketDetails.price || 0)}</PriceLabel></th>
                             <th>Amount: <br />{renderItem(marketDetails.tokenAmount || 0, AMOUNT_DECIMALS, 4)}</th>
                             <th>Basis: <br />{renderItem(marketDetails.basis || 0)}</th>
