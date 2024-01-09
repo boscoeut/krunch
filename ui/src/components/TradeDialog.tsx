@@ -6,9 +6,11 @@ import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
 import FormHelperText from '@mui/joy/FormHelperText';
+import Typography from '@mui/joy/Typography';
 import FormLabel from '@mui/joy/FormLabel';
 import Input from '@mui/joy/Input';
 import Modal from '@mui/joy/Modal';
+import PaidRoundedIcon from '@mui/icons-material/PaidRounded';
 import ModalClose from '@mui/joy/ModalClose';
 import ModalDialog from '@mui/joy/ModalDialog';
 import Option from '@mui/joy/Option';
@@ -160,7 +162,7 @@ export default function TradeDialog({ open, setOpen }: TradeDialogProps) {
                     <td></td>
                   </tr>
                   <tr>
-                    <td>{fee > 0 ? 'Fee' : 'Trading Rebate!'}</td>
+                    <td>{fee > 0 ? 'Fee' : <KLabel numValue={fee * -1} endDecorator={<PaidRoundedIcon color='success' />}>Trading Rebate</KLabel>}</td>
                     <td><KLabel fontWeight="bold" numValue={fee * -1}>{formatCurrency(fee, 4)}</KLabel>  </td>
                     <td><Chip color={fee > 0 ? "danger" : "success"}>Rate: {formatPercent(feeRate)}</Chip></td>
                   </tr>
