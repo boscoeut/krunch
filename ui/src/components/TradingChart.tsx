@@ -169,11 +169,11 @@ export default function TradingChart() {
                 </Box>
 
                 {/* Chart */}
-                <Box flexGrow={1} >
+                <Box flexGrow={1} sx={{bgcolor:appInfo.toolbarBackground}} >
                     <ErrorBoundary fallback={<div>Something went wrong</div>}>
                         <div
                             ref={container}
-                            style={{ height: "100%", width: "100%" }} />
+                            style={{ background:appInfo.toolbarBackground, height: "100%", width: "100%" }} />
                     </ErrorBoundary>
                 </Box>
             </Box>
