@@ -17,3 +17,7 @@ Cargo.lock
 **/test-ledger
 
 contracts/.anchor/test-ledger/rocksdb/000052.sst
+contracts/config/
+.DS_Store
+contracts/.DS_Store
+contracts/.DS_Store

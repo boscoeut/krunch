@@ -1,10 +1,18 @@
 import { PublicKey } from "@solana/web3.js";
 
+/**
+ * To Change Networks
+ * 1. Change NETWORK to 'Localnet', 'Devnet', or 'Mainnet'
+ * 2. Change cluster = "Devnet" in Anchor.toml
+ * 3. Run anchor run deploy-dev for dev
+ * 4. Run anchor run deploy-local for local
+ */
+export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Devnet";
+
 export const SHOW_LIGHT_MODE = false;
 export const AUTO_REFRESH_INTERVAL = 1000 * 2 // 2 seconds
 export const LOCALNET = 'Localnet'; 
 export const DEVNET = 'Devnet';
-export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Localnet";
 export const SLOTS_PER_DAY = 24 * 60 * 60
 
 let rewardFrequency = SLOTS_PER_DAY * 1

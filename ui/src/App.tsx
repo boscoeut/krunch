@@ -2,16 +2,15 @@ import { Sheet } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import CssBaseline from '@mui/joy/CssBaseline';
 import { CssVarsProvider, extendTheme } from '@mui/joy/styles';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Account from './components/Account';
-import UserPositions from './components/UserPositions';
 import Contracts from './components/Contracts';
 import Documentation from './components/Documentation';
-import Header from './components/Header';
 import Markets from './components/Markets';
 import Pool from './components/Pool';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
+import UserPositions from './components/UserPositions';
 import Welcome from './components/Welcome';
 import { colors } from './utils';
 

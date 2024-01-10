@@ -4,8 +4,8 @@ import { useKrunchStore } from "../hooks/useKrunchStore";
 import { LEVERAGE_DECIMALS, MARKETS, AMOUNT_DECIMALS, SLOTS_PER_DAY } from 'utils/dist/constants';
 import Stat from './Stat';
 import SubStat from './SubStat';
-import { Stack } from '@mui/joy';
-import { formatCurrency, renderItem, formatNumber, formatPercent } from '../utils';
+import { Stack } from '@mui/joy'; 
+import { formatCurrency, formatNumber, formatPercent } from '../utils';
 import SectionHeader from './SectionHeader';
 import moment from 'moment';
 
