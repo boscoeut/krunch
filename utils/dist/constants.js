@@ -9,7 +9,7 @@ var web3_js_1 = require("@solana/web3.js");
  * 3. Run anchor run deploy-dev for dev
  * 4. Run anchor run deploy-local for local
  */
-exports.NETWORK = "Devnet";
+exports.NETWORK = "Localnet";
 exports.SHOW_LIGHT_MODE = false;
 exports.AUTO_REFRESH_INTERVAL = 1000 * 2; // 2 seconds
 exports.LOCALNET = 'Localnet';

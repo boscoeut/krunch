@@ -221,6 +221,7 @@ const setupAccounts = async function (provider: any, program: any) {
         const program = anchor.workspace.Krunch as Program<Krunch>;
         const hash = await provider.connection.getLatestBlockhash();
         console.log("hash", hash)
+        console.log("rpcEndpoint", provider.connection.rpcEndpoint)
         console.log("program", program.programId.toString())
         console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
        

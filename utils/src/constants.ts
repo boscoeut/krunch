@@ -7,7 +7,7 @@ import { PublicKey } from "@solana/web3.js";
  * 3. Run anchor run deploy-dev for dev
  * 4. Run anchor run deploy-local for local
  */
-export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Devnet";
+export const NETWORK: 'Localnet'|'Devnet'|'Mainnet' = "Localnet";
 
 export const SHOW_LIGHT_MODE = false;
 export const AUTO_REFRESH_INTERVAL = 1000 * 2 // 2 seconds
