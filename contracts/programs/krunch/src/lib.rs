@@ -12,6 +12,7 @@ const FEE_DECIMALS: u128 = 10u128.pow(4);
 const AMOUNT_NUM_DECIMALS: u8 = 9;
 const AMOUNT_DECIMALS: u128 = 10u128.pow(AMOUNT_NUM_DECIMALS as u32);
 
+
 #[program]
 pub mod krunch {
     use super::*;
@@ -300,7 +301,7 @@ pub mod krunch {
         let user_account = &mut ctx.accounts.user_account;
         let exchange = &mut ctx.accounts.exchange;
 
-        execute_claim(user_account, exchange, false)?;
+       // execute_claim(user_account, exchange, false)?;
 
         user_account.collateral_value += collateral_amount as i64;
         exchange.collateral_value += collateral_amount as i64;

@@ -885,5 +885,8 @@
       "name": "NoRewardsAvailable",
       "msg": "No Rewards Available"
     }
-  ]
+  ],
+  "metadata": {
+    "address": "6zYPKjtGyPSZq6pP2U9ahNZAnaTtoVK9f1BMkEL2cix5"
+  }
 }
