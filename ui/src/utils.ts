@@ -31,8 +31,10 @@ import DoubleArrowRoundedIcon from '@mui/icons-material/DoubleArrowRounded';
 import FilterListRoundedIcon from '@mui/icons-material/FilterListRounded';
 import HighlightOffRoundedIcon from '@mui/icons-material/HighlightOffRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
+import AttachMoneyRoundedIcon from '@mui/icons-material/AttachMoneyRounded';
 
 export const ICONS = {
+  YIELD: AttachMoneyRoundedIcon,
   DEPOSIT: AddCircleOutlineRoundedIcon,
   WITHDRAW: RemoveCircleOutlineRoundedIcon,
   WALLET: CurrencyExchangeRounded,

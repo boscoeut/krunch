@@ -41,6 +41,10 @@
         {
           "name": "marketWeight",
           "type": "u16"
+        },
+        {
+          "name": "chainlinkProgram",
+          "type": "publicKey"
         }
       ]
     },
@@ -566,6 +570,117 @@
       "returns": {
         "defined": "DataFeed"
       }
+    },
+    {
+      "name": "addYieldMarket",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "yieldMarket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "exchange",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "marketIndex",
+          "type": "u16"
+        },
+        {
+          "name": "chainlinkFeed",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "updateYield",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userYieldPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "yieldMarket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkFeed",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "exchange",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "marketIndex",
+          "type": "u16"
+        },
+        {
+          "name": "tokenAmount",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "addYield",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userYieldPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "marketIndex",
+          "type": "u16"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -649,6 +764,10 @@
           {
             "name": "testMode",
             "type": "bool"
+          },
+          {
+            "name": "chainlinkProgram",
+            "type": "publicKey"
           }
         ]
       }
@@ -816,6 +935,110 @@
           },
           {
             "name": "rebates",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "YieldMarket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "marketIndex",
+            "type": "u16"
+          },
+          {
+            "name": "longTokenAmount",
+            "type": "i64"
+          },
+          {
+            "name": "shortTokenAmount",
+            "type": "i64"
+          },
+          {
+            "name": "longBasis",
+            "type": "i64"
+          },
+          {
+            "name": "shortBasis",
+            "type": "i64"
+          },
+          {
+            "name": "longFunding",
+            "type": "i64"
+          },
+          {
+            "name": "shortFunding",
+            "type": "i64"
+          },
+          {
+            "name": "shortFees",
+            "type": "i64"
+          },
+          {
+            "name": "longFees",
+            "type": "i64"
+          },
+          {
+            "name": "lastClaimDate",
+            "type": "i64"
+          },
+          {
+            "name": "chainlinkFeed",
+            "type": "publicKey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserYieldPosition",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "marketIndex",
+            "type": "u16"
+          },
+          {
+            "name": "longTokenAmount",
+            "type": "i64"
+          },
+          {
+            "name": "shortTokenAmount",
+            "type": "i64"
+          },
+          {
+            "name": "longBasis",
+            "type": "i64"
+          },
+          {
+            "name": "shortBasis",
+            "type": "i64"
+          },
+          {
+            "name": "longFunding",
+            "type": "i64"
+          },
+          {
+            "name": "shortFunding",
+            "type": "i64"
+          },
+          {
+            "name": "shortFees",
+            "type": "i64"
+          },
+          {
+            "name": "longFees",
+            "type": "i64"
+          },
+          {
+            "name": "lastClaimDate",
             "type": "i64"
           }
         ]

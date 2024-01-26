@@ -1,4 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
+import * as anchor from "@coral-xyz/anchor";
 
 export type Market = {
     name:string,
@@ -23,6 +24,34 @@ export type Market = {
     marketTypeId?:number,
     marketType?:string,  
 }
+
+export type YieldMarket = {
+    name:string,
+    marketIndex:number,
+    price?:number,   
+    marketTypeId?:number,
+    marketType?:string,  
+    longTokenAmount?:anchor.BN,
+    shortTokenAmount?:anchor.BN,
+    longFunding?:anchor.BN,
+    shortFunding?:anchor.BN,
+    longBasis?:anchor.BN,
+    shortBasis?:anchor.BN,
+    currentLongValue?:number,
+    userPosition?: UserYieldPosition
+}
+
+export type UserYieldPosition = {
+    longTokenAmount?:anchor.BN,
+    shortTokenAmount?:anchor.BN,
+    longFunding?:anchor.BN,
+    shortFunding?:anchor.BN,
+    longBasis?:anchor.BN,
+    shortBasis?:anchor.BN,
+    currentLongValue?:number,
+}
+
+
 
 export type ExchangeBalance = {
     mint: PublicKey,

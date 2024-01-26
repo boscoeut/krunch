@@ -18,6 +18,7 @@ import DepositDialog from './DepositDialog';
 import MarketDialog from './MarketDialog';
 import TradeDialog from './TradeDialog';
 import UpdateExchangeDialog from './UpdateExchangeDialog';
+import YieldDialog from './YieldDialog';
 import WithdrawDialog from './WithdrawDialog';
 import useActiveTabEvent from '../hooks/useActiveTabEvent';
 import { useEffect } from 'react';
@@ -42,6 +43,8 @@ export default function Toolbar() {
     const withdrawDialogOpen = useKrunchStore(state => state.withdrawDialogOpen)
     const setWithdrawDialogOpen = useKrunchStore(state => state.setWithdrawDialogOpen)
     const setTradeDialogOpen = useKrunchStore(state => state.setTradeDialogOpen)
+    const setYieldDialogOpen = useKrunchStore(state => state.setYieldDialogOpen)
+    const yieldDialogOpen = useKrunchStore(state => state.yieldDialogOpen)
     const setDepositDialogOpen = useKrunchStore(state => state.setDepositDialogOpen)
     const depositDialogOpen = useKrunchStore(state => state.depositDialogOpen)
     const tradeDialogOpen = useKrunchStore(state => state.tradeDialogOpen)
@@ -123,6 +126,15 @@ export default function Toolbar() {
                     >
                         Trade
                     </Button>
+                    <Button
+                        startDecorator={<ICONS.YIELD />}
+                        size="sm"
+                        sx={{padding:1,paddingLeft:2,paddingRight:2}}
+                        variant='plain'
+                        onClick={() => setYieldDialogOpen(true)}
+                    >
+                        Yield
+                    </Button>
                 </ButtonGroup>
                 }
                 <Box flex={1}></Box>
@@ -148,6 +160,7 @@ export default function Toolbar() {
             <DepositDialog open={depositDialogOpen} setOpen={setDepositDialogOpen} />
             <ClaimDialog open={claimDialogOpen} setOpen={setClaimDialogOpen} />
             <WithdrawDialog open={withdrawDialogOpen} setOpen={setWithdrawDialogOpen} />
+            <YieldDialog open={yieldDialogOpen} setOpen={setYieldDialogOpen} />
             <UpdateExchangeDialog open={updateExchangeDialogOpen} setOpen={setUpdateExchangeDialogOpen} />
         </Sheet>
     );

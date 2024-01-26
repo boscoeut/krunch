@@ -25,7 +25,9 @@ import {
 } from 'utils/dist/constants';
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
 import { create } from 'zustand';
-import type { AppInfo, ExchangeBalance, Market, UserPosition } from '../types';
+import type { AppInfo, ExchangeBalance, 
+  UserYieldPosition,
+  Market, UserPosition, YieldMarket } from '../types';
 import { colors } from "../utils";
 const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
 
@@ -47,13 +49,16 @@ export const defaultAppInfo: AppInfo = {
 }
 
 interface KrunchState {
+  yieldMarkets: Array<YieldMarket>,
   getExchange: () => Promise<any>,
   depositDialogOpen: boolean,
+  yieldDialogOpen: boolean,
   setDepositDialogOpen: (open: boolean) => void,
   withdrawDialogOpen: boolean,
   setWithdrawDialogOpen: (open: boolean) => void,
   tradeDialogOpen: boolean,
   setTradeDialogOpen: (open: boolean) => void,
+  setYieldDialogOpen: (open: boolean) => void,
   poolROI: number,
   exchangeBalanceAvailable: number,
   autoRefresh: boolean,
@@ -84,6 +89,7 @@ interface KrunchState {
   exchangeCollateral: number,
   initialize: (program: any, provider: any) => void,
   refreshMarkets: () => void,
+  refreshYieldMarkets: () => void,
   refreshAll: () => Promise<void>,
   refreshPositions: () => void,
   refreshUserAccount: () => void,
@@ -106,6 +112,7 @@ interface KrunchState {
 }
 
 export const useKrunchStore = create<KrunchState>()((set, get) => ({
+  yieldMarkets: [],
   getExchange: async () => {
     try {
       const exchange = await fetchAccount(get().program, 'exchange', ['exchange'])
@@ -117,8 +124,10 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   },
   depositDialogOpen: false,
   setDepositDialogOpen: (open: boolean) => { set({ depositDialogOpen: open }) },
+  yieldDialogOpen: false,
   withdrawDialogOpen: false,
   setWithdrawDialogOpen: (open: boolean) => { set({ withdrawDialogOpen: open }) },
+  setYieldDialogOpen: (open: boolean) => { set({ yieldDialogOpen: open }) },
   tradeDialogOpen: false,
   setTradeDialogOpen: (open: boolean) => { set({ tradeDialogOpen: open }) },
   poolROI: 0,
@@ -170,7 +179,6 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     }
     const program = get().program
     const provider = get().provider
-
     let tokenAccount = await getOrCreateAssociatedTokenAccount(
       provider.connection, //connection
       provider.wallet.publicKey, //payer
@@ -471,6 +479,42 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
   userBalances: [],
   userAccount: {},
   exchange: {},
+  refreshYieldMarkets: async () => {
+    let tempMarkets: Array<Market> = []
+    const exchange = await get().getExchange()
+    if (exchange) {
+      for (const market of get().markets) {
+        try {
+          const acct = await fetchAccount(get().program, 'yieldMarket', ['yield_market', market.marketIndex])
+          const price = get().prices.get(market.name) || 0
+          const marketType = MARKET_TYPES.find((x: any) => x.id === market.marketTypeId || 1)
+          const currentLongValue = price * (acct.longTokenAmount.toNumber() / AMOUNT_DECIMALS)
+
+          let userYieldPosition: UserYieldPosition | undefined = undefined
+          try{
+            userYieldPosition = await fetchAccount(get().program, 
+              'userYieldPosition', 
+              ['user_yield_position', market.marketIndex, get().provider.wallet.publicKey ])             
+          }catch(x:any){
+            // user account does not exist
+            console.log('userYieldPosition does not exist')
+          }
+
+          tempMarkets.push({ 
+            market: market.name, 
+            ...market, 
+            ...acct, 
+            price,  
+            currentLongValue,
+            userPosition: userYieldPosition,
+            marketType: marketType?.name })
+        } catch (x: any) {
+          // could not get market
+        }
+      }
+      set(() => ({ yieldMarkets: tempMarkets }))
+    }
+  },
   refreshMarkets: async () => {
     let tempMarkets: Array<Market> = []
 
@@ -720,6 +764,7 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
     set({ isAdmin })
     get().getPrices()
     get().refreshMarkets()
+    get().refreshYieldMarkets()
     get().refreshPositions()
     get().refreshPool()
     get().refreshUserAccount()

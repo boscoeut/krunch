@@ -65,6 +65,11 @@ export default function Sidebar() {
         name: 'Markets',
         icon: <ICONS.MARKET />,
         onclick: () => navigate('/markets')
+    }, {
+        path: '/yield',
+        name: 'Yields',
+        icon: <ICONS.YIELD />,
+        onclick: () => navigate('/yield')
     }]
 
     const bottomPages = [{

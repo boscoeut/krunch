@@ -100,8 +100,9 @@ const initializeKrunch = async function (provider: any, program: any) {
         new anchor.BN(REWARD_RATE),
         NETWORK === LOCALNET,
         EXCHANGE_MARKET_WEIGHT * MARKET_WEIGHT_DECIMALS,
+        new PublicKey(CHAINLINK_PROGRAM)
     ]);
-   
+
     console.log("exchange collateralValue", exchange.collateralValue.toString());
     await addMarkets(provider, program);
     const marketIndex = 1;
@@ -214,6 +215,56 @@ const setupAccounts = async function (provider: any, program: any) {
     //  await deposit(provider, program, SOL_MINT, SOL_USD_FEED, 100);
 };
 
+
+
+const initializeYield = async function (provider: any, program: any) {
+    if (NETWORK === LOCALNET) {
+        const exchangeAddress = await findAddress(program, ['exchange'])
+        for (const market of MARKETS) {
+            const yieldMarket: any = await findAddress(program, [ 'yield_market',market.marketIndex]);
+            // add yield market (if needed)
+            try {
+                const acct = await program.account['yieldMarket'].fetch(yieldMarket);
+                console.log("yieldMarket exists for ", market.name);
+            } catch (err) {                
+                let tx = await program.methods.addYieldMarket(market.marketIndex, new PublicKey(market.feedAddress)).accounts({
+                    exchange: exchangeAddress,
+                    yieldMarket: yieldMarket
+                }).rpc();
+                console.log("addYieldMarket", tx);
+            }
+
+            // add user yield position (if needed)
+            const userYieldPosition = await findAddress(program, 
+                ['user_yield_position',
+                market.marketIndex, 
+                provider.wallet.publicKey])
+            try {
+                const acct = await program.account['yieldMarket'].fetch(yieldMarket);
+                console.log("user_yield_position exists for ", market.name);
+            } catch (err) {                      
+                let tx = await program.methods.addYield(
+                    market.marketIndex).accounts({
+                        userYieldPosition,                        
+                }).rpc();          
+                console.log("addYieldMarket", tx);
+            }
+
+            // add user yield
+             let tx = await program.methods.updateYield(
+                market.marketIndex, 
+                new anchor.BN(1 * AMOUNT_DECIMALS)).accounts({
+                    exchange: exchangeAddress,
+                    userYieldPosition,
+                    yieldMarket: yieldMarket,
+                    chainlinkProgram: CHAINLINK_PROGRAM,
+                    chainlinkFeed: market.feedAddress
+            }).rpc();
+            console.log('updateYield', tx);
+        }
+    }
+};
+
 (async () => {
     const provider = anchor.AnchorProvider.env();
     console.log("provider rpcEndpoint", provider.connection.rpcEndpoint)
@@ -224,9 +275,10 @@ const setupAccounts = async function (provider: any, program: any) {
         console.log("rpcEndpoint", provider.connection.rpcEndpoint)
         console.log("program", program.programId.toString())
         console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
-       
+
         await initializeKrunch(provider, program);
-        await setupAccounts(provider, program);
+        await initializeYield(provider, program);
+        // await setupAccounts(provider, program);
     } catch (e) {
         console.log("error", e.message)
         console.log(e)

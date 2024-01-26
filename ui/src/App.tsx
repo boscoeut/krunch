@@ -7,6 +7,7 @@ import Account from './components/Account';
 import Contracts from './components/Contracts';
 import Documentation from './components/Documentation';
 import Markets from './components/Markets';
+import Yields from './components/Yields';
 import Pool from './components/Pool';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
@@ -75,6 +76,7 @@ export default function App() {
                         <Route path="/contracts" Component={Contracts} />
                         <Route path="/positions" Component={UserPositions} />
                         <Route path="/markets" Component={Markets} />
+                        <Route path="/yield" Component={Yields} />
                         <Route path="/" element={<Navigate replace to="/home" />} />
                     </Routes>
                 </Sheet>
