@@ -10,14 +10,12 @@ const LEVERAGE_DECIMALS: u128 = 10u128.pow(4);
 const MARKET_WEIGHT_DECIMALS: u128 = 10u128.pow(4);
 const FEE_DECIMALS: u128 = 10u128.pow(4);
 const AMOUNT_NUM_DECIMALS: u8 = 9;
-const ONE_YEAR : u64 = 365 * 24 * 60 * 60;
+const ONE_YEAR: u64 = 365 * 24 * 60 * 60;
+// const ONE_YEAR: u64 = 1 * 60 * 60; // one hour for testing
 const AMOUNT_DECIMALS: u128 = 10u128.pow(AMOUNT_NUM_DECIMALS as u32);
-
 
 #[program]
 pub mod krunch {
-    use anchor_spl::token;
-
     use super::*;
 
     pub fn initialize_exchange(
@@ -417,11 +415,11 @@ pub mod krunch {
     pub fn add_yield_market(
         ctx: Context<AddYieldMarket>,
         market_index: u16,
-        chainlink_feed: Pubkey
+        chainlink_feed: Pubkey,
     ) -> Result<()> {
         let clock = Clock::get()?;
         let current_unix_timestamp = clock.unix_timestamp;
-        
+
         let market = &mut ctx.accounts.yield_market;
         market.market_index = market_index;
         market.long_basis = 0;
@@ -440,14 +438,27 @@ pub mod krunch {
     pub fn update_yield(
         ctx: Context<UpdateYield>,
         market_index: u16,
-        token_amount : i64
+        long_token_amount: i64,
+        short_token_amount: i64,
     ) -> Result<()> {
         let clock = Clock::get()?;
         let current_unix_timestamp = clock.unix_timestamp;
         let yield_market = &mut ctx.accounts.yield_market;
         let user_yield_position = &mut ctx.accounts.user_yield_position;
+        let exchange = &ctx.accounts.exchange;
 
-        user_yield_position.owner = ctx.accounts.owner.key.to_owned();
+        if long_token_amount + user_yield_position.long_token_amount < 0 {
+            return err!(KrunchErrors::YieldAmountInsufficient);
+        }
+        if long_token_amount + yield_market.long_token_amount < 0 {
+            return err!(KrunchErrors::YieldAmountInsufficient);
+        }
+        if short_token_amount + user_yield_position.short_token_amount < 0 {
+            return err!(KrunchErrors::YieldAmountInsufficient);
+        }
+        if short_token_amount + yield_market.short_token_amount < 0 {
+            return err!(KrunchErrors::YieldAmountInsufficient);
+        }
 
         // get price
         let round = chainlink::latest_round_data(
@@ -459,39 +470,29 @@ pub mod krunch {
             ctx.accounts.chainlink_feed.to_account_info(),
         )?;
 
-        let current_price = round.answer;
-
-        let user_long_token_amount: i64;
-        let user_short_token_amount: i64 ;
-        let market_long_token_amount: i64  ;
-        let market_short_token_amount: i64;
-
-        
-        if token_amount > 0{
-            // long
-            user_short_token_amount = user_yield_position.short_token_amount.min(token_amount);
-            user_long_token_amount = token_amount - user_short_token_amount;
-
-            market_short_token_amount = yield_market.short_token_amount.min(token_amount);
-            market_long_token_amount = token_amount - market_short_token_amount;
-        }else{
-            // short
-            user_long_token_amount = user_yield_position.long_token_amount.min(token_amount*-1);
-            user_short_token_amount = token_amount - user_long_token_amount;
-
-            market_long_token_amount = yield_market.long_token_amount.min(token_amount);
-            market_short_token_amount = token_amount - market_long_token_amount;
+        let mut current_price = round.answer;
+        if exchange.test_mode {
+            let clock = Clock::get()?;
+            let current_unix_timestamp = clock.unix_timestamp;
+            let last_digit = current_unix_timestamp % 10;
+            current_price = (current_price as f64 * (1.0 + (last_digit as f64) / 100.0)) as i128;
         }
-        
-        let user_long_basis = (current_price as i128 * user_long_token_amount as i128) / 10i128.pow(price_decimals.into());
-        let user_short_basis = (current_price as i128 * user_short_token_amount as i128) / 10i128.pow(price_decimals.into());
 
-        let market_long_basis = (current_price as i128 * market_long_token_amount as i128) / 10i128.pow(price_decimals.into());
-        let market_short_basis = (current_price as i128 * market_short_token_amount as i128) / 10i128.pow(price_decimals.into());
-        
+        let user_long_basis =
+            (current_price as i128 * long_token_amount as i128) / 10i128.pow(price_decimals.into());
+        let user_short_basis = (current_price as i128 * short_token_amount as i128)
+            / 10i128.pow(price_decimals.into());
+
+        let market_long_basis =
+            (current_price as i128 * long_token_amount as i128) / 10i128.pow(price_decimals.into());
+        let market_short_basis = (current_price as i128 * short_token_amount as i128)
+            / 10i128.pow(price_decimals.into());
+
         // calculate funding
-        let long_current_value = (current_price as i128 * yield_market.long_token_amount as i128) / 10i128.pow(price_decimals.into());
-        let short_current_value = (current_price as i128 * yield_market.short_token_amount as i128) / 10i128.pow(price_decimals.into());
+        let long_current_value = (current_price as i128 * yield_market.long_token_amount as i128)
+            / 10i128.pow(price_decimals.into());
+        let short_current_value = (current_price as i128 * yield_market.short_token_amount as i128)
+            / 10i128.pow(price_decimals.into());
         let old_long_basis = yield_market.long_basis + yield_market.long_funding;
         let old_short_basis = yield_market.short_basis + yield_market.short_funding;
         let long_pnl = long_current_value - old_long_basis as i128;
@@ -499,58 +500,75 @@ pub mod krunch {
 
         let amount;
         let max_amount;
-        let mut user_yield_amount = 0;
         let elapsed_time: i64 = current_unix_timestamp - yield_market.last_claim_date;
-        let mut yield_amount = 0; 
-        
+        let mut long_user_yield_amount = 0;
+        let mut long_yield_amount = 0;
+        let mut short_user_yield_amount = 0;
+        let mut short_yield_amount = 0;
+
         if long_pnl > short_pnl {
             amount = long_pnl - short_pnl;
-            max_amount = amount.min(old_short_basis.into() );     
-            if yield_market.long_token_amount > 0 {
-                yield_amount = (max_amount as i128 * elapsed_time as i128) / ONE_YEAR as i128;
-                user_yield_amount = yield_amount as i128 * (user_yield_position.long_token_amount as i128 / yield_market.long_token_amount as i128);
-            }       
+            if (amount as i64) > old_short_basis {
+                max_amount = old_short_basis.into();
+            } else {
+                max_amount = amount;
+            }
+            if yield_market.long_token_amount > 0 && user_yield_position.long_token_amount > 0 {
+                long_yield_amount =
+                    get_ratio(max_amount as i128, elapsed_time as i128, ONE_YEAR as i128);
+                long_user_yield_amount = get_ratio(
+                    long_yield_amount as i128,
+                    user_yield_position.long_token_amount as i128,
+                    yield_market.long_token_amount as i128,
+                );
+                short_yield_amount = -1 * long_yield_amount;
+                short_user_yield_amount = -1 * long_user_yield_amount;
+            }
         } else {
-            amount = short_pnl - long_pnl ;
-            max_amount = amount.min(old_long_basis.into() );
-            if yield_market.short_token_amount > 0 {
-                yield_amount = (max_amount as i128 * elapsed_time as i128) / ONE_YEAR as i128;
-                user_yield_amount = yield_amount as i128 * (user_yield_position.short_token_amount as i128 / yield_market.short_token_amount as i128);
+            amount = short_pnl - long_pnl;
+            if (amount as i64) > old_long_basis {
+                max_amount = old_long_basis.into();
+            } else {
+                max_amount = amount;
+            }
+            if yield_market.short_token_amount > 0 && user_yield_position.short_token_amount > 0 {
+                short_yield_amount =
+                    get_ratio(max_amount as i128, elapsed_time as i128, ONE_YEAR as i128);
+                short_user_yield_amount = get_ratio(
+                    short_yield_amount as i128,
+                    user_yield_position.short_token_amount as i128,
+                    yield_market.short_token_amount as i128,
+                );
+                long_yield_amount = -1 * short_yield_amount;
+                long_user_yield_amount = -1 * short_user_yield_amount;
             }
         }
-       
-        if long_pnl > short_pnl {
-            user_yield_position.long_funding += user_yield_amount as i64;
-            yield_market.long_funding += yield_amount as i64;
-        } else {
-            yield_market.short_funding += yield_amount as i64;
-            user_yield_position.short_funding += user_yield_amount as i64;
-        }
-        
+        user_yield_position.long_funding += long_user_yield_amount as i64;
+        user_yield_position.short_funding += short_user_yield_amount as i64;
         user_yield_position.market_index = market_index;
-        user_yield_position.long_token_amount += user_long_token_amount;
-        user_yield_position.short_token_amount += user_short_token_amount;        
+        user_yield_position.long_token_amount += long_token_amount;
+        user_yield_position.short_token_amount += short_token_amount;
         user_yield_position.long_fees = 0;
         user_yield_position.short_fees = 0;
         user_yield_position.long_basis += user_long_basis as i64;
         user_yield_position.short_basis += user_short_basis as i64;
-        user_yield_position.last_claim_date = current_unix_timestamp;        
+        user_yield_position.last_claim_date = current_unix_timestamp;
 
-        yield_market.long_token_amount += user_long_token_amount;
-        yield_market.short_token_amount += user_short_token_amount;
+        yield_market.long_funding += long_yield_amount as i64;
+        yield_market.short_funding += short_yield_amount as i64;
         yield_market.long_fees = 0;
         yield_market.short_fees = 0;
+        yield_market.long_token_amount += long_token_amount;
+        yield_market.short_token_amount += short_token_amount;
         yield_market.long_basis += market_long_basis as i64;
         yield_market.short_basis += market_short_basis as i64;
-        yield_market.last_claim_date = current_unix_timestamp; 
+        yield_market.last_claim_date = current_unix_timestamp;
         Ok(())
     }
 
-    pub fn add_yield(
-        ctx: Context<AddYield>,
-        market_index: u16
-    ) -> Result<()> {
+    pub fn add_yield(ctx: Context<AddYield>, market_index: u16) -> Result<()> {
         let user_yield_position = &mut ctx.accounts.user_yield_position;
+        user_yield_position.market_index = market_index;
         user_yield_position.owner = ctx.accounts.owner.key.to_owned();
         Ok(())
     }
@@ -584,6 +602,13 @@ fn calculate_market_total(exchange: &Exchange, market: &Market) -> i128 {
         (exchange_total as i128 * market.market_weight as i128) / MARKET_WEIGHT_DECIMALS as i128;
     let market_total = max_market_collateral as i128 + market.margin_used as i128;
     return market_total;
+}
+fn get_ratio(num1: i128, num: i128, denom: i128) -> i128 {
+    if denom == 0 {
+        return 0;
+    }
+    return ((num1 * num * AMOUNT_DECIMALS as i128) / denom) / AMOUNT_DECIMALS as i128;
+    // return 1;
 }
 
 fn calculate_user_total(user_account: &UserAccount, leverage: i128) -> i128 {
@@ -649,4 +674,6 @@ pub enum KrunchErrors {
     RewardsClaimUnavailable,
     #[msg("No Rewards Available")]
     NoRewardsAvailable,
+    #[msg("Yield Amount Insufficient")]
+    YieldAmountInsufficient,
 }

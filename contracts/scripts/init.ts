@@ -217,16 +217,16 @@ const setupAccounts = async function (provider: any, program: any) {
 
 
 
-const initializeYield = async function (provider: any, program: any) {
+const initializeYield = async function (provider: any, program: any, createYieldPositions: boolean = true) {
     if (NETWORK === LOCALNET) {
         const exchangeAddress = await findAddress(program, ['exchange'])
         for (const market of MARKETS) {
-            const yieldMarket: any = await findAddress(program, [ 'yield_market',market.marketIndex]);
+            const yieldMarket: any = await findAddress(program, ['yield_market', market.marketIndex]);
             // add yield market (if needed)
             try {
                 const acct = await program.account['yieldMarket'].fetch(yieldMarket);
                 console.log("yieldMarket exists for ", market.name);
-            } catch (err) {                
+            } catch (err) {
                 let tx = await program.methods.addYieldMarket(market.marketIndex, new PublicKey(market.feedAddress)).accounts({
                     exchange: exchangeAddress,
                     yieldMarket: yieldMarket
@@ -235,32 +235,41 @@ const initializeYield = async function (provider: any, program: any) {
             }
 
             // add user yield position (if needed)
-            const userYieldPosition = await findAddress(program, 
+            const userYieldPosition = await findAddress(program,
                 ['user_yield_position',
-                market.marketIndex, 
-                provider.wallet.publicKey])
+                    market.marketIndex,
+                    provider.wallet.publicKey])
             try {
-                const acct = await program.account['yieldMarket'].fetch(yieldMarket);
-                console.log("user_yield_position exists for ", market.name);
-            } catch (err) {                      
+                const acct = await program.account['userYieldPosition'].fetch(userYieldPosition);
+                console.log("user_yield_position exists for ", acct.longFunding.toString());
+            } catch (err) {
                 let tx = await program.methods.addYield(
                     market.marketIndex).accounts({
-                        userYieldPosition,                        
-                }).rpc();          
-                console.log("addYieldMarket", tx);
+                        userYieldPosition,
+                    }).rpc();
+                console.log("addYield", tx);
             }
 
-            // add user yield
-             let tx = await program.methods.updateYield(
-                market.marketIndex, 
-                new anchor.BN(1 * AMOUNT_DECIMALS)).accounts({
-                    exchange: exchangeAddress,
-                    userYieldPosition,
-                    yieldMarket: yieldMarket,
-                    chainlinkProgram: CHAINLINK_PROGRAM,
-                    chainlinkFeed: market.feedAddress
-            }).rpc();
-            console.log('updateYield', tx);
+            if (createYieldPositions) {
+                // add user yield
+                let longAmount = 1;
+                let shortAmount = 0;
+                if (Math.random() > 0.5) {
+                    longAmount = 0;
+                    shortAmount = 1;
+                }
+                let tx = await program.methods.updateYield(
+                    market.marketIndex,
+                    new anchor.BN(longAmount * AMOUNT_DECIMALS),
+                    new anchor.BN(shortAmount * AMOUNT_DECIMALS)).accounts({
+                        exchange: exchangeAddress,
+                        userYieldPosition,
+                        yieldMarket: yieldMarket,
+                        chainlinkProgram: CHAINLINK_PROGRAM,
+                        chainlinkFeed: market.feedAddress
+                    }).rpc();
+                console.log('updateYield', tx);
+            }
         }
     }
 };
@@ -277,8 +286,8 @@ const initializeYield = async function (provider: any, program: any) {
         console.log("ONWER ADDRESS", provider.wallet.publicKey.toString());
 
         await initializeKrunch(provider, program);
-        await initializeYield(provider, program);
-        // await setupAccounts(provider, program);
+        await setupAccounts(provider, program);
+        await initializeYield(provider, program,false);
     } catch (e) {
         console.log("error", e.message)
         console.log(e)

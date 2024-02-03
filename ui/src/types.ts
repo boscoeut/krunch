@@ -38,7 +38,12 @@ export type YieldMarket = {
     longBasis?:anchor.BN,
     shortBasis?:anchor.BN,
     currentLongValue?:number,
-    userPosition?: UserYieldPosition
+    currentShortValue?:number,
+    longFees?:number,
+    shortFees?:number,
+    userPosition?: UserYieldPosition,
+    lastClaimDate?:number,
+
 }
 
 export type UserYieldPosition = {
@@ -49,9 +54,8 @@ export type UserYieldPosition = {
     longBasis?:anchor.BN,
     shortBasis?:anchor.BN,
     currentLongValue?:number,
+    lastClaimDate?:number,
 }
-
-
 
 export type ExchangeBalance = {
     mint: PublicKey,

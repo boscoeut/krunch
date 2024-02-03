@@ -651,7 +651,11 @@
           "type": "u16"
         },
         {
-          "name": "tokenAmount",
+          "name": "longTokenAmount",
+          "type": "i64"
+        },
+        {
+          "name": "shortTokenAmount",
           "type": "i64"
         }
       ]
@@ -1107,6 +1111,11 @@
       "code": 6007,
       "name": "NoRewardsAvailable",
       "msg": "No Rewards Available"
+    },
+    {
+      "code": 6008,
+      "name": "YieldAmountInsufficient",
+      "msg": "Yield Amount Insufficient"
     }
   ],
   "metadata": {

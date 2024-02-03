@@ -25,9 +25,11 @@ import {
 } from 'utils/dist/constants';
 import { fetchAccount, fetchOrCreateAccount, findAddress } from 'utils/dist/utils';
 import { create } from 'zustand';
-import type { AppInfo, ExchangeBalance, 
+import type {
+  AppInfo, ExchangeBalance,
   UserYieldPosition,
-  Market, UserPosition, YieldMarket } from '../types';
+  Market, UserPosition, YieldMarket
+} from '../types';
 import { colors } from "../utils";
 const { getOrCreateAssociatedTokenAccount } = require("@solana/spl-token");
 
@@ -103,6 +105,7 @@ interface KrunchState {
   userAccountValue: number,
   updateExchange: (testMode: boolean, rewardFrequency: number, rewardRate: number, leverage: number, marketWeight: number) => Promise<void>,
   executeTrade: (marketIndex: number, amount: number) => Promise<void>,
+  executeYield: (marketIndex: number, longAmount: number, shortAmount: number) => Promise<void>,
   deposit: (market: string, amount: number) => Promise<void>,
   withdraw: (market: string, amount: number) => Promise<void>,
   exchangeDepositOrWithdraw: (market: string, amount: number) => Promise<void>,
@@ -315,6 +318,43 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
       chainlinkProgram: CHAINLINK_PROGRAM,
     }).rpc();
   },
+  executeYield: async function (marketIndex: number,
+    longAmount: number,
+    shortAmount: number) {
+    const provider = get().provider
+    const program = get().program
+    const index = Number(marketIndex)
+    const market = MARKETS.find((market) => market.marketIndex === Number(marketIndex))
+    if (market) {
+
+      const userYieldPosition = await findAddress(program,
+        ['user_yield_position',
+          index,
+          provider.wallet.publicKey])
+
+      await fetchOrCreateAccount(program, 'userYieldPosition',
+        ['user_yield_position',
+          index,
+          provider.wallet.publicKey],
+        'addYield', [new anchor.BN(index)],
+        {
+          userYieldPosition
+        });
+
+      console.log('userYieldPosition found')  
+      const tx = await program.methods.updateYield(
+        new anchor.BN(marketIndex),
+        new anchor.BN(Number(longAmount) * AMOUNT_DECIMALS),
+        new anchor.BN(Number(shortAmount) * AMOUNT_DECIMALS)
+      ).accounts({
+        userYieldPosition,
+        exchange: await findAddress(program, ['exchange']),
+        yieldMarket: await findAddress(program, ['yield_market', index]),
+        chainlinkFeed: market.feedAddress,
+        chainlinkProgram: CHAINLINK_PROGRAM,
+      }).rpc();
+    }
+  },
   userAccountValue: 0,
   updateExchange: async function (testMode: boolean, rewardFrequency: number, rewardRate: number, leverage: number, marketWeight: number) {
     const program = get().program
@@ -489,25 +529,28 @@ export const useKrunchStore = create<KrunchState>()((set, get) => ({
           const price = get().prices.get(market.name) || 0
           const marketType = MARKET_TYPES.find((x: any) => x.id === market.marketTypeId || 1)
           const currentLongValue = price * (acct.longTokenAmount.toNumber() / AMOUNT_DECIMALS)
+          const currentShortValue = price * (acct.longTokenAmount.toNumber() / AMOUNT_DECIMALS)
 
           let userYieldPosition: UserYieldPosition | undefined = undefined
-          try{
-            userYieldPosition = await fetchAccount(get().program, 
-              'userYieldPosition', 
-              ['user_yield_position', market.marketIndex, get().provider.wallet.publicKey ])             
-          }catch(x:any){
+          try {
+            userYieldPosition = await fetchAccount(get().program,
+              'userYieldPosition',
+              ['user_yield_position', market.marketIndex, get().provider.wallet.publicKey])
+          } catch (x: any) {
             // user account does not exist
             console.log('userYieldPosition does not exist')
           }
 
-          tempMarkets.push({ 
-            market: market.name, 
-            ...market, 
-            ...acct, 
-            price,  
+          tempMarkets.push({
+            market: market.name,
+            ...market,
+            ...acct,
+            price,
             currentLongValue,
+            currentShortValue,
             userPosition: userYieldPosition,
-            marketType: marketType?.name })
+            marketType: marketType?.name
+          })
         } catch (x: any) {
           // could not get market
         }

@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import Box from '@mui/joy/Box';
 import Button from '@mui/joy/Button';
+import Chip from '@mui/joy/Chip';
 import DialogContent from '@mui/joy/DialogContent';
 import DialogTitle from '@mui/joy/DialogTitle';
 import FormControl from '@mui/joy/FormControl';
@@ -14,49 +14,71 @@ import Option from '@mui/joy/Option';
 import Select from '@mui/joy/Select';
 import Stack from '@mui/joy/Stack';
 import Table from '@mui/joy/Table';
-import Typography from '@mui/joy/Typography';
 import * as React from 'react';
-import { AMOUNT_DECIMALS, EXCHANGE_POSITIONS } from "utils/dist/constants";
+import { AMOUNT_DECIMALS, FEE_DECIMALS, MARKETS } from 'utils/dist/constants';
 import { useKrunchStore } from "../hooks/useKrunchStore";
-import { formatCurrency, renderItem, formatNumber, ICONS } from '../utils';
+import {ICONS, formatCurrency, formatNumber, formatPercent } from "../utils";
+import KLabel from "./KLabel";
 import PriceLabel from './PriceLabel';
-import KLabel from './KLabel';
 
 export interface YieldDialogProps {
   open: boolean;
-  setOpen: (open:boolean) => void;
+  setOpen: (open:boolean)=>void; // Definition of setOpen prop    
 }
 
 export default function YieldDialog({ open, setOpen }: YieldDialogProps) {
-  const [market, setMarket] = React.useState('USDC/USD');
-  const [amount, setAmount] = React.useState('0');
+  const [marketIndex, setMarketIndex] = React.useState('1');
   const [errorMessage, setErrorMessage] = React.useState('');
+  const [amount, setAmount] = React.useState('1');
+  const [shortAmount, setShortAmount] = React.useState('1');
   const [submitting, setSubmitting] = React.useState(false);
-  const userAccountValue = useKrunchStore(state => state.userAccountValue)
+  const exchangeBalances = useKrunchStore(state => state.exchangeBalances)
+  const positions = useKrunchStore(state => state.positions)
+  const markets = useKrunchStore(state => state.markets)
+  const userCollateral = useKrunchStore(state => state.userCollateral)
+  const exchangeBalanceAvailable = useKrunchStore(state => state.exchangeBalanceAvailable)
+  const executeYield = useKrunchStore(state => state.executeYield)
+  const selectedMarket = markets.find((position) => position.marketIndex === Number(marketIndex))
+  const selectedExchangeMarket = exchangeBalances.find((position) => position.market === selectedMarket?.name)
+  const selectedUserBalance = positions.find((position) => position.market === selectedMarket?.name)
+  const tradeValue = Number(amount) * (selectedExchangeMarket?.price || 0)
+  const marketTokenAmount = (selectedMarket?.tokenAmount || 0) / AMOUNT_DECIMALS
+  const userTokenAmount = (selectedUserBalance?.tokenAmount || 0) / AMOUNT_DECIMALS
 
-  const userBalances = useKrunchStore(state => state.userBalances)
-  const deposit = useKrunchStore(state => state.deposit)
+  let feeRate = (selectedMarket?.takerFee || 0) / FEE_DECIMALS || 0
+  const nAmount = Number(amount)
+  
+  if ((nAmount > 0 && nAmount <= marketTokenAmount && nAmount + marketTokenAmount >=0) 
+    || (nAmount < 0 && nAmount >= marketTokenAmount && nAmount + marketTokenAmount <=0)) {
+    feeRate = (selectedMarket?.makerFee || 0) / FEE_DECIMALS || 0
+  }
 
-  const selectedMarket = userBalances.find((position) => position.market === market)
-  const selectedBalance = (selectedMarket?.balance || 0) / (10 ** (selectedMarket?.decimals || 1))
+  let showMaxTrade =true
+  if ((nAmount > 0 && nAmount <= userTokenAmount*-1 && nAmount + userTokenAmount*-1 >=0) 
+    || (nAmount < 0 && nAmount >= userTokenAmount*-1 && nAmount + userTokenAmount*-1 <=0)) {
+    showMaxTrade = false
+  }
 
-  const depositValue = Number(amount) * (selectedMarket?.price || 0)
-  const balanceAfterDeposit = userAccountValue / AMOUNT_DECIMALS + depositValue
+  const fee = Math.abs(tradeValue) * feeRate
+  const total = Math.abs(tradeValue) + fee
+  const maxTrade = Math.min(exchangeBalanceAvailable, showMaxTrade?userCollateral:exchangeBalanceAvailable) / AMOUNT_DECIMALS || 0
 
   const closeDialog = () => {
-    setSubmitting(false)
     setErrorMessage('')
+    setSubmitting(false)
     setOpen(false)
   }
 
+  const closeAmount = () => {
+    setAmount(Number(userTokenAmount * -1).toFixed(4))
+  }
+
   const handleSubmit = async () => {
-    const position = EXCHANGE_POSITIONS.find((position) => position.market === market)
     try {
       setSubmitting(true)
-      if (position) {
-        await deposit(market, Number(amount))
-        closeDialog()
-      }
+      setErrorMessage('')
+      await executeYield(Number(marketIndex), Number(amount),Number(shortAmount))
+      closeDialog()
     } catch (e: any) {
       setErrorMessage(e.message)
       console.log("error", e);
@@ -65,27 +87,20 @@ export default function YieldDialog({ open, setOpen }: YieldDialogProps) {
     }
   };
 
-  const properties = [
-    { label: 'Amount', value: amount, onChange: setAmount, type: 'number' },
-    { label: `Token to Deposit`, value: market, onChange: setMarket, type: 'markets' },
-  ]
 
-  let submitMessage = 'Deposit'
-  let amountMessage = ''
   let canSubmit = !submitting
+  let selectedBalance = maxTrade
 
-  if (selectedBalance < Number(amount)) {
-    canSubmit = false
-    submitMessage = 'Insufficient Balance'
-    amountMessage = submitMessage
-  }
-  if (Number(amount) <= 0) {
-    canSubmit = false
-    submitMessage = 'Amount must be greater than 0'
-    amountMessage = submitMessage
-  }
+  let amountMessage = ''
+  // TODO: VALIDATE
+  // if (selectedBalance < Number(total) && showMaxTrade) {
+  //   canSubmit = false
+  //   amountMessage = 'Insufficient Balance'
+  // }
+
+  let submitMessage = 'Execute Yield'
   if (submitting) {
-    submitMessage = 'Depositing...'
+    submitMessage = 'Executing...'
   }
 
   return (
@@ -93,8 +108,8 @@ export default function YieldDialog({ open, setOpen }: YieldDialogProps) {
       <Modal open={open} onClose={() => closeDialog()}>
         <ModalDialog>
           <ModalClose />
-          <DialogTitle>Deposit Funds</DialogTitle>
-          <DialogContent>Enter Deposit Details</DialogContent>
+          <DialogTitle>Yield</DialogTitle>
+          <DialogContent>Enter Yield Details.</DialogContent>
           <form
             onSubmit={async (event: React.FormEvent<HTMLFormElement>) => {
               event.preventDefault();
@@ -102,53 +117,69 @@ export default function YieldDialog({ open, setOpen }: YieldDialogProps) {
             }}
           >
             <Stack spacing={2}>
-              {properties.map((property) => {
-                return (
-                  <Box key={property.label}>
-                    {property.type === 'markets' && <FormControl key={property.label}>
-                      <FormLabel>{property.label}</FormLabel>
-                      <Select value={property.value} onChange={(e: any, newValue: any) => {
-                        property.onChange(newValue)
-                      }}>
-                        {EXCHANGE_POSITIONS.map((position) => {
-                          return <Option key={position.market} value={position.market} >{position.market.replace("/USD", "")}</Option>
-                        })}
-                      </Select>
-
-                    </FormControl>}
-                    {property.type === 'number' && <FormControl key={property.label} error={!canSubmit && !submitting}>
-                      <FormLabel>{property.label}</FormLabel>
-                      <Input
-                        autoFocus required
-                        value={property.value}
-                        onChange={(e: any) => property.onChange(e.target.value)} />
-                      {!canSubmit && !submitting && <FormHelperText>
-                        <ICONS.INFO />
-                        {amountMessage}
-                      </FormHelperText>}
-                    </FormControl>}
-                  </Box>
-                );
-              })}
-
               <FormControl>
-                <Table>
-                  <tbody>
-                    <tr>
-                      <td style={{ width: 175 }}>Current Balance</td>
-                      <td>{formatCurrency(userAccountValue / AMOUNT_DECIMALS)}</td>
-                    </tr>
-                    <tr>
-                      <td>Deposit Amount</td>
-                      <td><KLabel numValue={Number(amount)}>{formatCurrency(depositValue)}</KLabel><span style={{ paddingLeft: 10, fontSize: '0.9em' }}>(Current Price = {formatNumber(selectedMarket?.price || 0, 4)})</span></td>
-                    </tr>
-                    <tr>
-                      <td>Balance After Deposit</td>
-                      <td><KLabel fontWeight='bold' numValue={Number(amount)}>{formatCurrency(balanceAfterDeposit)}</KLabel></td>
-                    </tr>
-                  </tbody>
-                </Table>
+                <FormLabel>Market</FormLabel>
+                <Select value={`${marketIndex}`} onChange={(e: any, newValue: any) => {
+                  setMarketIndex(newValue)
+                }}>
+                  {MARKETS.map((position) => {
+                    return <Option key={`${position.marketIndex}`} value={`${position.marketIndex}`} >{position.name}</Option>
+                  })}
+                </Select>
               </FormControl>
+              <FormControl error={!!amountMessage}>
+                <FormLabel>Long Amount <Chip color='success' onClick={closeAmount} style={{ display: userTokenAmount !== 0 ? 'inherit' : 'none', marginLeft: 10 }}>Current Amount: {userTokenAmount}</Chip></FormLabel>
+                <Input autoFocus required value={amount} onChange={(e: any) => setAmount(e.target.value)} />
+                {amountMessage && !submitting && <FormHelperText>
+                  <ICONS.INFO />
+                  {amountMessage}
+                </FormHelperText>}
+              </FormControl>
+              <FormControl error={!!amountMessage}>
+                <FormLabel>Short Amount <Chip color='success' onClick={closeAmount} style={{ display: userTokenAmount !== 0 ? 'inherit' : 'none', marginLeft: 10 }}>Current Amount: {userTokenAmount}</Chip></FormLabel>
+                <Input autoFocus required value={shortAmount} onChange={(e: any) => setShortAmount(e.target.value)} />
+                {amountMessage && !submitting && <FormHelperText>
+                  <ICONS.INFO />
+                  {amountMessage}
+                </FormHelperText>}
+              </FormControl>
+
+              <Table>
+                <thead>
+                  <tr>
+                    <th style={{ width: 150 }}>Yield Details</th>
+                    <th style={{ width: 100 }}></th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Amount</td>
+                    <td>{`${amount}`}</td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>Price</td>
+                    <td><PriceLabel value={selectedExchangeMarket?.price}>{`${formatNumber(selectedExchangeMarket?.price || 0)}`}</PriceLabel></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>Value</td>
+                    <td>{formatCurrency(tradeValue, 4)}</td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>{fee > 0 ? 'Fee' : <KLabel numValue={fee * -1} endDecorator={<ICONS.MONEY color='success' />}>Trading Rebate</KLabel>}</td>
+                    <td><KLabel fontWeight="bold" numValue={fee * -1}>{formatCurrency(fee, 4)}</KLabel>  </td>
+                    <td><Chip color={fee > 0 ? "danger" : "success"}>Rate: {formatPercent(feeRate)}</Chip></td>
+                  </tr>
+                  <tr>
+                    <th>Total </th>
+                    <th>{formatCurrency(total, 4)} </th>
+                    <td>{showMaxTrade && <Chip color={maxTrade > total ? "success" : "danger"}>Max Margin Available: {formatCurrency(maxTrade)}</Chip>}</td>
+                  </tr>
+                </tbody>
+              </Table>
               <Button disabled={!canSubmit} type="submit">{submitMessage}</Button>
               {errorMessage && <FormControl error={!!errorMessage}>
                 <FormHelperText>
@@ -156,34 +187,6 @@ export default function YieldDialog({ open, setOpen }: YieldDialogProps) {
                   {errorMessage}
                 </FormHelperText>
               </FormControl>}
-              <Table>
-                <thead>
-                  <tr>
-                    <th style={{ width: 125 }}>In Wallet</th>
-                    <th>Available to Deposit</th>
-                    <th>Current Price</th>
-                    <th>Current Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userBalances.map((item) => {
-                    const tokenAmount = item.balance / (10 ** item.decimals)
-                    const amount = item.balance !== 0 ? renderItem(item.balance || 0, 10 ** item.decimals) : 0
-                    let color: 'neutral' | 'primary' | 'success' | 'danger' = 'neutral'
-                    if (item.market === selectedMarket?.market) {
-                      color = 'primary'
-                    }
-                    return (
-                      <tr key={item.market} style={{ fontWeight: item.market === selectedMarket?.market ? 'bold' : 'normal' }}>
-                        <td><Typography color={color}>{item.market.replace("/USD", "")}</Typography></td>
-                        <td><Typography color={color}>{amount}</Typography></td>
-                        <td><Typography color={color}><PriceLabel value={item.price}>{formatNumber(item.price, 4)}</PriceLabel></Typography></td>
-                        <td><Typography color={color}>{formatCurrency(tokenAmount * (item.price || 0), 4)}</Typography></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </Table>
             </Stack>
           </form>
         </ModalDialog>
