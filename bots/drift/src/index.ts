@@ -33,7 +33,7 @@ const MARKETS: Array<Market> = [
         symbol: "AVAX",
         marketIndex: 22,
         tradeSize: 0.6,
-        openAdjustSize: 0,
+        openAdjustSize: 0.01,
         closeAdjustSize: 0.1,
         priceDiff: 0.1
     },
@@ -42,7 +42,7 @@ const MARKETS: Array<Market> = [
         symbol: "BTC",
         marketIndex: 1,
         tradeSize: 0.0005,
-        openAdjustSize: 0,
+        openAdjustSize: 5,
         closeAdjustSize: 15,
         priceDiff: 20
     },
@@ -51,7 +51,7 @@ const MARKETS: Array<Market> = [
         symbol: "ETH",
         marketIndex: 2,
         tradeSize: 0.01,
-        openAdjustSize: 0,
+        openAdjustSize: 1.5,
         closeAdjustSize: 5,
         priceDiff: 5
     },
@@ -60,7 +60,7 @@ const MARKETS: Array<Market> = [
         symbol: "BNB",
         marketIndex: 8,
         tradeSize: 0.07,
-        openAdjustSize: 0,
+        openAdjustSize: 0.25,
         closeAdjustSize: 1.5,
         priceDiff: 1
     }, {
@@ -68,7 +68,7 @@ const MARKETS: Array<Market> = [
         symbol: "XRP",
         marketIndex: 13,
         tradeSize: 50,
-        openAdjustSize: 0,
+        openAdjustSize: 0.000,
         closeAdjustSize: 0.003,
         priceDiff: 0.003
     }, {
@@ -76,7 +76,7 @@ const MARKETS: Array<Market> = [
         symbol: "DOGE",
         marketIndex: 7,
         tradeSize: 50,
-        openAdjustSize: 0,
+        openAdjustSize: 0.001,
         closeAdjustSize: 0.003,
         priceDiff: 0.003
     },
@@ -85,7 +85,7 @@ const MARKETS: Array<Market> = [
         direction: PositionDirection.SHORT,
         marketIndex: 24,
         tradeSize: 50,
-        openAdjustSize: 0,
+        openAdjustSize: 0.0002,
         closeAdjustSize: 0.0005,
         priceDiff: 0.0005
     },
@@ -94,7 +94,7 @@ const MARKETS: Array<Market> = [
         symbol: "SOL",
         marketIndex: 0,
         tradeSize: 0.2,
-        openAdjustSize: 0,
+        openAdjustSize: 0.01,
         closeAdjustSize: 0.05,
         priceDiff: 0.25
     },
@@ -193,8 +193,6 @@ async function checkTrades(markets: Array<Market>) {
     const cancelOrders: any[] = []
 
     for (const market of markets) {
-        
-
         const perpPosition = user.getPerpPosition(market.marketIndex);
         const baseAssetAmount = perpPosition?.baseAssetAmount;
         const baseAsset = convertAmount(baseAssetAmount?.toNumber() || 0);
@@ -205,12 +203,11 @@ async function checkTrades(markets: Array<Market>) {
         console.log('*** Entry Price:', entryPrice);
         console.log('*** Base Asset:', baseAsset);
 
-
         const quotes = await fetchQuotes(market.symbol);
         console.log(market.symbol, quotes);
 
         const direction = baseAsset === 0 ? market.direction : baseAsset < 0 ? PositionDirection.LONG : PositionDirection.SHORT;
-        const amount = baseAsset < 0 ? Math.abs(baseAsset) : market.tradeSize;
+        const amount = baseAsset !== 0 ? Math.abs(baseAsset) : market.tradeSize;
         const closePrice = baseAsset < 0 ? breakEvenPrice - market.closeAdjustSize : breakEvenPrice + market.closeAdjustSize;
         const bid = Math.min(quotes.bidPrice, quotes.askPrice);
         const ask = Math.max(quotes.bidPrice, quotes.askPrice);
@@ -308,12 +305,12 @@ function sleep(time: number) {
 }
 
 (async () => {
-    const waitTime = 30
+    const waitTime = 60
 
     while (true) {
         console.time('Check Trades');
         try {
-            await checkTrades(MARKETS.filter(m => ["DOGE","AVAX"].includes(m.symbol)));
+            await checkTrades(MARKETS.filter(m => m.symbol));
         } catch (e) {
             console.log('Error checking trades:', e);
         } finally {
