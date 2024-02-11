@@ -12,12 +12,30 @@
             "console": "integratedTerminal",
             "runtimeExecutable": "/Users/mebert/.nvm/versions/node/v21.5.0/bin/npm",
             "runtimeArgs": [
-                "run-script", 
+                "run-script",
                 "start"
             ],
             "skipFiles": [
                 "<node_internals>/**"
-              ]
+            ]
+        },
+        {
+            "name": "Run Drift Bot",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceRoot}/bots/drift",
+            "console": "integratedTerminal",
+            "runtimeExecutable": "/Users/mebert/.nvm/versions/node/v21.5.0/bin/npm",
+            "env": {                      
+                "ANCHOR_WALLET": "/Users/mebert/.config/solana/solanaTradingWalletProd.txt"
+            },
+            "runtimeArgs": [
+                "run-script",
+                "start"
+            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
         },
     ]
 }
