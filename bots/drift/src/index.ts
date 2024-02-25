@@ -42,9 +42,9 @@ const MARKETS: Array<Market> = [
         symbol: "BTC",
         marketIndex: 1,
         tradeSize: 0.0005,
-        openAdjustSize: 5,
+        openAdjustSize: 10,
         closeAdjustSize: 15,
-        priceDiff: 20
+        priceDiff: 50
     },
     {
         direction: PositionDirection.LONG,
@@ -68,24 +68,24 @@ const MARKETS: Array<Market> = [
         symbol: "XRP",
         marketIndex: 13,
         tradeSize: 50,
-        openAdjustSize: 0.000,
-        closeAdjustSize: 0.003,
-        priceDiff: 0.003
+        openAdjustSize: 0.0001,
+        closeAdjustSize: 0.0005,
+        priceDiff: 0.0005
     }, {
         direction: PositionDirection.SHORT,
         symbol: "DOGE",
         marketIndex: 7,
         tradeSize: 50,
-        openAdjustSize: 0.001,
-        closeAdjustSize: 0.003,
-        priceDiff: 0.003
+        openAdjustSize: 0.0001,
+        closeAdjustSize: 0.0003,
+        priceDiff: 0.0003
     },
     {
         symbol: "JUP",
         direction: PositionDirection.SHORT,
         marketIndex: 24,
         tradeSize: 50,
-        openAdjustSize: 0.0002,
+        openAdjustSize: 0.0000,
         closeAdjustSize: 0.0005,
         priceDiff: 0.0005
     },
@@ -96,7 +96,7 @@ const MARKETS: Array<Market> = [
         tradeSize: 0.2,
         openAdjustSize: 0.01,
         closeAdjustSize: 0.05,
-        priceDiff: 0.25
+        priceDiff: 0.20
     },
 ]
 const PLACE_ORDERS = true;
@@ -199,12 +199,14 @@ async function checkTrades(markets: Array<Market>) {
         const breakEvenPrice = convertPrice(AMOUNT_DECIMALS * Math.abs(perpPosition?.quoteBreakEvenAmount.toNumber() / baseAssetAmount?.toNumber() || 0));
         const entryPrice = convertPrice(AMOUNT_DECIMALS * Math.abs(perpPosition?.quoteEntryAmount.toNumber() / baseAssetAmount?.toNumber() || 0));
 
+       
+
+        const quotes = await fetchQuotes(market.symbol);
+        console.log('--');
+        console.log(market.symbol, quotes);
         console.log('*** Break Even Price:', breakEvenPrice);
         console.log('*** Entry Price:', entryPrice);
         console.log('*** Base Asset:', baseAsset);
-
-        const quotes = await fetchQuotes(market.symbol);
-        console.log(market.symbol, quotes);
 
         const direction = baseAsset === 0 ? market.direction : baseAsset < 0 ? PositionDirection.LONG : PositionDirection.SHORT;
         const amount = baseAsset !== 0 ? Math.abs(baseAsset) : market.tradeSize;
@@ -250,6 +252,7 @@ async function checkTrades(markets: Array<Market>) {
         }
 
         const priceDiff = Math.abs(newPrice - newOrder.price);
+        const shouldCancel = priceDiff > market.priceDiff && newOrder.orderId !== -1
 
         const orderParams = {
             orderType: OrderType.LIMIT,
@@ -260,13 +263,15 @@ async function checkTrades(markets: Array<Market>) {
             baseAssetAmount: new BN(amount * AMOUNT_DECIMALS),
             price: invertPrice(newPrice)
         }
-        if (priceDiff > market.priceDiff) {
-            if (newOrder.orderId !== -1) {
-                cancelOrders.push(newOrder);
-            } else {
-                newOrders.push(orderParams);
-            }
+        if (shouldCancel) {
+            cancelOrders.push(newOrder);
+        } else if (newOrder.orderId === -1) {   
+            newOrders.push(orderParams);
         }
+        console.log('*** priceDiff:', priceDiff);
+        console.log('*** marketDiff:', market.priceDiff );
+        console.log('*** shouldCancel:', shouldCancel);
+        console.log('*** newPrice:', convertPrice(orderParams.price.toNumber()));     
     }
 
     if (newOrders.length === 0) {
