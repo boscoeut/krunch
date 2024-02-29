@@ -152,7 +152,7 @@ async function getAccountData(
     group: any,
 ) {
     const mangoAccount = await client.getMangoAccount(new PublicKey(accountDefinition.key));
-    mangoAccount.get
+    
     const pp = mangoAccount
         .perpActive()
         .find((pp: any) => pp.marketIndex === perpMarket.perpMarketIndex);
@@ -265,13 +265,16 @@ function sleep(ms: number) {
 function createKeypair() {
     let mnemonic = bip39.generateMnemonic();
     console.log(mnemonic);
+    console.log(mnemonic.replace(/ /g, ''));
     const seed = bip39.mnemonicToSeedSync(mnemonic).slice(0, 32);
     const keypair = Keypair.fromSeed(seed);
-    console.log(keypair.publicKey.toBase58()); // Print the public key
+    const publicKey  = keypair.publicKey.toBase58()
+    console.log(publicKey); // Print the public key
 }
 
 async function main(): Promise<void> {
     const NUM_MINUTES = 1.5
+    //createKeypair()
     while (true) {
         console.log('Running Mango Bot', new Date().toTimeString())
         try {
