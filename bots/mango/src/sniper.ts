@@ -2,7 +2,8 @@ import {
     Group,
     MangoAccount,
     MangoClient,
-    PerpOrderSide
+    PerpOrderSide,
+    HealthType
 } from '@blockworks-foundation/mango-v4';
 import {
     Keypair, PublicKey
@@ -20,14 +21,13 @@ type AccountDefinition = {
 
 async function snipePrices(
     accountDefinition: AccountDefinition,
-    minAmount: number,
-    maxAmount: number,
     size: number,
     aprMinThreshold: number,
     aprMaxThreshold: number,
     client: MangoClient,
     mangoAccount: MangoAccount,
-    user: Keypair
+    user: Keypair,
+    healthThreshold: number
 ): Promise<void> {
     const hourlyRate = await getFundingRate()
     const hourlyRateAPR = Number((hourlyRate * 100 * 24 * 365).toFixed(3))
@@ -56,8 +56,8 @@ async function snipePrices(
         .find((pp: any) => pp.marketIndex === perpMarket.perpMarketIndex);
 
     if (!pp) {
-        console.error('Perp account not found');
-        throw new Error('Perp account not found');
+        console.error(accountDefinition.name, 'Perp account not found');
+        throw new Error(accountDefinition.name+' Perp account not found');
     }
 
     const usdcBalance = mangoAccount.getTokenBalanceUi(usdcBank);
@@ -69,9 +69,10 @@ async function snipePrices(
 
     const solPrice = perpMarket.price.toNumber() * 1000
 
+    const health = mangoAccount.getHealthRatio(group, HealthType.maint)!.toNumber()
 
-    const perpIsMaxedOut = Math.abs(perpEquity) >= maxAmount
-    const perpIsMinnedOut = Math.abs(perpEquity) <= minAmount
+    const canOpen = health > healthThreshold
+    // const canOpen = false// health > healthThreshold
     const spotVsPerpDiff = solBalance + perpEquity
     const minDiffSize = size / 3
     const spotUnbalanced = Math.abs(spotVsPerpDiff) > minDiffSize
@@ -87,6 +88,7 @@ async function snipePrices(
     console.log(' --- ')
     console.log('ACCOUNT:', accountDefinition.name)
     console.log('USDC Balance', usdcBalance)
+    console.log('HEALTH', health)
     console.log('SOL PERP Balance', perpEquity)
     console.log('SOL Balance', solBalance)
     console.log('SOL PRICE', solPrice)
@@ -94,10 +96,10 @@ async function snipePrices(
     console.log('FUND RATE APR:', hourlyRateAPR, '%')
     console.log('ACTION:', action)
 
+    const promises: any = [];
     if (action === 'BUY') {
-        const promises: any = [];
-        const canDoPerpTrade = !perpIsMinnedOut && spotVsPerpDiff <= size
-        if ((!spotUnbalanced && canDoPerpTrade) || (spotUnbalanced && spotVsPerpDiff > 0)) {
+        const canDoPerpTrade = (canOpen && spotVsPerpDiff <= size) || (perpEquity < 0 && spotVsPerpDiff <= size)
+        if (spotUnbalanced && spotVsPerpDiff > 0) {
             console.log('SELL SOL', size, spotVsPerpDiff)
             const amount = spotUnbalanced && spotVsPerpDiff > 0 ? Number(Math.abs(spotVsPerpDiff).toFixed(2)) : Number(Math.abs(size).toFixed(2))
             promises.push(spotTrade(amount, solBank, usdcBank, client, mangoAccount, user, group, 'SELL', accountDefinition))
@@ -106,7 +108,7 @@ async function snipePrices(
             console.log('BUY BACK PERP', hourlyRateAPR, aprMinThreshold)
             const asks = await perpMarket.loadAsks(client);
             const bestAsk: any = asks.best();
-            const tradeSize = Math.min(size, perpEquity * -1)
+            const tradeSize = size
             console.log(
                 'bestAsk:', bestAsk.uiPrice,
                 '< SOLPrice:', solPrice,
@@ -115,7 +117,7 @@ async function snipePrices(
                 const midPrice = (bestAsk.uiPrice + solPrice) / 2
                 console.log('**** SNIPING', midPrice, "Oracle", solPrice, 'with bestAsk', bestAsk.uiPrice, 'and bestAskSize', `${size}/${bestAsk.uiSize}`)
                 promises.push(perpTrade(client, group, mangoAccount,
-                    perpMarket, bestAsk.uiPrice, tradeSize, PerpOrderSide.bid, accountDefinition, true))
+                    perpMarket, midPrice, tradeSize, PerpOrderSide.bid, accountDefinition, false))
             }
         }
         console.log('Awaiting', promises.length, 'transaction(s)')
@@ -126,9 +128,8 @@ async function snipePrices(
         }
     }
     if (action === 'SELL') {
-        const promises: any = [];
-        const canDoPerpTrade = !perpIsMaxedOut && spotVsPerpDiff <= size
-        if (spotUnbalanced && spotVsPerpDiff > 0) {
+        const canDoPerpTrade = (canOpen && spotVsPerpDiff <= size) || (perpEquity > 0 && spotVsPerpDiff <= size)
+        if (spotUnbalanced && spotVsPerpDiff < 0) {
             console.log('BUY SOL', spotVsPerpDiff)
             const amount = solPrice * Math.abs(spotVsPerpDiff) + extraAmount
             promises.push(spotTrade(amount, usdcBank, solBank, client, mangoAccount, user, group, 'BUY', accountDefinition))
@@ -142,9 +143,10 @@ async function snipePrices(
                 '> SOLPrice:', solPrice,
                 'bestBidSize:', bestBid.uiSize)
             if (bestBid.uiPrice > solPrice) {
-                console.log('**** SNIPING', solPrice, 'with bestBid', bestBid.uiPrice, 'and bestBidSize', `${size}/${bestBid.uiSize}`)
+                const midPrice = (bestBid.uiPrice + solPrice)
+                console.log('**** SNIPING', midPrice, 'with bestBid', bestBid.uiPrice, 'and bestBidSize', `${size}/${bestBid.uiSize}`)
                 promises.push(perpTrade(client, group, mangoAccount,
-                    perpMarket, bestBid.uiPrice, size, PerpOrderSide.ask, accountDefinition, false))
+                    perpMarket, midPrice, size, PerpOrderSide.ask, accountDefinition, false))
             }
         }
         console.log('Awaiting', promises.length, 'transaction(s)')
@@ -154,21 +156,24 @@ async function snipePrices(
             console.log('Promise regjected', e)
         }
     }
+    return promises
 }
 
 
 async function main(): Promise<void> {
     const NUM_MINUTES = 0.75
-    // const names = ['SIX','BIRD']
-    const names = ['SOL_FLARE','DRIFT']
-    // const names = ['BIRD', 'FIVE', 'SIX', 'BUCKET', 'SOL_FLARE']
-    // const names = ['SOL_FLARE']
+    const names = ['PRIVATE3']
     const accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
-        .filter((f: any) => names.includes(f.name));
+       //.filter((f: any) => names.includes(f.name));
     const clients: Map<string, any> = new Map()
 
+    const minusThreshold = -25
+    const plusThreshold = 25
+    const healthThreshold = 30
+    const tradeSize = 0.5
     while (true) {
         console.log('Sniping Bot', new Date().toTimeString())
+        let numberOfTransactions = 0
         for (const accountDefinition of accountDefinitions) {
             try {
                 let client = clients.get(accountDefinition.name)
@@ -176,17 +181,28 @@ async function main(): Promise<void> {
                     client = await setupClient(accountDefinition)
                     clients.set(accountDefinition.name, client)
                 }
-                await snipePrices(accountDefinition, 0, 100, 6, -50, 50, client.client, client.mangoAccount, client.user)
+                const transactions: any = await snipePrices(accountDefinition,
+                    tradeSize,
+                    minusThreshold,
+                    plusThreshold, client.client,
+                    client.mangoAccount, client.user, healthThreshold)
+                numberOfTransactions += transactions?.length || 0
             } catch (e) {
                 console.error('Error querying Mango', e)
             }
         }
-        if (NUM_MINUTES > 1) {
-            console.log('Sleeping for', NUM_MINUTES, 'minutes')
+
+        if (numberOfTransactions > 0) {
+            if (NUM_MINUTES > 1) {
+                console.log('#Transactions',numberOfTransactions,'Sleeping for', NUM_MINUTES, 'minutes')
+            } else {
+                console.log('#Transactions',numberOfTransactions,'Sleeping for', NUM_MINUTES * 60, 'seconds')
+            }
+            await sleep(1000 * 60 * NUM_MINUTES)
         } else {
-            console.log('Sleeping for', NUM_MINUTES * 60, 'seconds')
+            console.log('No transactions, sleeping for 5 seconds')
+            await sleep(5000)
         }
-        await sleep(1000 * 60 * NUM_MINUTES)
     }
 }
 
