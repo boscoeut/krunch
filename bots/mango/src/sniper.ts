@@ -167,10 +167,10 @@ async function main(): Promise<void> {
        //.filter((f: any) => names.includes(f.name));
     const clients: Map<string, any> = new Map()
 
-    const minusThreshold = -25
-    const plusThreshold = 25
+    const minusThreshold = -50
+    const plusThreshold = 50
     const healthThreshold = 30
-    const tradeSize = 0.5
+    const tradeSize = 1
     while (true) {
         console.log('Sniping Bot', new Date().toTimeString())
         let numberOfTransactions = 0
