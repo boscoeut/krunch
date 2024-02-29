@@ -40,6 +40,7 @@ type AccountDetail = {
     funding: number;
     health: number;
     equity: number;
+    solBalance: number;
 };
 
 function loadSavedCredentialsIfExist() {
@@ -94,7 +95,7 @@ async function updateGoogleSheet(accountDetails: AccountDetail[] = [], fundingRa
         let startRow = 10
 
         let endRow = startRow + accountDetails.length
-        const SPREADSHEET_RANGE = `SOL!A${startRow}:J${endRow}`;
+        const SPREADSHEET_RANGE = `SOL!A${startRow}:K${endRow}`;
         const values = accountDetails.map((accountDetail) => {
             return [
                 accountDetail.name,
@@ -106,7 +107,9 @@ async function updateGoogleSheet(accountDetails: AccountDetail[] = [], fundingRa
                 accountDetail.usdBasis,
                 accountDetail.jupBasis,
                 accountDetail.solAmount,
-                toGoogleSheetsDate(new Date())]
+                toGoogleSheetsDate(new Date()),
+                accountDetail.solBalance
+            ]
         });
         const request = {
             spreadsheetId: SPREADSHEET_ID,
@@ -167,6 +170,11 @@ async function getAccountData(
     if (bank) {
         interestAmount += mangoAccount.getCumulativeInterest(bank)
     }
+
+    const banks = Array.from(group.banksMapByName.values()).flat();
+    const solBank = banks.find((bank:any) => bank.name === 'SOL');
+    const solBalance = mangoAccount.getTokenBalanceUi(solBank);
+
     let borrow = toUiDecimalsForQuote(mangoAccount.getCollateralValue(group)!.toNumber())
     const equity = toUiDecimalsForQuote(mangoAccount.getEquity(group)!.toNumber())
     return {
@@ -180,7 +188,8 @@ async function getAccountData(
         usdBasis: accountDefinition.usd,
         funding: fundingAmount,
         health: mangoAccount.getHealthRatio(group, HealthType.maint)!.toNumber(),
-        equity
+        equity,
+        solBalance
     }
 }
 
@@ -239,6 +248,7 @@ async function queryMango(): Promise<void> {
             console.log(key + " SOL", accountData.solAmount);
             console.log(key + " HEALTH", accountData.health)
             console.log(key + " FUNDING", accountData.funding)
+            console.log(key + " SOL TOKEN", accountData.solBalance)
             accountDetails.push(accountData)
         } catch (x) {
             console.error(`Error fetching account data for ${accountDefinition.name}`, x)
@@ -273,7 +283,7 @@ function createKeypair() {
 }
 
 async function main(): Promise<void> {
-    const NUM_MINUTES = 1.5
+    const NUM_MINUTES = 1
     //createKeypair()
     while (true) {
         console.log('Running Mango Bot', new Date().toTimeString())

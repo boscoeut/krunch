@@ -18,7 +18,9 @@ type AccountDefinition = {
     privateKey: string;
 };
 
-async function snipePrices(minAmount: number,
+async function snipePrices(
+    accountDefinition: AccountDefinition,
+    minAmount: number,
     maxAmount: number,
     size: number,
     aprMinThreshold: number,
@@ -33,7 +35,7 @@ async function snipePrices(minAmount: number,
     // RELOAD
     const group = await client.getGroup(new PublicKey(GROUP_PK));
     await mangoAccount.reload(client)
-    
+
     const banks = Array.from(group.banksMapByName.values()).flat();
     const usdcBank = banks.find((bank) => bank.name === 'USDC');
     const solBank = banks.find((bank) => bank.name === 'SOL');
@@ -59,14 +61,14 @@ async function snipePrices(minAmount: number,
     }
 
     const usdcBalance = mangoAccount.getTokenBalanceUi(usdcBank);
-    console.log('USDC  balance', usdcBalance)
+
     const solBalance = mangoAccount.getTokenBalanceUi(solBank);
-    console.log('SOL balance', solBalance)
+
     const perpEquity = pp.basePositionLots.toNumber() / 100
-    console.log('SOL PERP balance', perpEquity)
+
 
     const solPrice = perpMarket.price.toNumber() * 1000
-    console.log('solPrice', solPrice)
+
 
     const perpIsMaxedOut = Math.abs(perpEquity) >= maxAmount
     const perpIsMinnedOut = Math.abs(perpEquity) <= minAmount
@@ -83,19 +85,24 @@ async function snipePrices(minAmount: number,
     }
 
     console.log(' --- ')
+    console.log('ACCOUNT:', accountDefinition.name)
+    console.log('USDC Balance', usdcBalance)
+    console.log('SOL PERP Balance', perpEquity)
+    console.log('SOL Balance', solBalance)
+    console.log('SOL PRICE', solPrice)
     console.log('FUND RATE / HR:', hourlyRate * 100, '%')
     console.log('FUND RATE APR:', hourlyRateAPR, '%')
     console.log('ACTION:', action)
 
     if (action === 'BUY') {
-
-        const promises:any = [];
-        if (spotUnbalanced && spotVsPerpDiff > 0) {
+        const promises: any = [];
+        const canDoPerpTrade = !perpIsMinnedOut && spotVsPerpDiff <= size
+        if ((!spotUnbalanced && canDoPerpTrade) || (spotUnbalanced && spotVsPerpDiff > 0)) {
             console.log('SELL SOL', size, spotVsPerpDiff)
             const amount = spotUnbalanced && spotVsPerpDiff > 0 ? Number(Math.abs(spotVsPerpDiff).toFixed(2)) : Number(Math.abs(size).toFixed(2))
-            promises.push(spotTrade(amount, solBank, usdcBank, client, mangoAccount, user, group, 'SELL'))
-        } 
-        if (!perpIsMinnedOut && spotVsPerpDiff <= size) {
+            promises.push(spotTrade(amount, solBank, usdcBank, client, mangoAccount, user, group, 'SELL', accountDefinition))
+        }
+        if (canDoPerpTrade) {
             console.log('BUY BACK PERP', hourlyRateAPR, aprMinThreshold)
             const asks = await perpMarket.loadAsks(client);
             const bestAsk: any = asks.best();
@@ -105,19 +112,27 @@ async function snipePrices(minAmount: number,
                 'bestAskSize:', bestAsk.uiSize)
             if (bestAsk.uiPrice < solPrice) {
                 const midPrice = (bestAsk.uiPrice + solPrice) / 2
-                console.log('**** SNIPING',midPrice,"Oracle", solPrice, 'with bestAsk', bestAsk.uiPrice, 'and bestAskSize', `${size}/${bestAsk.uiSize}`)
+                console.log('**** SNIPING', midPrice, "Oracle", solPrice, 'with bestAsk', bestAsk.uiPrice, 'and bestAskSize', `${size}/${bestAsk.uiSize}`)
                 promises.push(perpTrade(client, group, mangoAccount,
-                    perpMarket, bestAsk.uiPrice, size, PerpOrderSide.bid))
+                    perpMarket, bestAsk.uiPrice, size, PerpOrderSide.bid, accountDefinition))
             }
         }
-        await Promise.all(promises)
+        console.log('Awaiting', promises.length, 'transaction(s)')
+        try {
+            // await Promise.all(promises)
+        } catch (e) {
+            console.log('Promise regjected', e)
+        }
     }
     if (action === 'SELL') {
+        const promises: any = [];
+        const canDoPerpTrade = !perpIsMaxedOut && spotVsPerpDiff <= size
         if (spotUnbalanced && spotVsPerpDiff > 0) {
             console.log('BUY SOL', spotVsPerpDiff)
             const amount = solPrice * Math.abs(spotVsPerpDiff) + extraAmount
-            await spotTrade(amount, usdcBank, solBank, client, mangoAccount, user, group, 'BUY')
-        } else if (!perpIsMaxedOut) {
+            promises.push(spotTrade(amount, usdcBank, solBank, client, mangoAccount, user, group, 'BUY', accountDefinition))
+        }
+        if (canDoPerpTrade) {
             console.log('SELL PERP', hourlyRateAPR, aprMaxThreshold)
             const bids = await perpMarket.loadBids(client);
             const bestBid: any = bids.best();
@@ -126,28 +141,39 @@ async function snipePrices(minAmount: number,
                 '> SOLPrice:', solPrice,
                 'bestBidSize:', bestBid.uiSize)
             if (bestBid.uiPrice > solPrice) {
-                await perpTrade(client, group, mangoAccount,
-                    perpMarket, bestBid.uiPrice, size, PerpOrderSide.ask)
                 console.log('**** SNIPING', solPrice, 'with bestBid', bestBid.uiPrice, 'and bestBidSize', `${size}/${bestBid.uiSize}`)
+                promises.push(perpTrade(client, group, mangoAccount,
+                    perpMarket, bestBid.uiPrice, size, PerpOrderSide.ask, accountDefinition))
             }
+        }
+        console.log('Awaiting', promises.length, 'transaction(s)')
+        try {
+            //await Promise.all(promises)
+        } catch (e) {
+            console.log('Promise regjected', e)
         }
     }
 }
 
 
 async function main(): Promise<void> {
-    const NUM_MINUTES = 0.25
+    const NUM_MINUTES = 0.75
+    const names = ['BIRD', 'FIVE', 'SIX', 'BUCKET', 'SOL_FLARE']
+    // const names = ['SOL_FLARE']
     const accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
-        .filter((f: any) => f.name === 'SIX');
-    const accountDefinition = accountDefinitions[0]
-    const { client, user,  mangoAccount } = await setupClient(accountDefinition)
+        .filter((f: any) => names.includes(f.name));
+    const clients: Map<string, any> = new Map()
 
     while (true) {
         console.log('Sniping Bot', new Date().toTimeString())
         for (const accountDefinition of accountDefinitions) {
             try {
-                await snipePrices(50, 100, 1, -50, 50,
-                    client, mangoAccount, user)
+                let client = clients.get(accountDefinition.name)
+                if (!client) {
+                    client = await setupClient(accountDefinition)
+                    clients.set(accountDefinition.name, client)
+                }
+                await snipePrices(accountDefinition, 25, 100, 6, -50, 50, client.client, client.mangoAccount, client.user)
             } catch (e) {
                 console.error('Error querying Mango', e)
             }

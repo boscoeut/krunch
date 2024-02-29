@@ -120,9 +120,13 @@ export const fetchJupiterTransaction = async (
 }
 
 export const getUser = (accountKey: string): Keypair => {
-    const b = bs58.decode(fs.readFileSync(accountKey, 'utf8'));
-    const j = new Uint8Array(b.buffer, b.byteOffset, b.byteLength / Uint8Array.BYTES_PER_ELEMENT);
-    const user = Keypair.fromSecretKey(new Uint8Array(JSON.parse(`[${j}]`)));
+    let file = fs.readFileSync(accountKey, 'utf8');
+    if (!file.startsWith('[')) {
+        const b = bs58.decode(fs.readFileSync(accountKey, 'utf8'));
+        const j = new Uint8Array(b.buffer, b.byteOffset, b.byteLength / Uint8Array.BYTES_PER_ELEMENT);
+        file = `[${j}]`
+    }
+    const user = Keypair.fromSecretKey(new Uint8Array(JSON.parse(file)));
     return user;
 }
 
@@ -134,51 +138,56 @@ export const spotTrade = async (
     mangoAccount: MangoAccount,
     user: Keypair,
     group: Group,
-    side: 'BUY' | 'SELL') => {
-    const amountBn = toNative(
-        Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
-        inBank.mintDecimals,
-    );
-
-
-    console.log('finding best route for amount = ' + amount);
-    const onlyDirectRoutes = false
-    const slippage = 50
-    const swapMode = 'ExactIn'
-    const paramObj: any = {
-        inputMint: inBank.mint.toString(),
-        outputMint: outBank.mint.toString(),
-        amount: amountBn.toString(),
-        slippageBps: Math.ceil(slippage * 100).toString(),
-        swapMode,
-        onlyDirectRoutes: `${onlyDirectRoutes}`,
+    side: 'BUY' | 'SELL',
+    accountDefinition:AccountDefinition) => {
+    try {
+        const amountBn = toNative(
+            Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
+            inBank.mintDecimals,
+        );
+        console.log('finding best route for amount = ' + amount);
+        const onlyDirectRoutes = false
+        const slippage = 50
+        const swapMode = 'ExactIn'
+        const paramObj: any = {
+            inputMint: inBank.mint.toString(),
+            outputMint: outBank.mint.toString(),
+            amount: amountBn.toString(),
+            slippageBps: Math.ceil(slippage * 100).toString(),
+            swapMode,
+            onlyDirectRoutes: `${onlyDirectRoutes}`,
+        }
+        const paramsString = new URLSearchParams(paramObj).toString()
+        const res = await axios.get(
+            `${JUPITER_V6_QUOTE_API_MAINNET}/quote?${paramsString}`,
+        )
+        const bestRoute = res.data
+        const [ixs, alts] = await fetchJupiterTransaction(
+            client.connection,
+            bestRoute,
+            user.publicKey,
+            0,
+            inBank.mint,
+            outBank.mint,
+        );
+        const price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
+        console.log(`*** MARGIN ${side}: `, amount, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
+        const sig = await client.marginTrade({
+            group: group,
+            mangoAccount: mangoAccount,
+            inputMintPk: inBank.mint,
+            amountIn: Number(amount.toFixed(3)),
+            outputMintPk: outBank.mint,
+            userDefinedInstructions: ixs,
+            userDefinedAlts: alts,
+            flashLoanType: { swap: {} },
+        });
+        console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`,`https://explorer.solana.com/tx/${sig.signature}`);
+        return sig.signature
+    } catch (e) {
+        console.log(`${accountDefinition.name} Error placing SPOT Trade`, e)
+        return null
     }
-    const paramsString = new URLSearchParams(paramObj).toString()
-    const res = await axios.get(
-        `${JUPITER_V6_QUOTE_API_MAINNET}/quote?${paramsString}`,
-    )
-    const bestRoute = res.data
-    const [ixs, alts] = await fetchJupiterTransaction(
-        client.connection,
-        bestRoute,
-        user.publicKey,
-        0,
-        inBank.mint,
-        outBank.mint,
-    );
-    const price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
-    console.log(`*** MARGIN ${side}: `, amount, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
-    const sig = await client.marginTrade({
-        group: group,
-        mangoAccount: mangoAccount,
-        inputMintPk: inBank.mint,
-        amountIn: Number(amount.toFixed(3)),
-        outputMintPk: outBank.mint,
-        userDefinedInstructions: ixs,
-        userDefinedAlts: alts,
-        flashLoanType: { swap: {} },
-    });
-    console.log(`${side} - MARGIN TRADE:, https://explorer.solana.com/tx/${sig.signature}`,);
 }
 
 export const perpTrade = async (client: MangoClient,
@@ -187,21 +196,27 @@ export const perpTrade = async (client: MangoClient,
     perpMarket: PerpMarket,
     price: number,
     size: number,
-    side: PerpOrderSide) => {
-    const orderId = 4200
-    console.log(`**** PERP ${side === PerpOrderSide.ask ? "SELL" : "BUY"} order for ${size} at ${price}`)
-    const order = await client.perpPlaceOrder(
-        group,
-        mangoAccount,
-        perpMarket.perpMarketIndex,
-        side,
-        price, // ui price 
-        size, // ui base quantity
-        undefined, // max quote quantity
-        orderId, // order id
-        PerpOrderType.immediateOrCancel,
-        false);
-    console.log(`https://explorer.solana.com/tx/${order.signature}`);
+    side: PerpOrderSide,
+    accountDefinition:AccountDefinition) => {
+    try {
+        console.log(`**** ${accountDefinition.name} PERP ${side === PerpOrderSide.ask ? "SELL" : "BUY"} order for ${size} at ${price}`)
+        const order = await client.perpPlaceOrder(
+            group,
+            mangoAccount,
+            perpMarket.perpMarketIndex,
+            side,
+            price, // ui price 
+            size, // ui base quantity
+            undefined, // max quote quantity
+            undefined, // order id
+            PerpOrderType.immediateOrCancel,
+            false);
+        console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
+        return order.signature
+    } catch (e) {
+        console.log(`${accountDefinition.name} Error placing PERP Trade`, e)
+        return null
+    }
 }
 
 
