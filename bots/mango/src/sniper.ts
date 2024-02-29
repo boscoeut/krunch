@@ -106,6 +106,7 @@ async function snipePrices(
             console.log('BUY BACK PERP', hourlyRateAPR, aprMinThreshold)
             const asks = await perpMarket.loadAsks(client);
             const bestAsk: any = asks.best();
+            const tradeSize = Math.min(size, perpEquity * -1)
             console.log(
                 'bestAsk:', bestAsk.uiPrice,
                 '< SOLPrice:', solPrice,
@@ -114,7 +115,7 @@ async function snipePrices(
                 const midPrice = (bestAsk.uiPrice + solPrice) / 2
                 console.log('**** SNIPING', midPrice, "Oracle", solPrice, 'with bestAsk', bestAsk.uiPrice, 'and bestAskSize', `${size}/${bestAsk.uiSize}`)
                 promises.push(perpTrade(client, group, mangoAccount,
-                    perpMarket, bestAsk.uiPrice, size, PerpOrderSide.bid, accountDefinition))
+                    perpMarket, bestAsk.uiPrice, tradeSize, PerpOrderSide.bid, accountDefinition, true))
             }
         }
         console.log('Awaiting', promises.length, 'transaction(s)')
@@ -143,7 +144,7 @@ async function snipePrices(
             if (bestBid.uiPrice > solPrice) {
                 console.log('**** SNIPING', solPrice, 'with bestBid', bestBid.uiPrice, 'and bestBidSize', `${size}/${bestBid.uiSize}`)
                 promises.push(perpTrade(client, group, mangoAccount,
-                    perpMarket, bestBid.uiPrice, size, PerpOrderSide.ask, accountDefinition))
+                    perpMarket, bestBid.uiPrice, size, PerpOrderSide.ask, accountDefinition, false))
             }
         }
         console.log('Awaiting', promises.length, 'transaction(s)')
@@ -158,7 +159,9 @@ async function snipePrices(
 
 async function main(): Promise<void> {
     const NUM_MINUTES = 0.75
-    const names = ['BIRD', 'FIVE', 'SIX', 'BUCKET', 'SOL_FLARE']
+    // const names = ['SIX','BIRD']
+    const names = ['SOL_FLARE','DRIFT']
+    // const names = ['BIRD', 'FIVE', 'SIX', 'BUCKET', 'SOL_FLARE']
     // const names = ['SOL_FLARE']
     const accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
         .filter((f: any) => names.includes(f.name));
@@ -173,7 +176,7 @@ async function main(): Promise<void> {
                     client = await setupClient(accountDefinition)
                     clients.set(accountDefinition.name, client)
                 }
-                await snipePrices(accountDefinition, 25, 100, 6, -50, 50, client.client, client.mangoAccount, client.user)
+                await snipePrices(accountDefinition, 0, 100, 6, -50, 50, client.client, client.mangoAccount, client.user)
             } catch (e) {
                 console.error('Error querying Mango', e)
             }

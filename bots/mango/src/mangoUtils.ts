@@ -197,7 +197,8 @@ export const perpTrade = async (client: MangoClient,
     price: number,
     size: number,
     side: PerpOrderSide,
-    accountDefinition:AccountDefinition) => {
+    accountDefinition:AccountDefinition,
+    reduceOnly:boolean) => {
     try {
         console.log(`**** ${accountDefinition.name} PERP ${side === PerpOrderSide.ask ? "SELL" : "BUY"} order for ${size} at ${price}`)
         const order = await client.perpPlaceOrder(
@@ -210,7 +211,7 @@ export const perpTrade = async (client: MangoClient,
             undefined, // max quote quantity
             undefined, // order id
             PerpOrderType.immediateOrCancel,
-            false);
+            reduceOnly);
         console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
         return order.signature
     } catch (e) {
