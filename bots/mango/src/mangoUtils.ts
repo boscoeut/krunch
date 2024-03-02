@@ -1,3 +1,5 @@
+import * as bip39 from 'bip39';
+
 import {
     Bank,
     Group,
@@ -6,7 +8,9 @@ import {
     MangoClient,
     PerpMarket,
     PerpOrderSide, PerpOrderType,
-    toNative
+    toNative,
+    HealthType,
+    toUiDecimalsForQuote
 } from '@blockworks-foundation/mango-v4';
 import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import {
@@ -20,7 +24,7 @@ import axios from 'axios';
 import * as bs58 from 'bs58';
 import fs from 'fs';
 export const JUPITER_V6_QUOTE_API_MAINNET = 'https://quote-api.jup.ag/v6'
-
+export const FUNDING_RATE_API = 'https://api.mngo.cloud/data/v4/one-hour-funding-rate?mango-group=78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
 const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0';
 const CLUSTER_URL = CONNECTION_URL;
 export const GROUP_PK =
@@ -28,14 +32,93 @@ export const GROUP_PK =
 const CLUSTER: Cluster =
     (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
 
+export type AccountDetail = {
+    account: string;
+    name: string,
+    jupBasis: number;
+    fundingAmount: number;
+    interestAmount: number;
+    solAmount: number;
+    borrow: number;
+    usdBasis: number;
+    funding: number;
+    health: number;
+    equity: number;
+    solPrice: number;
+    solBalance: number;
+    usdcBalance: number;
+    solBank: Bank;
+    usdcBank: Bank;
+    perpMarket: PerpMarket;
+};
 
-type AccountDefinition = {
+export type AccountDefinition = {
     name: string,
     key: string;
     usd: number;
     jup: number;
     privateKey: string;
+    healthThreshold: number;
 };
+export type PendingTransaction = {
+    promise: Promise<any>,
+    type: 'PERP' | 'SWAP',
+    accountName: string,
+    side: 'BUY' | 'SELL',
+    amount: number,
+    price: number,
+    oracle: number
+}
+
+export interface TotalInterestDataItem {
+    borrow_interest: number
+    deposit_interest: number
+    borrow_interest_usd: number
+    deposit_interest_usd: number
+    symbol: string
+}
+
+export function createKeypair() {
+    let mnemonic = bip39.generateMnemonic();
+    console.log(mnemonic);
+    console.log(mnemonic.replace(/ /g, ''));
+    const seed = bip39.mnemonicToSeedSync(mnemonic).slice(0, 32);
+    const keypair = Keypair.fromSeed(seed);
+    const publicKey = keypair.publicKey.toBase58()
+    console.log(publicKey); // Print the public key
+}
+
+export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
+
+
+const INTEREST_CACHE: Map<string, Array<any>> = new Map()
+export const fetchInterestData = async (mangoAccountPk: string) => {
+    try {
+        if (INTEREST_CACHE.has(mangoAccountPk)) {
+            return INTEREST_CACHE.get(mangoAccountPk)
+        } else {
+            const response = await axios.get(
+                `${MANGO_DATA_API_URL}/stats/interest-account-total?mango-account=${mangoAccountPk}`,
+            )
+            const parsedResponse: Omit<TotalInterestDataItem, 'symbol'>[] | null = response.data
+            if (parsedResponse) {
+                const entries: [string, Omit<TotalInterestDataItem, 'symbol'>][] =
+                    Object.entries(parsedResponse).sort((a, b) => b[0].localeCompare(a[0]))
+
+                const stats: TotalInterestDataItem[] = entries
+                    .map(([key, value]) => {
+                        return { ...value, symbol: key }
+                    })
+                    .filter((x) => x)
+                INTEREST_CACHE.set(mangoAccountPk, stats)
+                return stats
+            } else return []
+        }
+    } catch (e) {
+        console.log('Failed to fetch account funding', e)
+        return []
+    }
+}
 
 export const deserializeJupiterIxAndAlt = async (
     connection: Connection,
@@ -86,7 +169,7 @@ export const fetchJupiterTransaction = async (
                 // user public key to be used for the swap
                 userPublicKey,
                 slippageBps: Math.ceil(slippage * 100),
-                wrapAndUnwrapSol: false,
+                wrapAndUnwrapSol: false
             }),
         })
     ).json()
@@ -139,15 +222,16 @@ export const spotTrade = async (
     user: Keypair,
     group: Group,
     side: 'BUY' | 'SELL',
-    accountDefinition:AccountDefinition) => {
+    accountDefinition: AccountDefinition) => {
     try {
         const amountBn = toNative(
             Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
             inBank.mintDecimals,
         );
         console.log('finding best route for amount = ' + amount);
-        const onlyDirectRoutes = false
-        const slippage = 50
+        const onlyDirectRoutes = true
+        const slippage = 75
+        const maxAccounts = 64
         const swapMode = 'ExactIn'
         const paramObj: any = {
             inputMint: inBank.mint.toString(),
@@ -156,6 +240,7 @@ export const spotTrade = async (
             slippageBps: Math.ceil(slippage * 100).toString(),
             swapMode,
             onlyDirectRoutes: `${onlyDirectRoutes}`,
+            maxAccounts: `${maxAccounts}`,
         }
         const paramsString = new URLSearchParams(paramObj).toString()
         const res = await axios.get(
@@ -168,10 +253,13 @@ export const spotTrade = async (
             user.publicKey,
             0,
             inBank.mint,
-            outBank.mint,
+            outBank.mint
         );
-        const price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
-        console.log(`*** MARGIN ${side}: `, amount, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
+        let price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
+        if (side === 'BUY') {
+            price = (bestRoute.inAmount / 10 ** inBank.mintDecimals) / (bestRoute.outAmount / 10 ** outBank.mintDecimals)
+        }
+        console.log(`*** ${accountDefinition.name} MARGIN ${side}: `, amount, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
         const sig = await client.marginTrade({
             group: group,
             mangoAccount: mangoAccount,
@@ -182,7 +270,7 @@ export const spotTrade = async (
             userDefinedAlts: alts,
             flashLoanType: { swap: {} },
         });
-        console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`,`https://explorer.solana.com/tx/${sig.signature}`);
+        console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
         return sig.signature
     } catch (e) {
         console.log(`${accountDefinition.name} Error placing SPOT Trade`, e)
@@ -190,15 +278,16 @@ export const spotTrade = async (
     }
 }
 
-export const perpTrade = async (client: MangoClient,
+export const perpTrade = async (
+    client: MangoClient,
     group: Group,
     mangoAccount: MangoAccount,
     perpMarket: PerpMarket,
     price: number,
     size: number,
     side: PerpOrderSide,
-    accountDefinition:AccountDefinition,
-    reduceOnly:boolean) => {
+    accountDefinition: AccountDefinition,
+    reduceOnly: boolean) => {
     try {
         console.log(`**** ${accountDefinition.name} PERP ${side === PerpOrderSide.ask ? "SELL" : "BUY"} order for ${size} at ${price}`)
         const order = await client.perpPlaceOrder(
@@ -209,7 +298,7 @@ export const perpTrade = async (client: MangoClient,
             price, // ui price 
             size, // ui base quantity
             undefined, // max quote quantity
-            undefined, // order id
+            Date.now(), // order id
             PerpOrderType.immediateOrCancel,
             reduceOnly);
         console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
@@ -221,19 +310,95 @@ export const perpTrade = async (client: MangoClient,
 }
 
 
-export const setupClient = async (accountDefinition: AccountDefinition) => {
+export type Client = {
+    client: MangoClient,
+    user: Keypair,
+    mangoAccount?: MangoAccount,
+    group: Group,
+    ids: any
+}
+
+export const getClient = async (user: Keypair): Promise<Client> => {
     const options = AnchorProvider.defaultOptions();
     const connection = new Connection(CLUSTER_URL!, options);
 
-    const user = getUser(accountDefinition.privateKey);
     const wallet = new Wallet(user);
     const provider = new AnchorProvider(connection, wallet, options);
     const client = MangoClient.connect(provider, CLUSTER, MANGO_V4_ID[CLUSTER], {
         idsSource: 'get-program-accounts',
     });
+    const group = await client.getGroup(new PublicKey(GROUP_PK));
+    const ids = await client.getIds(group.publicKey);
+    return {
+        client, user, group, ids
+    }
+}
+
+export async function getAccountData(
+    accountDefinition: AccountDefinition,
+    client: any,
+    group: any,
+    mangoAccount: MangoAccount
+): Promise<AccountDetail> {
+
+    await mangoAccount.reload(client);
+
+    const values = group.perpMarketsMapByMarketIndex.values()
+    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+
+    const pp = mangoAccount
+        .perpActive()
+        .find((pp: any) => pp.marketIndex === perpMarket.perpMarketIndex);
+
+    let fundingAmount = 0;
+    let interestAmount = 0;
+    let solAmount = 0;
+    if (pp) {
+        fundingAmount += pp.getCumulativeFundingUi(perpMarket);
+        solAmount = pp.basePositionLots.toNumber() / 100
+    }
+    const interestData = await fetchInterestData(mangoAccount.publicKey.toBase58())
+    for (const interest of interestData || []) {
+        interestAmount += interest.deposit_interest_usd - interest.borrow_interest_usd
+    }
+
+    const banks = Array.from(group.banksMapByName.values()).flat();
+    const solBank: any = banks.find((bank: any) => bank.name === 'SOL');
+    const usdcBank: any = banks.find((bank: any) => bank.name === 'USDC');
+    const solBalance = solBank ? mangoAccount.getTokenBalanceUi(solBank) : 0;
+    const usdcBalance = solBank ? mangoAccount.getTokenBalanceUi(solBank) : 0;
+
+    let borrow = toUiDecimalsForQuote(mangoAccount.getCollateralValue(group)!.toNumber())
+    const equity = toUiDecimalsForQuote(mangoAccount.getEquity(group)!.toNumber())
+    const solPrice = perpMarket.price.toNumber() * 1000
+    return {
+        account: accountDefinition.key,
+        name: accountDefinition.name,
+        jupBasis: accountDefinition.jup,
+        fundingAmount,
+        interestAmount,
+        solAmount,
+        borrow,
+        usdBasis: accountDefinition.usd,
+        funding: fundingAmount,
+        health: mangoAccount.getHealthRatio(group, HealthType.maint)!.toNumber(),
+        equity,
+        solBalance,
+        solPrice,
+        usdcBalance,
+        solBank,
+        usdcBank,
+        perpMarket
+    }
+}
+
+
+export const setupClient = async (accountDefinition: AccountDefinition): Promise<Client> => {
+    const user = getUser(accountDefinition.privateKey);
+    const { client, group, ids } = await getClient(user)
     const mangoAccount = await client.getMangoAccount(new PublicKey(accountDefinition.key));
     return {
-        client, user, mangoAccount
+        client, user, mangoAccount, group, ids
     }
 }
 export async function getFundingRate() {
