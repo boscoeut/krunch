@@ -4,22 +4,24 @@ import {
 import fs from 'fs';
 import { authorize, updateGoogleSheet } from './googleUtils';
 import {
+    getAccountData,
+    getFundingRate, perpTrade, setupClient, sleep, spotTrade
+} from './mangoUtils';
+import {
     AccountDefinition,
     AccountDetail,
     Client,
     PendingTransaction,
-    getAccountData,
-    getFundingRate, perpTrade, setupClient, sleep, spotTrade
-} from './mangoUtils';
+    SnipeResponse
+} from './types';
+import { TRADE_SIZE, MINUS_THRESHOLD, 
+    MIN_SIZE, MAX_SPOT_TRADE,
+    PLUS_THRESHOLD, MIN_PERP, MAX_PERP } from './constants';
+
 const { google } = require('googleapis');
 
 function roundToNearestHalf(num: number) {
     return Math.floor(num * 2) / 2;
-}
-
-interface SnipeResponse {
-    promises: Array<PendingTransaction>,
-    accountDetails?: AccountDetail
 }
 
 async function snipePrices(
@@ -40,6 +42,7 @@ async function snipePrices(
         if (!client.mangoAccount) {
             throw new Error('Mango account not found: ' + accountDefinition.name)
         }
+        await client.mangoAccount.reload(client.client);
         accountDetails = await getAccountData(accountDefinition,
             client.client,
             client.group,
@@ -53,9 +56,8 @@ async function snipePrices(
             await client.group.reloadPerpMarketOraclePrices(client.client);
 
             const { solPrice, solBalance,
-                health, borrow, solAmount,
-                solBank, usdcBank, perpMarket,
-                usdcBalance } = accountDetails
+                borrow, solAmount,
+                solBank, usdcBank, perpMarket } = accountDetails
             let action: 'HOLD' | 'BUY' | 'SELL' = 'HOLD'
             if (hourlyRateAPR < 0) {
                 action = 'BUY'
@@ -71,14 +73,12 @@ async function snipePrices(
                 maxSize = Math.min(maxSize, maxPerp - solAmount)
             }
             if (action === 'SELL' && solAmount > minPerp) {
-                maxSize = Math.min(maxSize, Math.abs(minPerp) +solAmount)    
+                maxSize = Math.min(maxSize, Math.abs(minPerp) + solAmount)
             }
 
             const optimalSize = maxSize
-            const minSize = 0.5
-            const maxSpotTrade = 5
+            
             let tradeSize = requestedTradeSize
-
 
             if (solAmount > 0 && action === "BUY") {
                 tradeSize = Math.min(requestedTradeSize, optimalSize)
@@ -89,7 +89,7 @@ async function snipePrices(
             } else if (solAmount > 0 && action === "SELL") {
                 tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount))
             }
-            let increaseExposure = (hourlyRateAPR > aprMaxThreshold || hourlyRateAPR < aprMinThreshold) && tradeSize > minSize
+            let increaseExposure = (hourlyRateAPR > aprMaxThreshold || hourlyRateAPR < aprMinThreshold) && tradeSize > MIN_SIZE
             if (action === "BUY" && increaseExposure && solAmount >= maxPerp) {
                 increaseExposure = false
             }
@@ -97,27 +97,15 @@ async function snipePrices(
                 increaseExposure = false
             }
             const spotVsPerpDiff = solBalance + solAmount
-            const minDiffSize = 0.02
-            const spotUnbalanced = Math.abs(spotVsPerpDiff) > minDiffSize
-            const extraUSDCAmount = 0.02
-            const quoteBuffer = 0.04
-
-            console.log(' --- ')
-            console.log('ACCOUNT:', accountDefinition.name)
-            console.log('USDC Balance', usdcBalance)
-            console.log('HEALTH', health)
-            console.log('THRESHOLDS', aprMinThreshold, aprMaxThreshold, hourlyRateAPR)
-            console.log('SOL PERP Balance', solAmount)
-            console.log('SOL Balance', solBalance)
-            console.log('SOL PRICE', solPrice)
-            console.log('FUND RATE APR:', hourlyRateAPR, '%')
-            console.log('ACTION:', action)
-            console.log('INCREASE EXPOSURE:', increaseExposure)
-
+            const MIN_DIFF_SIZE = 0.02
+            const EXTRA_USDC_AMOUNT = 0.02
+            const QUOTE_BUFFER = 0.04
+            const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
+           
             if (action === 'BUY') {
                 if (spotVsPerpDiff > 0 && spotUnbalanced) {
                     console.log('SELL SOL', tradeSize, spotVsPerpDiff)
-                    const amount = Math.min(maxSpotTrade, requestedTradeSize, Number(Math.abs(spotVsPerpDiff).toFixed(2)))
+                    const amount = Math.min(MAX_SPOT_TRADE, requestedTradeSize, Number(Math.abs(spotVsPerpDiff).toFixed(2)))
                     promises.push({
                         type: 'SWAP',
                         accountName: accountDefinition.name,
@@ -130,7 +118,7 @@ async function snipePrices(
                 }
                 else if (spotUnbalanced || increaseExposure) {
                     console.log('BUY BACK PERP', hourlyRateAPR, aprMinThreshold)
-                    const bestAsk = solPrice - quoteBuffer
+                    const bestAsk = solPrice - QUOTE_BUFFER
                     tradeSize = spotUnbalanced ? Math.min(tradeSize, Math.abs(spotVsPerpDiff)) : tradeSize
                     const midPrice = (bestAsk + solPrice) / 2
                     console.log('**** SNIPING BUY', midPrice, "Oracle", solPrice, 'Trade size', `${tradeSize}`)
@@ -149,8 +137,8 @@ async function snipePrices(
             if (action === 'SELL') {
                 if (spotVsPerpDiff < 0 && spotUnbalanced) {
                     console.log('BUY SOL', spotVsPerpDiff)
-                    const buySize = Math.min(maxSpotTrade, requestedTradeSize, Math.abs(spotVsPerpDiff))
-                    const amount = Number((buySize * solPrice + extraUSDCAmount).toFixed(2))
+                    const buySize = Math.min(MAX_SPOT_TRADE, requestedTradeSize, Math.abs(spotVsPerpDiff))
+                    const amount = Number((buySize * solPrice + EXTRA_USDC_AMOUNT).toFixed(2))
                     promises.push({
                         type: 'SWAP',
                         accountName: accountDefinition.name,
@@ -163,7 +151,7 @@ async function snipePrices(
                 }
                 else if (spotUnbalanced || increaseExposure) {
                     console.log('SELL PERP', hourlyRateAPR, aprMaxThreshold)
-                    const bestBid = solPrice + quoteBuffer
+                    const bestBid = solPrice + QUOTE_BUFFER
                     tradeSize = spotUnbalanced ? Math.min(tradeSize, Math.abs(spotVsPerpDiff)) : tradeSize
                     const midPrice = (bestBid + solPrice) / 2
                     console.log('**** SNIPING SELL', midPrice, "Oracle", solPrice, 'Trade Size', `${tradeSize}`)
@@ -189,10 +177,9 @@ async function snipePrices(
     }
 }
 
-
 async function main(): Promise<void> {
-    const CAN_TRADE = true
-    const NUM_MINUTES = CAN_TRADE ? 0.25 : 2
+    const CAN_TRADE = false
+    const NUM_MINUTES = CAN_TRADE ? 0.5 : 2
     const names = ['BIRD', 'SIX']
     const accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     // .filter((f: any) => names.includes(f.name));
@@ -200,11 +187,6 @@ async function main(): Promise<void> {
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
 
-    const minPerp = -25
-    const maxPerp = 0
-    const minusThreshold = -100
-    const plusThreshold = 100
-    const tradeSize = 15
     const openTransactions: Array<PendingTransaction> = []
     let successfulTransactions = 0
     let failedTransactions = 0
@@ -227,12 +209,12 @@ async function main(): Promise<void> {
                         clients.set(accountDefinition.name, client)
                     }
                     const result = await snipePrices(accountDefinition,
-                        tradeSize,
-                        minusThreshold,
-                        plusThreshold,
+                        TRADE_SIZE,
+                        MINUS_THRESHOLD,
+                        PLUS_THRESHOLD,
                         hourlyRateAPR,
-                        minPerp,
-                        maxPerp,
+                        MIN_PERP,
+                        MAX_PERP,
                         client,
                         openTxs,
                         CAN_TRADE)
@@ -257,12 +239,6 @@ async function main(): Promise<void> {
                 }
             }
 
-            console.log('New Tx:', numberOfTransactions,
-                'Open Tx:', openTransactions.length,
-                'Successful:', successfulTransactions,
-                'Failed:', failedTransactions)
-
-            console.log('--- OPEN TRANSACTIONS ---')
             for (const tx of openTransactions) {
                 console.log(` > ${tx.accountName} ${tx.type} ${tx.side} AMT=${tx.amount} PRICE=${tx.price} ORACLE=${tx.oracle}`)
             }

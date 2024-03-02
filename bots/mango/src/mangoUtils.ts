@@ -23,6 +23,9 @@ import {
 import axios from 'axios';
 import * as bs58 from 'bs58';
 import fs from 'fs';
+import { Client } from './types';
+import { AccountDefinition, AccountDetail, TotalInterestDataItem } from './types';
+
 export const JUPITER_V6_QUOTE_API_MAINNET = 'https://quote-api.jup.ag/v6'
 export const FUNDING_RATE_API = 'https://api.mngo.cloud/data/v4/one-hour-funding-rate?mango-group=78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
 const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0';
@@ -31,52 +34,8 @@ export const GROUP_PK =
     process.env.GROUP_PK || '78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'; // SOL GROUP
 const CLUSTER: Cluster =
     (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
-
-export type AccountDetail = {
-    account: string;
-    name: string,
-    jupBasis: number;
-    fundingAmount: number;
-    interestAmount: number;
-    solAmount: number;
-    borrow: number;
-    usdBasis: number;
-    funding: number;
-    health: number;
-    equity: number;
-    solPrice: number;
-    solBalance: number;
-    usdcBalance: number;
-    solBank: Bank;
-    usdcBank: Bank;
-    perpMarket: PerpMarket;
-};
-
-export type AccountDefinition = {
-    name: string,
-    key: string;
-    usd: number;
-    jup: number;
-    privateKey: string;
-    healthThreshold: number;
-};
-export type PendingTransaction = {
-    promise: Promise<any>,
-    type: 'PERP' | 'SWAP',
-    accountName: string,
-    side: 'BUY' | 'SELL',
-    amount: number,
-    price: number,
-    oracle: number
-}
-
-export interface TotalInterestDataItem {
-    borrow_interest: number
-    deposit_interest: number
-    borrow_interest_usd: number
-    deposit_interest_usd: number
-    symbol: string
-}
+export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
+const INTEREST_CACHE: Map<string, Array<any>> = new Map()
 
 export function createKeypair() {
     let mnemonic = bip39.generateMnemonic();
@@ -88,10 +47,6 @@ export function createKeypair() {
     console.log(publicKey); // Print the public key
 }
 
-export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
-
-
-const INTEREST_CACHE: Map<string, Array<any>> = new Map()
 export const fetchInterestData = async (mangoAccountPk: string) => {
     try {
         if (INTEREST_CACHE.has(mangoAccountPk)) {
@@ -309,15 +264,6 @@ export const perpTrade = async (
     }
 }
 
-
-export type Client = {
-    client: MangoClient,
-    user: Keypair,
-    mangoAccount?: MangoAccount,
-    group: Group,
-    ids: any
-}
-
 export const getClient = async (user: Keypair): Promise<Client> => {
     const options = AnchorProvider.defaultOptions();
     const connection = new Connection(CLUSTER_URL!, options);
@@ -340,9 +286,6 @@ export async function getAccountData(
     group: any,
     mangoAccount: MangoAccount
 ): Promise<AccountDetail> {
-
-    await mangoAccount.reload(client);
-
     const values = group.perpMarketsMapByMarketIndex.values()
     const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
 
@@ -392,7 +335,6 @@ export async function getAccountData(
     }
 }
 
-
 export const setupClient = async (accountDefinition: AccountDefinition): Promise<Client> => {
     const user = getUser(accountDefinition.privateKey);
     const { client, group, ids } = await getClient(user)
@@ -401,8 +343,9 @@ export const setupClient = async (accountDefinition: AccountDefinition): Promise
         client, user, mangoAccount, group, ids
     }
 }
+
 export async function getFundingRate() {
-    const fundingRate = await axios.get('https://api.mngo.cloud/data/v4/one-hour-funding-rate?mango-group=78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX')
+    const fundingRate = await axios.get(FUNDING_RATE_API)
     const data: any = fundingRate.data
     const hourlyRate = data.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
     return hourlyRate

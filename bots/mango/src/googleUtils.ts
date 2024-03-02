@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import { AccountDetail, PendingTransaction } from './types';
 const { authenticate } = require('@google-cloud/local-auth');
 const { google } = require('googleapis');
-import { AccountDetail, PendingTransaction } from './mangoUtils';
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const TOKEN_PATH = path.join(process.cwd(), 'secrets/token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), 'secrets/google_creds.json');

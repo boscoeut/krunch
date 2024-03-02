@@ -37,24 +37,7 @@
                 "<node_internals>/**"
             ]
         },
-        {
-            "name": "Run Mongo Bot",
-            "type": "node",
-            "request": "launch",
-            "cwd": "${workspaceRoot}/bots/mango",
-            "console": "integratedTerminal",
-            "runtimeExecutable": "/Users/mebert/.nvm/versions/node/v21.5.0/bin/npm",
-            "env": {                      
-                "ANCHOR_WALLET": "/Users/mebert/.config/solana/solanaTradingWalletProd.txt"
-            },
-            "runtimeArgs": [
-                "run-script",
-                "start"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ]
-        },
+       
         {
             "name": "Run Sniper Bot",
             "type": "node",
