@@ -6,6 +6,12 @@ import {
     Keypair
 } from '@solana/web3.js';
 
+export type TotalAccountFundingItem = {
+    long_funding: number
+    short_funding: number
+  }
+  
+  
 export type AccountDetail = {
     account: string;
     name: string,
@@ -24,6 +30,9 @@ export type AccountDetail = {
     solBank: Bank;
     usdcBank: Bank;
     perpMarket: PerpMarket;
+    bestBid: number;
+    bestAsk: number;
+    historicalFunding:number
 };
 
 export type AccountDefinition = {
@@ -33,6 +42,7 @@ export type AccountDefinition = {
     jup: number;
     privateKey: string;
     healthThreshold: number;
+    canTrade:boolean
 };
 export type PendingTransaction = {
     promise: Promise<any>,

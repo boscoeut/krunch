@@ -32,7 +32,7 @@ export async function updateGoogleSheet(googleSheets: any,
         const values = accountDetails.map((accountDetail) => {
             return [
                 accountDetail.name,
-                accountDetail.funding,
+                accountDetail.historicalFunding,
                 accountDetail.borrow,
                 accountDetail.equity,
                 accountDetail.health / 100,
@@ -54,12 +54,15 @@ export async function updateGoogleSheet(googleSheets: any,
         };
         await googleSheets.spreadsheets.values.update(request);
 
+        const bestBid = accountDetails[0].bestBid
+        const bestAsk = accountDetails[0].bestAsk
         const request2 = {
             spreadsheetId: SPREADSHEET_ID,
-            range: `SOL!B1:B2`,
+            range: `SOL!B1:C2`,
             valueInputOption: 'USER_ENTERED',
             resource: {
-                values: [[solPrice], [fundingRate * 24 * 365]],
+                values: [[solPrice,bestBid], 
+                        [fundingRate * 24 * 365, bestAsk]],
             },
         };
         await googleSheets.spreadsheets.values.update(request2);

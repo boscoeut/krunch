@@ -23,19 +23,49 @@ import {
 import axios from 'axios';
 import * as bs58 from 'bs58';
 import fs from 'fs';
-import { Client } from './types';
-import { AccountDefinition, AccountDetail, TotalInterestDataItem } from './types';
+import { Client, TotalAccountFundingItem, AccountDefinition, AccountDetail, TotalInterestDataItem } from './types';
+import {
+    ACCOUNT_REFRESH_EXPIRATION,
+    ORDER_TYPE,
+    DEFAULT_CACHE_EXPIRATION,
+    BID_ASK_CACHE_EXPIRATION,
+    CONNECTION_URL,
+    SOL_GROUP_PK,
+    ENFORCE_BEST_PRICE,
+    MANGO_DATA_API_URL,
+    JUPITER_V6_QUOTE_API_MAINNET,
+    FUNDING_RATE_API,
+    FUNDING_CACHE_EXPIRATION,
+    INTEREST_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION
+} from './constants';
 
-export const JUPITER_V6_QUOTE_API_MAINNET = 'https://quote-api.jup.ag/v6'
-export const FUNDING_RATE_API = 'https://api.mngo.cloud/data/v4/one-hour-funding-rate?mango-group=78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
-const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0';
 const CLUSTER_URL = CONNECTION_URL;
-export const GROUP_PK =
-    process.env.GROUP_PK || '78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'; // SOL GROUP
+export const GROUP_PK = process.env.GROUP_PK || SOL_GROUP_PK; // SOL GROUP
 const CLUSTER: Cluster =
     (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
-export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
-const INTEREST_CACHE: Map<string, Array<any>> = new Map()
+
+type CacheItem = {
+    date: Date,
+    item: any
+}
+const CACHE = new Map<string, CacheItem>()
+
+const getFromCache = (key: string, expirationInMinutes: number = DEFAULT_CACHE_EXPIRATION) => {
+    const item = CACHE.get(key)
+    if (item) {
+        const now = new Date()
+        const diff = (now.getTime() - item.date.getTime()) / 1000
+        if (diff < expirationInMinutes * 60) {
+            return item.item
+        }
+    }
+    return null
+}
+
+const setToCache = (key: string, item: any) => {
+    const now = new Date()
+    CACHE.set(key, { date: now, item })
+}
 
 export function createKeypair() {
     let mnemonic = bip39.generateMnemonic();
@@ -48,9 +78,11 @@ export function createKeypair() {
 }
 
 export const fetchInterestData = async (mangoAccountPk: string) => {
+    const cacheKey = 'INT' + mangoAccountPk
     try {
-        if (INTEREST_CACHE.has(mangoAccountPk)) {
-            return INTEREST_CACHE.get(mangoAccountPk)
+        const intData = getFromCache(cacheKey, INTEREST_CACHE_EXPIRATION)
+        if (intData) {
+            return intData
         } else {
             const response = await axios.get(
                 `${MANGO_DATA_API_URL}/stats/interest-account-total?mango-account=${mangoAccountPk}`,
@@ -65,7 +97,56 @@ export const fetchInterestData = async (mangoAccountPk: string) => {
                         return { ...value, symbol: key }
                     })
                     .filter((x) => x)
-                INTEREST_CACHE.set(mangoAccountPk, stats)
+                setToCache(cacheKey, stats)
+                return stats
+            } else return []
+        }
+    } catch (e) {
+        console.log('Failed to fetch account funding', e)
+        return []
+    }
+}
+
+export const fetchRefreshKey = (accountName: string, value:Date) => {
+    const cacheKey = 'REFRESH_KEY' + accountName
+    try {
+        const cache = getFromCache(cacheKey, ACCOUNT_REFRESH_EXPIRATION)
+        if (cache) {
+            return cache
+        } else {
+            setToCache(cacheKey, value)
+            return cache
+        }
+    } catch (e) {
+        console.log('Failed to fetchRefreshKey', e)
+        return new Date()
+    }
+}
+
+export const fetchFundingData = async (mangoAccountPk: string) => {
+    const cacheKey = 'FUND' + mangoAccountPk
+    try {
+        const cache = getFromCache(cacheKey, FUNDING_CACHE_EXPIRATION)
+        if (cache) {
+            return cache
+        } else {
+            const url = `${MANGO_DATA_API_URL}/stats/funding-account-total?mango-account=${mangoAccountPk}`
+            const response = await axios.get(url)
+            const res: any = response.data
+            if (res) {
+                const entries: [string, Omit<TotalAccountFundingItem, 'market'>][] =
+                    Object.entries(res)
+
+                const stats: TotalAccountFundingItem[] = entries
+                    .map(([key, value]) => {
+                        return {
+                            long_funding: value.long_funding * -1,
+                            short_funding: value.short_funding * -1,
+                            market: key,
+                        }
+                    })
+                    .filter((x) => x)
+                setToCache(cacheKey, stats)
                 return stats
             } else return []
         }
@@ -100,6 +181,32 @@ export const deserializeJupiterIxAndAlt = async (
 
     return [decompiledMessage.instructions, addressLookupTables]
 }
+
+export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient) => {
+    const cacheKey = 'BidAsks'
+    try {
+        const cache = getFromCache(cacheKey, BID_ASK_CACHE_EXPIRATION)
+        if (cache) {
+            return cache
+        }else{
+            const [bids, asks] = await Promise.all([
+                perpMarket.loadBids(client, true),
+                perpMarket.loadAsks(client, true)
+            ]);
+            const item =  {
+                bestBid:bids.best()?.uiPrice || 0,
+                bestAsk:asks.best()?.uiPrice || 0 
+            }
+            setToCache(cacheKey,item)
+            return item
+        }
+
+    } catch (e) {
+        console.log('Failed to fetch bids and asks', e)
+        return null
+    }
+}
+
 
 /**  Given a Jupiter route, fetch the transaction for the user to sign.
  **This function should be used for margin swaps* */
@@ -254,7 +361,7 @@ export const perpTrade = async (
             size, // ui base quantity
             undefined, // max quote quantity
             Date.now(), // order id
-            PerpOrderType.immediateOrCancel,
+            ORDER_TYPE,
             reduceOnly);
         console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
         return order.signature
@@ -294,12 +401,21 @@ export async function getAccountData(
         .find((pp: any) => pp.marketIndex === perpMarket.perpMarketIndex);
 
     let fundingAmount = 0;
+    let historicalFunding = 0;
     let interestAmount = 0;
     let solAmount = 0;
     if (pp) {
         fundingAmount += pp.getCumulativeFundingUi(perpMarket);
         solAmount = pp.basePositionLots.toNumber() / 100
     }
+    const {bestBid, bestAsk} = await getBidsAndAsks(perpMarket, client)
+    const fundingData = await fetchFundingData(mangoAccount.publicKey.toBase58())
+    if (fundingData && fundingData.length > 0) {
+        for (const funding of fundingData || []) {
+            historicalFunding += funding.long_funding + funding.short_funding
+        }
+    }
+
     const interestData = await fetchInterestData(mangoAccount.publicKey.toBase58())
     for (const interest of interestData || []) {
         interestAmount += interest.deposit_interest_usd - interest.borrow_interest_usd
@@ -314,6 +430,9 @@ export async function getAccountData(
     let borrow = toUiDecimalsForQuote(mangoAccount.getCollateralValue(group)!.toNumber())
     const equity = toUiDecimalsForQuote(mangoAccount.getEquity(group)!.toNumber())
     const solPrice = perpMarket.price.toNumber() * 1000
+
+    console.log(accountDefinition.name, 'Funding', fundingAmount, historicalFunding)
+
     return {
         account: accountDefinition.key,
         name: accountDefinition.name,
@@ -331,7 +450,11 @@ export async function getAccountData(
         usdcBalance,
         solBank,
         usdcBank,
-        perpMarket
+        perpMarket,
+        bestAsk,
+        bestBid,
+        historicalFunding
+
     }
 }
 
@@ -345,10 +468,17 @@ export const setupClient = async (accountDefinition: AccountDefinition): Promise
 }
 
 export async function getFundingRate() {
-    const fundingRate = await axios.get(FUNDING_RATE_API)
-    const data: any = fundingRate.data
-    const hourlyRate = data.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
-    return hourlyRate
+    const cacheKey = 'FUND_RATE'
+    const rate = getFromCache(cacheKey, FUNDING_RATE_CACHE_EXPIRATION)
+    if (rate) {
+        return rate
+    } else {
+        const fundingRate = await axios.get(FUNDING_RATE_API)
+        const data: any = fundingRate.data
+        const hourlyRate = data.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
+        setToCache(cacheKey, hourlyRate)
+        return hourlyRate
+    }
 }
 
 export function sleep(ms: number) {
