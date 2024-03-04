@@ -3,7 +3,7 @@ import {
     MangoAccount, MangoClient, Group
 } from '@blockworks-foundation/mango-v4';
 import {
-    Keypair
+    Keypair, PublicKey
 } from '@solana/web3.js';
 
 export type TotalAccountFundingItem = {
@@ -53,6 +53,30 @@ export type PendingTransaction = {
     price: number,
     oracle: number
 }
+
+export class TokenAccount {
+    publicKey!: PublicKey
+    mint!: PublicKey
+    owner!: PublicKey
+    amount!: number
+    decimals!: number
+    uiAmount: number
+  
+    constructor(
+      publicKey: PublicKey,
+      decoded: {
+        mint: PublicKey
+        owner: PublicKey
+        amount: number
+        decimals: number
+        uiAmount: number
+      },
+    ) {
+      this.publicKey = publicKey
+      this.uiAmount = 0
+      Object.assign(this, decoded)
+    }
+  }
 
 export type Client = {
     client: MangoClient,

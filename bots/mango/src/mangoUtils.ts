@@ -1,5 +1,6 @@
 import * as bip39 from 'bip39';
 
+import { TokenInstructions } from '@project-serum/serum'
 import {
     Bank,
     Group,
@@ -7,10 +8,12 @@ import {
     MangoAccount,
     MangoClient,
     PerpMarket,
-    PerpOrderSide, PerpOrderType,
+    PerpOrderSide,
     toNative,
     HealthType,
-    toUiDecimalsForQuote
+    toUiDecimalsForQuote,
+    FlashLoanType,
+    toUiDecimals
 } from '@blockworks-foundation/mango-v4';
 import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import {
@@ -23,7 +26,7 @@ import {
 import axios from 'axios';
 import * as bs58 from 'bs58';
 import fs from 'fs';
-import { Client, TotalAccountFundingItem, AccountDefinition, AccountDetail, TotalInterestDataItem } from './types';
+import { Client, TotalAccountFundingItem, AccountDefinition, AccountDetail, TotalInterestDataItem, TokenAccount } from './types';
 import {
     ACCOUNT_REFRESH_EXPIRATION,
     ORDER_TYPE,
@@ -31,7 +34,9 @@ import {
     BID_ASK_CACHE_EXPIRATION,
     CONNECTION_URL,
     SOL_GROUP_PK,
-    ENFORCE_BEST_PRICE,
+    USDC_MINT,SOL_MINT,
+    DEFAULT_PRIORITY_FEE,
+    LAVA_CONNECTION_URL,
     MANGO_DATA_API_URL,
     JUPITER_V6_QUOTE_API_MAINNET,
     FUNDING_RATE_API,
@@ -107,7 +112,7 @@ export const fetchInterestData = async (mangoAccountPk: string) => {
     }
 }
 
-export const fetchRefreshKey = (accountName: string, value:Date) => {
+export const fetchRefreshKey = (accountName: string, value: Date) => {
     const cacheKey = 'REFRESH_KEY' + accountName
     try {
         const cache = getFromCache(cacheKey, ACCOUNT_REFRESH_EXPIRATION)
@@ -188,16 +193,16 @@ export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient
         const cache = getFromCache(cacheKey, BID_ASK_CACHE_EXPIRATION)
         if (cache) {
             return cache
-        }else{
+        } else {
             const [bids, asks] = await Promise.all([
                 perpMarket.loadBids(client, true),
                 perpMarket.loadAsks(client, true)
             ]);
-            const item =  {
-                bestBid:bids.best()?.uiPrice || 0,
-                bestAsk:asks.best()?.uiPrice || 0 
+            const item = {
+                bestBid: bids.best()?.uiPrice || 0,
+                bestAsk: asks.best()?.uiPrice || 0
             }
-            setToCache(cacheKey,item)
+            setToCache(cacheKey, item)
             return item
         }
 
@@ -206,7 +211,6 @@ export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient
         return null
     }
 }
-
 
 /**  Given a Jupiter route, fetch the transaction for the user to sign.
  **This function should be used for margin swaps* */
@@ -275,6 +279,51 @@ export const getUser = (accountKey: string): Keypair => {
     return user;
 }
 
+export async function getTokenAccountsByOwnerWithWrappedSol(
+    connection: Connection,
+    owner: PublicKey,
+): Promise<TokenAccount[]> {
+    const solReq = connection.getAccountInfo(owner)
+    const tokenReq = connection.getParsedTokenAccountsByOwner(owner, {
+        programId: TokenInstructions.TOKEN_PROGRAM_ID,
+    })
+
+    // fetch data
+    const [solResp, tokenResp] = await Promise.all([solReq, tokenReq])
+
+    // parse token accounts
+    const tokenAccounts = tokenResp.value.map((t) => {
+        return {
+            publicKey: t.pubkey,
+            mint: t.account.data.parsed.info.mint,
+            owner: t.account.data.parsed.info.owner,
+            amount: t.account.data.parsed.info.tokenAmount.amount,
+            uiAmount: t.account.data.parsed.info.tokenAmount.uiAmount,
+            decimals: t.account.data.parsed.info.tokenAmount.decimals,
+        }
+    })
+    // create fake wrapped sol account to reflect sol balances in user's wallet
+    const lamports = solResp?.lamports || 0
+    const solAccount = new TokenAccount(owner, {
+        mint: TokenInstructions.WRAPPED_SOL_MINT,
+        owner,
+        amount: lamports,
+        uiAmount: toUiDecimals(lamports, 9),
+        decimals: 9,
+    })
+
+    // prepend SOL account to beginning of list
+    return [solAccount].concat(tokenAccounts)
+}
+
+export const doJupiterTrade = async (connection:Connection, owner:PublicKey)=>{
+    console.log('doJupiterTrade called')
+    const tokens = await getTokenAccountsByOwnerWithWrappedSol(connection, owner)
+    const usdcToken = tokens.find((t) => t.mint.toString() === USDC_MINT)
+    const solToken = tokens.find((t) => t.mint.toString() === SOL_MINT)
+    return tokens
+}
+
 export const spotTrade = async (
     amount: number,
     inBank: Bank,
@@ -291,8 +340,8 @@ export const spotTrade = async (
             inBank.mintDecimals,
         );
         console.log('finding best route for amount = ' + amount);
-        const onlyDirectRoutes = true
-        const slippage = 75
+        const onlyDirectRoutes = false
+        const slippage = 100
         const maxAccounts = 64
         const swapMode = 'ExactIn'
         const paramObj: any = {
@@ -330,7 +379,7 @@ export const spotTrade = async (
             outputMintPk: outBank.mint,
             userDefinedInstructions: ixs,
             userDefinedAlts: alts,
-            flashLoanType: { swap: {} },
+            flashLoanType: FlashLoanType.swap
         });
         console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
         return sig.signature
@@ -372,13 +421,22 @@ export const perpTrade = async (
 }
 
 export const getClient = async (user: Keypair): Promise<Client> => {
+    // const options = AnchorProvider.defaultOptions();
+    // const connection = new Connection(CLUSTER_URL!, options);
     const options = AnchorProvider.defaultOptions();
-    const connection = new Connection(CLUSTER_URL!, options);
+    const connection = new Connection(CLUSTER_URL!, 'processed');
+    const backupConnections = [new Connection(LAVA_CONNECTION_URL)];
 
     const wallet = new Wallet(user);
     const provider = new AnchorProvider(connection, wallet, options);
+    provider.opts.skipPreflight = true // TODO
     const client = MangoClient.connect(provider, CLUSTER, MANGO_V4_ID[CLUSTER], {
         idsSource: 'get-program-accounts',
+        prioritizationFee: DEFAULT_PRIORITY_FEE,
+        multipleConnections: backupConnections,
+        postSendTxCallback: (txCallbackOptions: any) => {
+            console.log('<<<<>>>> Transaction txCallbackOptions', txCallbackOptions)
+        }
     });
     const group = await client.getGroup(new PublicKey(GROUP_PK));
     const ids = await client.getIds(group.publicKey);
@@ -408,7 +466,7 @@ export async function getAccountData(
         fundingAmount += pp.getCumulativeFundingUi(perpMarket);
         solAmount = pp.basePositionLots.toNumber() / 100
     }
-    const {bestBid, bestAsk} = await getBidsAndAsks(perpMarket, client)
+    const { bestBid, bestAsk } = await getBidsAndAsks(perpMarket, client)
     const fundingData = await fetchFundingData(mangoAccount.publicKey.toBase58())
     if (fundingData && fundingData.length > 0) {
         for (const funding of fundingData || []) {
@@ -452,7 +510,6 @@ export async function getAccountData(
         bestAsk,
         bestBid,
         historicalFunding
-
     }
 }
 
@@ -473,9 +530,13 @@ export async function getFundingRate() {
     } else {
         const fundingRate = await axios.get(FUNDING_RATE_API)
         const data: any = fundingRate.data
-        const hourlyRate = data.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
-        setToCache(cacheKey, hourlyRate)
-        return hourlyRate
+        if (data.find) {
+            const hourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
+            setToCache(cacheKey, hourlyRate)
+            return hourlyRate
+        } else {
+            return 0
+        }
     }
 }
 
