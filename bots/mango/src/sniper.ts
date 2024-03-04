@@ -51,7 +51,9 @@ async function snipePrices(
         }
 
         const lastRefresh = new Date()
-        if (canTrade || fetchRefreshKey(accountDefinition.name, lastRefresh) != lastRefresh) {
+        const needsRefresh = fetchRefreshKey(accountDefinition.name, lastRefresh) != lastRefresh
+        if (canTrade || needsRefresh) {
+            console.log('Reloading Mango Account', accountDefinition.name)
             await Promise.all([
                 client.mangoAccount.reload(client.client),
                 client.group.reloadBanks(client.client, client.ids),
@@ -65,44 +67,51 @@ async function snipePrices(
             client.group,
             client.mangoAccount)
 
-        // check existing orders
-        const orders = await client.mangoAccount.loadPerpOpenOrdersForMarket(
-            client.client,
-            client.group,
-            accountDetails.perpMarket.perpMarketIndex,
-        )
-        const now = new Date()
-        let hasExpiredOrders = false
-        let hasOpenOrders = orders.length > 0
-        const tenMinutes = ORDER_EXPIRATION
-        for (const order of orders) {
-            const side = order.side === PerpOrderSide.bid ? 'BUY' : 'SELL'
-            const size = order.uiSize
-            const price = order.uiPrice
-            const timestamp = new Date(1000 * order.timestamp)
-            const elapsedTime = now.getTime() - timestamp.getTime()
-            if (elapsedTime > tenMinutes) {
-                console.log('order expired', elapsedTime, 'ms')
-                hasExpiredOrders = true
-                break
+        let numOpenOrders = 0
+        const hasCancelOrder = openTransactions.filter((f) => f.type === 'CANCEL').length > 0
+        if (!hasCancelOrder) {
+            // check existing orders
+            const orders = await client.mangoAccount.loadPerpOpenOrdersForMarket(
+                client.client,
+                client.group,
+                accountDetails.perpMarket.perpMarketIndex,
+            )
+            const now = new Date()
+            numOpenOrders = orders.length 
+            const tenMinutes = ORDER_EXPIRATION
+            for (const order of orders) {
+                const side = order.side === PerpOrderSide.bid ? 'BUY' : 'SELL'
+                const size = order.uiSize
+                const price = order.uiPrice
+                const timestamp = new Date(1000 * order.timestamp)
+                const elapsedTime = now.getTime() - timestamp.getTime()
+                if (elapsedTime > tenMinutes) {
+                    // cancel open orders
+                    promises.push({
+                        type: 'CANCEL',
+                        side,
+                        oracle: price,
+                        amount: size,
+                        price: price,
+                        accountName: accountDefinition.name,
+                        promise: client.client.perpCancelAllOrders(
+                            client.group,
+                            client.mangoAccount,
+                            accountDetails.perpMarket.perpMarketIndex,
+                            10,
+                        )
+                    })
+                    break
+                }
             }
         }
 
-        if (hasExpiredOrders) {
-            // cancel open orders
-            await client.client.perpCancelAllOrdersIx(
-                client.group,
-                client.mangoAccount,
-                accountDetails.perpMarket.perpMarketIndex,
-                10,
-            )
-            hasOpenOrders = false
-        }
-
-        if (hasOpenOrders) {
-            console.log('hasOpenOrders', accountDefinition.name, orders.length)
-        } else if (openTransactions.length > 0 || !canTrade) {
-            console.log(`Skipping ${accountDefinition.name} due to openTx=${openTransactions.length} or canTrade=${canTrade}`)
+        if (openTransactions.length > 0) {
+            console.log(`Skipping ${accountDefinition.name} due to openTx=${openTransactions.length}`)
+        } else if (numOpenOrders > 0) {
+            console.log(`Skipping ${accountDefinition.name} due to # Open Orders=${numOpenOrders}`)
+        } else if (!canTrade) {
+            console.log(`Skipping ${accountDefinition.name} due to canTrade=${canTrade}`)
         } else {
             const { solPrice, solBalance,
                 borrow, solAmount,
@@ -172,7 +181,7 @@ async function snipePrices(
                     if (ENFORCE_BEST_PRICE && midPrice < accountDetails.bestAsk) {
                         console.log('**** SNIPING BUY NOT EXECUTED', `(midPrice)=${midPrice} (bestAsk=${accountDetails.bestAsk}) (Oracle=${solPrice})`)
                     } else {
-                        console.log('**** SNIPING BUY', midPrice, "Oracle", solPrice, 'Trade size', `${tradeSize}`)
+                        console.log(`**** SNIPING BUY (midPrice)=${midPrice} (bestAsk=${accountDetails.bestAsk}) (Oracle=${solPrice}) (Trade Size=${tradeSize})`)
                         promises.push({
                             type: 'PERP',
                             side: 'BUY',
@@ -253,6 +262,7 @@ async function main(): Promise<void> {
             let numberOfTransactions = 0
             const hourlyRate = await getFundingRate()
             const hourlyRateAPR = Number((hourlyRate * 100 * 24 * 365).toFixed(3))
+            console.log(`hourlyRateAPR = ${hourlyRateAPR}%`)
 
             const run: any = []
             for (const accountDefinition of accountDefinitions) {
@@ -296,13 +306,14 @@ async function main(): Promise<void> {
                 }
             }
 
-            for (const tx of openTransactions) {
-                console.log(` > ${tx.accountName} ${tx.type} ${tx.side} AMT=${tx.amount} PRICE=${tx.price} ORACLE=${tx.oracle}`)
-            }
-
             // update google sheet
             const accountDetails: AccountDetail[] = results.map((result) => result.accountDetails).filter((f) => f !== undefined) as AccountDetail[]
             await updateGoogleSheet(googleSheets, accountDetails, hourlyRate, accountDetails[0].solPrice, openTransactions)
+
+            // print out open transactions
+            for (const transaction of openTransactions) {
+                console.log('Open Tx > ', transaction.accountName, transaction.type, transaction.side, transaction.amount, transaction.price)
+            }
             console.log('Sleeping for', SLEEP_MAIN_LOOP > 1 ? SLEEP_MAIN_LOOP : SLEEP_MAIN_LOOP * 60, SLEEP_MAIN_LOOP > 1 ? 'minutes' : 'seconds')
             await sleep(SLEEP_MAIN_LOOP * 1000 * 60)
         } catch (e: any) {

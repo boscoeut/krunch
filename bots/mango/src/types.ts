@@ -46,7 +46,7 @@ export type AccountDefinition = {
 };
 export type PendingTransaction = {
     promise: Promise<any>,
-    type: 'PERP' | 'SWAP',
+    type: 'PERP' | 'SWAP' | 'CANCEL',
     accountName: string,
     side: 'BUY' | 'SELL',
     amount: number,

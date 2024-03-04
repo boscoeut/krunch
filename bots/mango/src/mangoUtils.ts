@@ -431,8 +431,6 @@ export async function getAccountData(
     const equity = toUiDecimalsForQuote(mangoAccount.getEquity(group)!.toNumber())
     const solPrice = perpMarket.price.toNumber() * 1000
 
-    console.log(accountDefinition.name, 'Funding', fundingAmount, historicalFunding)
-
     return {
         account: accountDefinition.key,
         name: accountDefinition.name,

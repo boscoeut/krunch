@@ -65,15 +65,15 @@ export async function updateGoogleSheet(googleSheets: any,
                         [fundingRate * 24 * 365, bestAsk]],
             },
         };
-        await googleSheets.spreadsheets.values.update(request2);
-
+        let result = await googleSheets.spreadsheets.values.update(request2);
+        
         const transactionRow = 20
         const maxTransactionRows = 20
-        await googleSheets.spreadsheets.values.clear({
+        result = await googleSheets.spreadsheets.values.clear({
             spreadsheetId: SPREADSHEET_ID,
             range: `SOL!A${transactionRow+ openTransactions.length}:F${transactionRow + maxTransactionRows - openTransactions.length}`
         });
-
+        
         if (openTransactions.length > 0) {
             const transactionValues: any = []
             openTransactions.forEach((pendingTx) => {
@@ -95,7 +95,7 @@ export async function updateGoogleSheet(googleSheets: any,
                     values: transactionValues,
                 },
             };
-            await googleSheets.spreadsheets.values.update(request3);
+            result =  await googleSheets.spreadsheets.values.update(request3);
         }
 
 
