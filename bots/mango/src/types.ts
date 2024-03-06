@@ -5,6 +5,16 @@ import {
 import {
     Keypair, PublicKey
 } from '@solana/web3.js';
+import { Wallet } from '@coral-xyz/anchor';
+
+export type JupiterSwap = {
+    stage: 'BORROW' | 'DEPOSIT' | 'SWAP' ,
+    in: 'USDC'|'SOL',
+    out: 'USDC'|'SOL',
+    inAmount: number,
+    outAmount:number,
+    txAmount:number
+}
 
 export type TotalAccountFundingItem = {
     long_funding: number
@@ -42,16 +52,18 @@ export type AccountDefinition = {
     jup: number;
     privateKey: string;
     healthThreshold: number;
-    canTrade:boolean
+    canTrade:boolean,
+    useMangoSpotTrades:boolean,
 };
 export type PendingTransaction = {
     promise: Promise<any>,
-    type: 'PERP' | 'SWAP' | 'CANCEL',
+    type: 'PERP' | 'SWAP' | 'JUPSWAP'
     accountName: string,
     side: 'BUY' | 'SELL',
     amount: number,
     price: number,
-    oracle: number
+    oracle: number,
+    timestamp:number
 }
 
 export class TokenAccount {
@@ -83,7 +95,8 @@ export type Client = {
     user: Keypair,
     mangoAccount?: MangoAccount,
     group: Group,
-    ids: any
+    ids: any,
+    wallet?:Wallet
 }
 
 export interface TotalInterestDataItem {

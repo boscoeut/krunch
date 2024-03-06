@@ -26,23 +26,30 @@ import {
 import axios from 'axios';
 import * as bs58 from 'bs58';
 import fs from 'fs';
-import { Client, TotalAccountFundingItem, AccountDefinition, AccountDetail, TotalInterestDataItem, TokenAccount } from './types';
+import { Client, TotalAccountFundingItem, AccountDefinition, AccountDetail, TotalInterestDataItem, TokenAccount, JupiterSwap } from './types';
 import {
     ACCOUNT_REFRESH_EXPIRATION,
     ORDER_TYPE,
     DEFAULT_CACHE_EXPIRATION,
     BID_ASK_CACHE_EXPIRATION,
+    MIN_SPOT_USDC_DIFF,
     CONNECTION_URL,
     SOL_GROUP_PK,
-    USDC_MINT,SOL_MINT,
+    SOL_RESERVE,
+    JUP_ONLY_DIRECT_ROUTES,
+    SWAP_ONLY_DIRECT_ROUTES,
+    USDC_MINT,
+    SOL_MINT,
     DEFAULT_PRIORITY_FEE,
     LAVA_CONNECTION_URL,
+    COMMITTMENT,
     MANGO_DATA_API_URL,
     JUPITER_V6_QUOTE_API_MAINNET,
     FUNDING_RATE_API,
     FUNDING_CACHE_EXPIRATION,
-    INTEREST_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION
+    INTEREST_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION, USDC_DECIMALS, SOL_DECIMALS, USDC_BUFFER, SOL_BUFFER, ORDER_EXPIRATION
 } from './constants';
+import { getItem, setItem } from './db';
 
 const CLUSTER_URL = CONNECTION_URL;
 export const GROUP_PK = process.env.GROUP_PK || SOL_GROUP_PK; // SOL GROUP
@@ -55,7 +62,7 @@ type CacheItem = {
 }
 const CACHE = new Map<string, CacheItem>()
 
-const getFromCache = (key: string, expirationInMinutes: number = DEFAULT_CACHE_EXPIRATION) => {
+export const getFromCache = (key: string, expirationInMinutes: number = DEFAULT_CACHE_EXPIRATION) => {
     const item = CACHE.get(key)
     if (item) {
         const now = new Date()
@@ -316,12 +323,185 @@ export async function getTokenAccountsByOwnerWithWrappedSol(
     return [solAccount].concat(tokenAccounts)
 }
 
-export const doJupiterTrade = async (connection:Connection, owner:PublicKey)=>{
-    console.log('doJupiterTrade called')
-    const tokens = await getTokenAccountsByOwnerWithWrappedSol(connection, owner)
+export const performJupiterSwap = async (
+    client: MangoClient,
+    user: PublicKey,
+    inputMint: string,
+    outputMint: string,
+    amount: number,
+    inDecimals: number,
+    wallet?: Wallet
+) => {
+    console.log('performJupiterSwap called')
+    const amountBn = toNative(
+        Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
+        inDecimals,
+    );
+    const onlyDirectRoutes = JUP_ONLY_DIRECT_ROUTES
+    const slippage = 100
+    const maxAccounts = 64
+    const swapMode = 'ExactIn'
+    const paramObj: any = {
+        inputMint,
+        outputMint,
+        amount: amountBn.toString(),
+        slippageBps: Math.ceil(slippage * 100).toString(),
+        swapMode,
+        onlyDirectRoutes: `${onlyDirectRoutes}`,
+        maxAccounts: `${maxAccounts}`,
+    }
+    const paramsString = new URLSearchParams(paramObj).toString()
+    const res = await axios.get(
+        `${JUPITER_V6_QUOTE_API_MAINNET}/quote?${paramsString}`,
+    )
+    const selectedRoute = res.data
+    const transactions = await (
+        await fetch(`${JUPITER_V6_QUOTE_API_MAINNET}/swap`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                // response from /quote api
+                quoteResponse: selectedRoute,
+                // user public key to be used for the swap
+                userPublicKey: user,
+                slippageBps: Math.ceil(slippage * 100),
+                wrapAndUnwrapSol: true
+            }),
+        })
+    ).json()
+    const { swapTransaction } = transactions
+
+    const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
+    var transaction = VersionedTransaction.deserialize(swapTransactionBuf);
+    console.log(transaction);
+
+    // sign the transaction
+    if (wallet) {
+        transaction.sign([wallet.payer]);
+    }
+
+    // Execute the transaction
+    const rawTransaction = transaction.serialize()
+    const txid = await client.connection.sendRawTransaction(rawTransaction, {
+        skipPreflight: true,
+        maxRetries: 2
+        
+    });
+    console.log('>> JUPITER SWAP txid', txid);
+    await client.connection.confirmTransaction(txid);
+}
+
+export const doJupiterTrade = async (
+    accountDefinition: AccountDefinition,
+    client: Client,
+    inMint: string,
+    outMint: string,
+    inAmount: number,
+    outAmount: number): Promise<JupiterSwap> => {
+    const tokens = await getTokenAccountsByOwnerWithWrappedSol(client.client.connection, client.user.publicKey)
     const usdcToken = tokens.find((t) => t.mint.toString() === USDC_MINT)
     const solToken = tokens.find((t) => t.mint.toString() === SOL_MINT)
-    return tokens
+    const usdc = usdcToken?.uiAmount || 0
+    const sol = solToken?.uiAmount || 0
+
+    const cacheKey = 'JUPSWAP' + accountDefinition.name
+
+    const swap: JupiterSwap = {
+        stage: 'SWAP',
+        in: inMint === USDC_MINT ? 'USDC' : 'SOL',
+        out: outMint === USDC_MINT ? 'USDC' : 'SOL',
+        inAmount,
+        outAmount,
+        txAmount: 0
+    }
+    setItem(cacheKey, swap.stage)
+    if (!client.mangoAccount) {
+        console.log('Mango account not found')
+    } else if (inMint === USDC_MINT) {
+        if (sol - SOL_RESERVE >= outAmount) {
+            // import SOL
+            console.log('Importing SOL')
+            swap.stage = 'DEPOSIT'
+            setItem(cacheKey, swap.stage)
+            const depositAmount = sol- SOL_RESERVE
+            swap.txAmount = depositAmount
+            await client.client.tokenDeposit(
+                client.group,
+                client.mangoAccount,
+                new PublicKey(SOL_MINT),
+                depositAmount,
+            )
+        } else if (usdc < inAmount) {
+            // borrow usdc
+            swap.stage = 'BORROW'
+            console.log('Borrowing USDC')
+            setItem(cacheKey, swap.stage)
+            console.log('Borrowing USDC')
+            const borrowAmount = inAmount - usdc + USDC_BUFFER
+            swap.txAmount = borrowAmount
+            await client.client.tokenWithdraw(
+                client.group,
+                client.mangoAccount,
+                new PublicKey(USDC_MINT),
+                borrowAmount,
+                true,
+            )
+        } else if (usdc >= inAmount) {
+            // swap usdc to sol
+            console.log('Swapping USDC to SOL: ' + usdc)
+            swap.txAmount = usdc
+            await performJupiterSwap(client.client,
+                client.user.publicKey,
+                inMint,
+                outMint,
+                usdc,
+                USDC_DECIMALS,
+                client.wallet)
+        }
+    } else {
+        if (usdc - MIN_SPOT_USDC_DIFF >= outAmount) {
+            // import USDC
+            console.log('Importing USDC')
+            swap.stage = 'DEPOSIT'
+            setItem(cacheKey, swap.stage)
+            swap.txAmount = usdc
+            await client.client.tokenDeposit(
+                client.group,
+                client.mangoAccount,
+                new PublicKey(USDC_MINT),
+                usdc,
+            )
+        } else if (sol - SOL_RESERVE < inAmount) {
+            // borrow SOL
+            const borrowAmount = inAmount - sol - SOL_RESERVE + SOL_BUFFER
+            swap.stage = 'BORROW'
+            setItem(cacheKey, swap.stage)
+            swap.txAmount = borrowAmount
+            console.log('Borrowing SOL')
+            await client.client.tokenWithdraw(
+                client.group,
+                client.mangoAccount,
+                new PublicKey(SOL_MINT),
+                borrowAmount,
+                true,
+            )
+        } else if (sol >= inAmount) {
+            // swap sol to USDC
+            console.log('Swapping SOL to USDC: ' + inAmount)
+            swap.txAmount = inAmount
+            await performJupiterSwap(client.client,
+                client.user.publicKey,
+                inMint,
+                outMint,
+                inAmount,
+                SOL_DECIMALS,
+                client.wallet)
+        }
+    }
+
+    return swap;
 }
 
 export const spotTrade = async (
@@ -334,59 +514,56 @@ export const spotTrade = async (
     group: Group,
     side: 'BUY' | 'SELL',
     accountDefinition: AccountDefinition) => {
-    try {
-        const amountBn = toNative(
-            Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
-            inBank.mintDecimals,
-        );
-        console.log('finding best route for amount = ' + amount);
-        const onlyDirectRoutes = false
-        const slippage = 100
-        const maxAccounts = 64
-        const swapMode = 'ExactIn'
-        const paramObj: any = {
-            inputMint: inBank.mint.toString(),
-            outputMint: outBank.mint.toString(),
-            amount: amountBn.toString(),
-            slippageBps: Math.ceil(slippage * 100).toString(),
-            swapMode,
-            onlyDirectRoutes: `${onlyDirectRoutes}`,
-            maxAccounts: `${maxAccounts}`,
-        }
-        const paramsString = new URLSearchParams(paramObj).toString()
-        const res = await axios.get(
-            `${JUPITER_V6_QUOTE_API_MAINNET}/quote?${paramsString}`,
-        )
-        const bestRoute = res.data
-        const [ixs, alts] = await fetchJupiterTransaction(
-            client.connection,
-            bestRoute,
-            user.publicKey,
-            0,
-            inBank.mint,
-            outBank.mint
-        );
-        let price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
-        if (side === 'BUY') {
-            price = (bestRoute.inAmount / 10 ** inBank.mintDecimals) / (bestRoute.outAmount / 10 ** outBank.mintDecimals)
-        }
-        console.log(`*** ${accountDefinition.name} MARGIN ${side}: `, amount, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
-        const sig = await client.marginTrade({
-            group: group,
-            mangoAccount: mangoAccount,
-            inputMintPk: inBank.mint,
-            amountIn: Number(amount.toFixed(3)),
-            outputMintPk: outBank.mint,
-            userDefinedInstructions: ixs,
-            userDefinedAlts: alts,
-            flashLoanType: FlashLoanType.swap
-        });
-        console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
-        return sig.signature
-    } catch (e) {
-        console.log(`${accountDefinition.name} Error placing SPOT Trade`, e)
-        return null
+
+    const amountBn = toNative(
+        Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
+        inBank.mintDecimals,
+    );
+    console.log('finding best route for amount = ' + amount);
+    const onlyDirectRoutes = SWAP_ONLY_DIRECT_ROUTES
+    const slippage = 100
+    const maxAccounts = 64
+    const swapMode = 'ExactIn'
+    const paramObj: any = {
+        inputMint: inBank.mint.toString(),
+        outputMint: outBank.mint.toString(),
+        amount: amountBn.toString(),
+        slippageBps: Math.ceil(slippage * 100).toString(),
+        swapMode,
+        onlyDirectRoutes: `${onlyDirectRoutes}`,
+        maxAccounts: `${maxAccounts}`,
     }
+    const paramsString = new URLSearchParams(paramObj).toString()
+    const res = await axios.get(
+        `${JUPITER_V6_QUOTE_API_MAINNET}/quote?${paramsString}`,
+    )
+    const bestRoute = res.data
+    const [ixs, alts] = await fetchJupiterTransaction(
+        client.connection,
+        bestRoute,
+        user.publicKey,
+        0,
+        inBank.mint,
+        outBank.mint
+    );
+    let price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
+    if (side === 'BUY') {
+        price = (bestRoute.inAmount / 10 ** inBank.mintDecimals) / (bestRoute.outAmount / 10 ** outBank.mintDecimals)
+    }
+    console.log(`*** ${accountDefinition.name} MARGIN ${side}: `, amount, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
+    const sig = await client.marginTrade({
+        group: group,
+        mangoAccount: mangoAccount,
+        inputMintPk: inBank.mint,
+        amountIn: Number(amount.toFixed(3)),
+        outputMintPk: outBank.mint,
+        userDefinedInstructions: ixs,
+        userDefinedAlts: alts,
+        flashLoanType: FlashLoanType.swap
+    });
+    console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
+    return sig.signature
+
 }
 
 export const perpTrade = async (
@@ -399,32 +576,29 @@ export const perpTrade = async (
     side: PerpOrderSide,
     accountDefinition: AccountDefinition,
     reduceOnly: boolean) => {
-    try {
-        console.log(`**** ${accountDefinition.name} PERP ${side === PerpOrderSide.ask ? "SELL" : "BUY"} order for ${size} at ${price}`)
-        const order = await client.perpPlaceOrder(
-            group,
-            mangoAccount,
-            perpMarket.perpMarketIndex,
-            side,
-            price, // ui price 
-            size, // ui base quantity
-            undefined, // max quote quantity
-            Date.now(), // order id
-            ORDER_TYPE,
-            reduceOnly);
-        console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
-        return order.signature
-    } catch (e) {
-        console.log(`${accountDefinition.name} Error placing PERP Trade`, e)
-        return null
-    }
+
+    const expiryTimestamp = Date.now() / 1000 + ORDER_EXPIRATION;
+    console.log(`**** ${accountDefinition.name} PERP ${side === PerpOrderSide.ask ? "SELL" : "BUY"} order for ${size} at ${price}`)
+    const order = await client.perpPlaceOrder(
+        group,
+        mangoAccount,
+        perpMarket.perpMarketIndex,
+        side,
+        price, // ui price 
+        size, // ui base quantity
+        undefined, // max quote quantity
+        Date.now(), // order id
+        ORDER_TYPE,
+        reduceOnly,
+        expiryTimestamp
+    );
+    console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
+    return order.signature
 }
 
 export const getClient = async (user: Keypair): Promise<Client> => {
-    // const options = AnchorProvider.defaultOptions();
-    // const connection = new Connection(CLUSTER_URL!, options);
     const options = AnchorProvider.defaultOptions();
-    const connection = new Connection(CLUSTER_URL!, 'processed');
+    const connection = new Connection(CLUSTER_URL!, COMMITTMENT);
     const backupConnections = [new Connection(LAVA_CONNECTION_URL)];
 
     const wallet = new Wallet(user);
@@ -441,7 +615,7 @@ export const getClient = async (user: Keypair): Promise<Client> => {
     const group = await client.getGroup(new PublicKey(GROUP_PK));
     const ids = await client.getIds(group.publicKey);
     return {
-        client, user, group, ids
+        client, user, group, ids, wallet
     }
 }
 
@@ -515,10 +689,10 @@ export async function getAccountData(
 
 export const setupClient = async (accountDefinition: AccountDefinition): Promise<Client> => {
     const user = getUser(accountDefinition.privateKey);
-    const { client, group, ids } = await getClient(user)
+    const { client, group, ids, wallet } = await getClient(user)
     const mangoAccount = await client.getMangoAccount(new PublicKey(accountDefinition.key));
     return {
-        client, user, mangoAccount, group, ids
+        client, user, mangoAccount, group, ids, wallet
     }
 }
 

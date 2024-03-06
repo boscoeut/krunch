@@ -5,7 +5,8 @@ import fs from 'fs';
 import { authorize, updateGoogleSheet } from './googleUtils';
 import {
     getAccountData, fetchRefreshKey,
-    getFundingRate, perpTrade, setupClient, sleep, spotTrade
+    getFundingRate, perpTrade, setupClient, sleep, spotTrade,
+    doJupiterTrade
 } from './mangoUtils';
 import {
     AccountDefinition,
@@ -22,8 +23,11 @@ import {
     CAN_TRADE, SLEEP_MAIN_LOOP,
     PLUS_THRESHOLD, MAX_SHORT_PERP, MAX_LONG_PERP,
     MIN_DIFF_SIZE, EXTRA_USDC_AMOUNT, QUOTE_BUFFER,
-    FILTER_TO_ACCOUNTS
+    FILTER_TO_ACCOUNTS,
+    TRANSACTION_EXPIRATION,
 } from './constants';
+import { getItem } from './db'
+import { DB_KEYS, incrementItem } from './db';
 
 const { google } = require('googleapis');
 
@@ -67,44 +71,14 @@ async function snipePrices(
             client.group,
             client.mangoAccount)
 
-        let numOpenOrders = 0
-        const hasCancelOrder = openTransactions.filter((f) => f.type === 'CANCEL').length > 0
-        if (!hasCancelOrder) {
-            // check existing orders
-            const orders = await client.mangoAccount.loadPerpOpenOrdersForMarket(
-                client.client,
-                client.group,
-                accountDetails.perpMarket.perpMarketIndex,
-            )
-            const now = new Date()
-            numOpenOrders = orders.length 
-            const tenMinutes = ORDER_EXPIRATION
-            for (const order of orders) {
-                const side = order.side === PerpOrderSide.bid ? 'BUY' : 'SELL'
-                const size = order.uiSize
-                const price = order.uiPrice
-                const timestamp = new Date(1000 * order.timestamp)
-                const elapsedTime = now.getTime() - timestamp.getTime()
-                if (elapsedTime > tenMinutes) {
-                    // cancel open orders
-                    promises.push({
-                        type: 'CANCEL',
-                        side,
-                        oracle: price,
-                        amount: size,
-                        price: price,
-                        accountName: accountDefinition.name,
-                        promise: client.client.perpCancelAllOrders(
-                            client.group,
-                            client.mangoAccount,
-                            accountDetails.perpMarket.perpMarketIndex,
-                            10,
-                        )
-                    })
-                    break
-                }
-            }
-        }
+        const orders = await client.mangoAccount.loadPerpOpenOrdersForMarket(
+            client.client,
+            client.group,
+            accountDetails.perpMarket.perpMarketIndex,
+            true
+        )
+        const numOpenOrders = orders.filter(order => !order.isExpired).length
+
 
         if (openTransactions.length > 0) {
             console.log(`Skipping ${accountDefinition.name} due to openTx=${openTransactions.length}`)
@@ -161,16 +135,32 @@ async function snipePrices(
             if (action === 'BUY') {
                 if (spotVsPerpDiff > 0 && spotUnbalanced) {
                     console.log('SELL SOL', tradeSize, spotVsPerpDiff)
-                    const amount = Math.min(MAX_SPOT_TRADE, requestedTradeSize, Number(Math.abs(spotVsPerpDiff).toFixed(2)))
-                    promises.push({
-                        type: 'SWAP',
-                        accountName: accountDefinition.name,
-                        side: 'SELL',
-                        oracle: solPrice,
-                        amount,
-                        price: solPrice,
-                        promise: spotTrade(amount, solBank, usdcBank, client.client, client.mangoAccount, client.user, client.group, 'SELL', accountDefinition)
-                    })
+                    const amount = Math.min(MAX_SPOT_TRADE, Number(Math.abs(spotVsPerpDiff).toFixed(2)))
+                    if (accountDefinition.useMangoSpotTrades) {
+                        promises.push({
+                            type: 'SWAP',
+                            accountName: accountDefinition.name,
+                            side: 'SELL',
+                            oracle: solPrice,
+                            timestamp: new Date().getTime(),
+                            amount,
+                            price: solPrice,
+                            promise: spotTrade(amount, solBank, usdcBank, client.client, client.mangoAccount, client.user, client.group, 'SELL', accountDefinition)
+                        })
+                    } else {
+                        promises.push({
+                            type: 'JUPSWAP',
+                            accountName: accountDefinition.name,
+                            side: 'SELL',
+                            timestamp: new Date().getTime(),
+                            oracle: solPrice,
+                            amount,
+                            price: solPrice,
+                            promise: doJupiterTrade(accountDefinition,
+                                client, solBank.mint.toString(),
+                                usdcBank.mint.toString(), amount, amount * solPrice)
+                        })
+                    }
                 }
                 else if (spotUnbalanced || increaseExposure) {
                     console.log('BUY BACK PERP', hourlyRateAPR, aprMinThreshold)
@@ -185,6 +175,7 @@ async function snipePrices(
                         promises.push({
                             type: 'PERP',
                             side: 'BUY',
+                            timestamp: new Date().getTime(),
                             oracle: solPrice,
                             amount: tradeSize,
                             price: midPrice,
@@ -198,17 +189,33 @@ async function snipePrices(
             if (action === 'SELL') {
                 if (spotVsPerpDiff < 0 && spotUnbalanced) {
                     console.log('BUY SOL', spotVsPerpDiff)
-                    const buySize = Math.min(MAX_SPOT_TRADE, requestedTradeSize, Math.abs(spotVsPerpDiff))
+                    const buySize = Math.min(MAX_SPOT_TRADE, Math.abs(spotVsPerpDiff))
                     const amount = Number((buySize * solPrice + EXTRA_USDC_AMOUNT).toFixed(2))
-                    promises.push({
-                        type: 'SWAP',
-                        accountName: accountDefinition.name,
-                        side: 'BUY',
-                        oracle: solPrice,
-                        amount,
-                        price: solPrice,
-                        promise: spotTrade(amount, usdcBank, solBank, client.client, client.mangoAccount, client.user, client.group, 'BUY', accountDefinition)
-                    })
+                    if (accountDefinition.useMangoSpotTrades) {
+                        promises.push({
+                            type: 'SWAP',
+                            accountName: accountDefinition.name,
+                            side: 'BUY',
+                            oracle: solPrice,
+                            timestamp: new Date().getTime(),
+                            amount,
+                            price: solPrice,
+                            promise: spotTrade(amount, usdcBank, solBank, client.client, client.mangoAccount, client.user, client.group, 'BUY', accountDefinition)
+                        })
+                    } else {
+                        promises.push({
+                            type: 'JUPSWAP',
+                            accountName: accountDefinition.name,
+                            side: 'BUY',
+                            oracle: solPrice,
+                            amount,
+                            timestamp: new Date().getTime(),
+                            price: solPrice,
+                            promise: doJupiterTrade(accountDefinition,
+                                client, usdcBank.mint.toString(), solBank.mint.toString(),
+                                amount, buySize)
+                        })
+                    }
                 }
                 else if (spotUnbalanced || increaseExposure) {
                     console.log('SELL PERP', hourlyRateAPR, aprMaxThreshold)
@@ -225,6 +232,7 @@ async function snipePrices(
                             amount: tradeSize,
                             price: midPrice,
                             side: 'SELL',
+                            timestamp: new Date().getTime(),
                             accountName: accountDefinition.name,
                             promise: perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false)
                         })
@@ -253,7 +261,7 @@ async function main(): Promise<void> {
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
 
-    const openTransactions: Array<PendingTransaction> = []
+    let openTransactions: Array<PendingTransaction> = []
     let successfulTransactions = 0
     let failedTransactions = 0
     while (true) {
@@ -298,8 +306,17 @@ async function main(): Promise<void> {
                     openTransactions.push(transaction)
                     transaction.promise.then((result: any) => {
                         successfulTransactions++
-                    }).catch((error: any) => {
+                        const cacheKey = 'JUPSWAP' + transaction.accountName
+                        const jupSwap = getItem(cacheKey)
+                        const key = transaction.type === 'JUPSWAP' ? 'JUP-' + jupSwap : transaction.type
                         failedTransactions++
+                        incrementItem(key + '_'+ DB_KEYS.NUM_TRADES_SUCCESS, 1)
+                    }).catch((error: any) => {
+                        const cacheKey = 'JUPSWAP' + transaction.accountName
+                        const jupSwap = getItem(cacheKey)
+                        const key = transaction.type === 'JUPSWAP' ? 'JUP-' + jupSwap : transaction.type
+                        failedTransactions++
+                        incrementItem(key + '_'+ DB_KEYS.NUM_TRADES_FAIL, 1)
                     }).finally(() => {
                         openTransactions.splice(openTransactions.indexOf(transaction), 1)
                     })
@@ -310,6 +327,7 @@ async function main(): Promise<void> {
             const accountDetails: AccountDetail[] = results.map((result) => result.accountDetails).filter((f) => f !== undefined) as AccountDetail[]
             await updateGoogleSheet(googleSheets, accountDetails, hourlyRate, accountDetails[0].solPrice, openTransactions)
 
+            openTransactions = openTransactions.filter((transaction) => transaction.timestamp > new Date().getTime() - TRANSACTION_EXPIRATION)
             // print out open transactions
             for (const transaction of openTransactions) {
                 console.log('Open Tx > ', transaction.accountName, transaction.type, transaction.side, transaction.amount, transaction.price)
