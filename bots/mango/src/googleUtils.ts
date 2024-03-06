@@ -1,13 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import { AccountDetail, PendingTransaction } from './types';
+import { getItem, getAll } from './db'
+
 const { authenticate } = require('@google-cloud/local-auth');
 const { google } = require('googleapis');
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const TOKEN_PATH = path.join(process.cwd(), 'secrets/token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), 'secrets/google_creds.json');
-import { getItem, getAll } from './db'
 export const SPREADSHEET_ID = '1-k6Lv4quwIS-rRck-JYLA0WiuC9x43nDuMa_95q8CIw';
+const  START_ROW = 10
 
 export function loadSavedCredentialsIfExist() {
     try {
@@ -25,10 +27,18 @@ export async function updateGoogleSheet(googleSheets: any,
     solPrice: number,
     openTransactions: PendingTransaction[] = []) {
     try {
-        let startRow = 10
+        
+        // clear old transactions
+        const transactionRow = 20
+        const maxTransactionRows = 20
+        const result = await googleSheets.spreadsheets.values.clear({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `SOL!A${transactionRow + openTransactions.length}:G${transactionRow + maxTransactionRows - openTransactions.length}`
+        });
 
-        let endRow = startRow + accountDetails.length
-        const SPREADSHEET_RANGE = `SOL!A${startRow}:K${endRow}`;
+        //  accounts
+        let endRow = START_ROW + accountDetails.length
+        const SPREADSHEET_RANGE = `SOL!A${START_ROW}:K${endRow}`;
         const values = accountDetails.map((accountDetail) => {
             return [
                 accountDetail.name,
@@ -44,83 +54,60 @@ export async function updateGoogleSheet(googleSheets: any,
                 accountDetail.solBalance
             ]
         });
-        const request = {
-            spreadsheetId: SPREADSHEET_ID,
-            range: SPREADSHEET_RANGE,
-            valueInputOption: 'USER_ENTERED',
-            resource: {
-                values,
-            },
-        };
-        await googleSheets.spreadsheets.values.update(request);
 
         const bestBid = accountDetails[0].bestBid
         const bestAsk = accountDetails[0].bestAsk
-        const request2 = {
-            spreadsheetId: SPREADSHEET_ID,
-            range: `SOL!B1:C2`,
-            valueInputOption: 'USER_ENTERED',
-            resource: {
-                values: [[solPrice, bestBid],
-                [fundingRate * 24 * 365, bestAsk]],
-            },
-        };
-        let result = await googleSheets.spreadsheets.values.update(request2);
-
-        const transactionRow = 20
-        const maxTransactionRows = 20
-        result = await googleSheets.spreadsheets.values.clear({
-            spreadsheetId: SPREADSHEET_ID,
-            range: `SOL!A${transactionRow + openTransactions.length}:G${transactionRow + maxTransactionRows - openTransactions.length}`
-        });
-
-        if (openTransactions.length > 0) {
-            const transactionValues: any = []
-            openTransactions.forEach((pendingTx) => {
-                const cacheKey = 'JUPSWAP' + pendingTx.accountName
-                const jupSwap = getItem(cacheKey)
-                transactionValues.push([
-                    pendingTx.accountName,
-                    pendingTx.type === 'JUPSWAP' ? 'JUP-' + jupSwap : pendingTx.type,
-                    pendingTx.side,
-                    pendingTx.price,
-                    pendingTx.oracle,
-                    pendingTx.type === 'PERP' ? pendingTx.amount : pendingTx.amount / solPrice,
-                    toGoogleSheetsDate(new Date(pendingTx.timestamp))
-                ])
-            })
 
 
-
-            const request3 = {
-                spreadsheetId: SPREADSHEET_ID,
-                range: `SOL!A${transactionRow}:G${transactionRow + maxTransactionRows}`,
-                valueInputOption: 'USER_ENTERED',
-                resource: {
-                    values: transactionValues,
-                },
-            };
-            result = await googleSheets.spreadsheets.values.update(request3);
-        }
+        const transactionValues: any = []
+        openTransactions.forEach((pendingTx) => {
+            const cacheKey = 'JUPSWAP' + pendingTx.accountName
+            const jupSwap = getItem(cacheKey)
+            transactionValues.push([
+                pendingTx.accountName,
+                pendingTx.type === 'JUPSWAP' ? 'JUP-' + jupSwap : pendingTx.type,
+                pendingTx.side,
+                pendingTx.price,
+                pendingTx.oracle,
+                pendingTx.type === 'PERP' ? pendingTx.amount : pendingTx.amount / solPrice,
+                toGoogleSheetsDate(new Date(pendingTx.timestamp))
+            ])
+        })
 
         // update stats
         const db = getAll()
         const statValues: any = []
         for (const [key, value] of db.entries()) {
             if (key.indexOf('NUM') === -1) continue
-            statValues.push([value,key])
+            statValues.push([value, key])
         }
-        statValues.sort((a:string, b:string) => a[1].localeCompare(b[1]));
-        if (statValues.length > 0) {
-            await googleSheets.spreadsheets.values.update({
-                spreadsheetId: SPREADSHEET_ID,
-                range: `SOL!J${transactionRow}:K${transactionRow + statValues.length}`,
+        statValues.sort((a: string, b: string) => a[1].localeCompare(b[1]));
+
+        const response = await googleSheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            resource: {
                 valueInputOption: 'USER_ENTERED',
-                resource: {
+                data: [{
+                    range: `SOL!J${transactionRow}:K${transactionRow + statValues.length}`,
                     values: statValues,
-                },
-            });
-        }
+
+                }, {
+                    range: `SOL!A${transactionRow}:G${transactionRow + maxTransactionRows}`,
+                    values: transactionValues,
+
+                }, {
+                    range: `SOL!B1:C2`,
+                    values: [[solPrice, bestBid],
+                    [fundingRate * 24 * 365, bestAsk]],
+
+                }, {
+                    range: SPREADSHEET_RANGE,
+                    values,
+
+                }]
+            }
+        });
+        console.log('batch update response', response)
 
     } catch (e) {
         console.log(e)
