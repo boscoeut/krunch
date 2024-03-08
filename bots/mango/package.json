@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node src/index.ts",
-    "sniper": "ts-node src/sniper.ts"
+    "sniper": "ts-node src/sniper.ts",
+    "pm": "pm2 start -x ts-node src/sniper.ts"
   },
   "keywords": [],
   "author": "",

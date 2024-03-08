@@ -1,14 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import { AccountDetail, PendingTransaction } from './types';
+import { AccountDetail, JupiterSwap, PendingTransaction } from './types';
 import { getItem, getAll } from './db'
 
+import { SPREADSHEET_ID } from './constants';
 const { authenticate } = require('@google-cloud/local-auth');
 const { google } = require('googleapis');
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const TOKEN_PATH = path.join(process.cwd(), 'secrets/token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), 'secrets/google_creds.json');
-export const SPREADSHEET_ID = '1-k6Lv4quwIS-rRck-JYLA0WiuC9x43nDuMa_95q8CIw';
 const  START_ROW = 10
 
 export function loadSavedCredentialsIfExist() {
@@ -25,7 +25,9 @@ export async function updateGoogleSheet(googleSheets: any,
     accountDetails: AccountDetail[] = [],
     fundingRate: number,
     solPrice: number,
-    openTransactions: PendingTransaction[] = []) {
+    openTransactions: PendingTransaction[] = [],
+    jupPrice: number,
+    jupSolPrice:number ) {
     try {
         
         // clear old transactions
@@ -38,8 +40,8 @@ export async function updateGoogleSheet(googleSheets: any,
 
         //  accounts
         let endRow = START_ROW + accountDetails.length
-        const SPREADSHEET_RANGE = `SOL!A${START_ROW}:K${endRow}`;
-        const values = accountDetails.map((accountDetail) => {
+        const ACCOUNT_VALUES_RANGE = `SOL!A${START_ROW}:N${endRow}`;
+        const accountValues = accountDetails.map((accountDetail) => {
             return [
                 accountDetail.name,
                 accountDetail.historicalFunding,
@@ -51,7 +53,10 @@ export async function updateGoogleSheet(googleSheets: any,
                 accountDetail.jupBasis,
                 accountDetail.solAmount,
                 toGoogleSheetsDate(new Date()),
-                accountDetail.solBalance
+                accountDetail.solBalance,
+                accountDetail.walletSol,
+                accountDetail.walletUsdc,
+                accountDetail.usdcBalance
             ]
         });
 
@@ -62,14 +67,15 @@ export async function updateGoogleSheet(googleSheets: any,
         const transactionValues: any = []
         openTransactions.forEach((pendingTx) => {
             const cacheKey = 'JUPSWAP' + pendingTx.accountName
-            const jupSwap = getItem(cacheKey)
+            const jupSwap:JupiterSwap = getItem(cacheKey)
+            const amount = pendingTx.type === 'JUPSWAP' ? jupSwap?.txAmount : pendingTx.amount
             transactionValues.push([
                 pendingTx.accountName,
-                pendingTx.type === 'JUPSWAP' ? 'JUP-' + jupSwap : pendingTx.type,
+                pendingTx.type === 'JUPSWAP' ? 'JUP-' + jupSwap?.stage : pendingTx.type,
                 pendingTx.side,
                 pendingTx.price,
                 pendingTx.oracle,
-                pendingTx.type === 'PERP' ? pendingTx.amount : pendingTx.amount / solPrice,
+                pendingTx.type === 'PERP' || pendingTx.type === 'JUPSWAP' ?  amount : amount / solPrice,
                 toGoogleSheetsDate(new Date(pendingTx.timestamp))
             ])
         })
@@ -83,7 +89,7 @@ export async function updateGoogleSheet(googleSheets: any,
         }
         statValues.sort((a: string, b: string) => a[1].localeCompare(b[1]));
 
-        const response = await googleSheets.spreadsheets.values.batchUpdate({
+        await googleSheets.spreadsheets.values.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,
             resource: {
                 valueInputOption: 'USER_ENTERED',
@@ -101,16 +107,17 @@ export async function updateGoogleSheet(googleSheets: any,
                     [fundingRate * 24 * 365, bestAsk]],
 
                 }, {
-                    range: SPREADSHEET_RANGE,
-                    values,
+                    range: ACCOUNT_VALUES_RANGE,
+                    values: accountValues,
 
+                }, {
+                    range: `SOL!O1:O2`,
+                    values: [[jupSolPrice],[jupPrice]],
                 }]
             }
         });
-        console.log('batch update response', response)
-
     } catch (e) {
-        console.log(e)
+        console.error('Error updating google sheet', e);
     }
 }
 

@@ -1,65 +1,60 @@
 import * as bip39 from 'bip39';
 
-import { TokenInstructions } from '@project-serum/serum'
 import {
-    Bank,
     Group,
+    HealthType,
     MANGO_V4_ID,
     MangoAccount,
     MangoClient,
     PerpMarket,
     PerpOrderSide,
-    toNative,
-    HealthType,
-    toUiDecimalsForQuote,
-    FlashLoanType,
-    toUiDecimals
+    toUiDecimals,
+    toUiDecimalsForQuote
 } from '@blockworks-foundation/mango-v4';
 import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
+import { TokenInstructions } from '@project-serum/serum';
 import {
-    AddressLookupTableAccount,
-    Cluster, Connection, Keypair, PublicKey,
-    TransactionInstruction,
-    TransactionMessage,
-    VersionedTransaction
+    Cluster, Connection, Keypair, PublicKey
 } from '@solana/web3.js';
 import axios from 'axios';
 import * as bs58 from 'bs58';
 import fs from 'fs';
-import { Client, TotalAccountFundingItem, AccountDefinition, AccountDetail, TotalInterestDataItem, TokenAccount, JupiterSwap } from './types';
 import {
     ACCOUNT_REFRESH_EXPIRATION,
-    ORDER_TYPE,
-    DEFAULT_CACHE_EXPIRATION,
     BID_ASK_CACHE_EXPIRATION,
-    MIN_SPOT_USDC_DIFF,
-    CONNECTION_URL,
-    SOL_GROUP_PK,
-    SOL_RESERVE,
-    JUP_ONLY_DIRECT_ROUTES,
-    SWAP_ONLY_DIRECT_ROUTES,
-    USDC_MINT,
-    SOL_MINT,
-    DEFAULT_PRIORITY_FEE,
-    LAVA_CONNECTION_URL,
     COMMITTMENT,
-    MANGO_DATA_API_URL,
-    JUPITER_V6_QUOTE_API_MAINNET,
-    FUNDING_RATE_API,
+    CONNECTION_URL,
+    DEFAULT_CACHE_EXPIRATION,
+    DEFAULT_PRIORITY_FEE,
     FUNDING_CACHE_EXPIRATION,
-    INTEREST_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION, USDC_DECIMALS, SOL_DECIMALS, USDC_BUFFER, SOL_BUFFER, ORDER_EXPIRATION
+    FUNDING_RATE_API,
+    FUNDING_RATE_CACHE_EXPIRATION,
+    INTEREST_CACHE_EXPIRATION,
+    JUP_PRICE_EXPIRATION,
+    JUP_PRICE_URL,
+    MANGO_DATA_API_URL,
+    ORDER_EXPIRATION,
+    ORDER_TYPE,
+    SOL_GROUP_PK,
+    SOL_MINT,
+    USDC_MINT
 } from './constants';
-import { getItem, setItem } from './db';
+import {
+    AccountDefinition,
+    AccountDetail,
+    CacheItem,
+    Client,
+    TokenAccount,
+    TotalAccountFundingItem,
+    TotalInterestDataItem
+} from './types';
 
 const CLUSTER_URL = CONNECTION_URL;
 export const GROUP_PK = process.env.GROUP_PK || SOL_GROUP_PK; // SOL GROUP
 const CLUSTER: Cluster =
     (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
 
-type CacheItem = {
-    date: Date,
-    item: any
-}
+
 const CACHE = new Map<string, CacheItem>()
 
 export const getFromCache = (key: string, expirationInMinutes: number = DEFAULT_CACHE_EXPIRATION) => {
@@ -135,6 +130,26 @@ export const fetchRefreshKey = (accountName: string, value: Date) => {
     }
 }
 
+export const fetchJupPrice = async () => {
+    const cacheKey = 'JUP_PRICE'
+    try {
+        const cache = getFromCache(cacheKey, JUP_PRICE_EXPIRATION)
+        if (cache) {
+            return cache
+        } else {
+            const url = JUP_PRICE_URL
+            const response = await axios.get(url)
+            const jupPrice = response.data.data.JUP.price
+            const solPrice = response.data.data.SOL.price
+            setToCache(cacheKey, { jupPrice, solPrice })
+            return { jupPrice, solPrice }
+        }
+    } catch (e) {
+        console.log('Failed to fetch jup price', e)
+        return 0
+    }
+}
+
 export const fetchFundingData = async (mangoAccountPk: string) => {
     const cacheKey = 'FUND' + mangoAccountPk
     try {
@@ -168,32 +183,6 @@ export const fetchFundingData = async (mangoAccountPk: string) => {
     }
 }
 
-export const deserializeJupiterIxAndAlt = async (
-    connection: Connection,
-    swapTransaction: string,
-): Promise<[TransactionInstruction[], AddressLookupTableAccount[]]> => {
-    const parsedSwapTransaction = VersionedTransaction.deserialize(
-        Buffer.from(swapTransaction, 'base64'),
-    )
-    const message = parsedSwapTransaction.message
-    // const lookups = message.addressTableLookups
-    const addressLookupTablesResponses = await Promise.all(
-        message.addressTableLookups.map((alt) =>
-            connection.getAddressLookupTable(alt.accountKey),
-        ),
-    )
-    const addressLookupTables: AddressLookupTableAccount[] =
-        addressLookupTablesResponses
-            .map((alt) => alt.value)
-            .filter((x): x is AddressLookupTableAccount => x !== null)
-
-    const decompiledMessage = TransactionMessage.decompile(message, {
-        addressLookupTableAccounts: addressLookupTables,
-    })
-
-    return [decompiledMessage.instructions, addressLookupTables]
-}
-
 export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient) => {
     const cacheKey = 'BidAsks'
     try {
@@ -219,61 +208,6 @@ export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient
     }
 }
 
-/**  Given a Jupiter route, fetch the transaction for the user to sign.
- **This function should be used for margin swaps* */
-export const fetchJupiterTransaction = async (
-    connection: Connection,
-    selectedRoute: any,
-    userPublicKey: PublicKey,
-    slippage: number,
-    inputMint: PublicKey,
-    outputMint: PublicKey,
-): Promise<[TransactionInstruction[], AddressLookupTableAccount[]]> => {
-    // docs https://station.jup.ag/api-v6/post-swap
-    const transactions = await (
-        await fetch(`${JUPITER_V6_QUOTE_API_MAINNET}/swap`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                // response from /quote api
-                quoteResponse: selectedRoute,
-                // user public key to be used for the swap
-                userPublicKey,
-                slippageBps: Math.ceil(slippage * 100),
-                wrapAndUnwrapSol: false
-            }),
-        })
-    ).json()
-
-    const { swapTransaction } = transactions
-
-    const [ixs, alts] = await deserializeJupiterIxAndAlt(
-        connection,
-        swapTransaction,
-    )
-
-    const isSetupIx = (pk: PublicKey): boolean =>
-        pk.toString() === 'ComputeBudget111111111111111111111111111111' ||
-        pk.toString() === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
-
-    const isDuplicateAta = (ix: TransactionInstruction): boolean => {
-        return (
-            ix.programId.toString() ===
-            'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' &&
-            (ix.keys[3].pubkey.toString() === inputMint.toString() ||
-                ix.keys[3].pubkey.toString() === outputMint.toString())
-        )
-    }
-
-    //remove ATA and compute setup from swaps in margin trades
-    const filtered_jup_ixs = ixs
-        .filter((ix) => !isSetupIx(ix.programId))
-        .filter((ix) => !isDuplicateAta(ix))
-
-    return [filtered_jup_ixs, alts]
-}
 
 export const getUser = (accountKey: string): Keypair => {
     let file = fs.readFileSync(accountKey, 'utf8');
@@ -323,249 +257,6 @@ export async function getTokenAccountsByOwnerWithWrappedSol(
     return [solAccount].concat(tokenAccounts)
 }
 
-export const performJupiterSwap = async (
-    client: MangoClient,
-    user: PublicKey,
-    inputMint: string,
-    outputMint: string,
-    amount: number,
-    inDecimals: number,
-    wallet?: Wallet
-) => {
-    console.log('performJupiterSwap called')
-    const amountBn = toNative(
-        Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
-        inDecimals,
-    );
-    const onlyDirectRoutes = JUP_ONLY_DIRECT_ROUTES
-    const slippage = 100
-    const maxAccounts = 64
-    const swapMode = 'ExactIn'
-    const paramObj: any = {
-        inputMint,
-        outputMint,
-        amount: amountBn.toString(),
-        slippageBps: Math.ceil(slippage * 100).toString(),
-        swapMode,
-        onlyDirectRoutes: `${onlyDirectRoutes}`,
-        maxAccounts: `${maxAccounts}`,
-    }
-    const paramsString = new URLSearchParams(paramObj).toString()
-    const res = await axios.get(
-        `${JUPITER_V6_QUOTE_API_MAINNET}/quote?${paramsString}`,
-    )
-    const selectedRoute = res.data
-    const transactions = await (
-        await fetch(`${JUPITER_V6_QUOTE_API_MAINNET}/swap`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                // response from /quote api
-                quoteResponse: selectedRoute,
-                // user public key to be used for the swap
-                userPublicKey: user,
-                slippageBps: Math.ceil(slippage * 100),
-                wrapAndUnwrapSol: true
-            }),
-        })
-    ).json()
-    const { swapTransaction } = transactions
-
-    const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
-    var transaction = VersionedTransaction.deserialize(swapTransactionBuf);
-    console.log(transaction);
-
-    // sign the transaction
-    if (wallet) {
-        transaction.sign([wallet.payer]);
-    }
-
-    // Execute the transaction
-    const rawTransaction = transaction.serialize()
-    const txid = await client.connection.sendRawTransaction(rawTransaction, {
-        skipPreflight: true,
-        maxRetries: 2
-        
-    });
-    console.log('>> JUPITER SWAP txid', txid);
-    await client.connection.confirmTransaction(txid);
-}
-
-export const doJupiterTrade = async (
-    accountDefinition: AccountDefinition,
-    client: Client,
-    inMint: string,
-    outMint: string,
-    inAmount: number,
-    outAmount: number): Promise<JupiterSwap> => {
-    const tokens = await getTokenAccountsByOwnerWithWrappedSol(client.client.connection, client.user.publicKey)
-    const usdcToken = tokens.find((t) => t.mint.toString() === USDC_MINT)
-    const solToken = tokens.find((t) => t.mint.toString() === SOL_MINT)
-    const usdc = usdcToken?.uiAmount || 0
-    const sol = solToken?.uiAmount || 0
-
-    const cacheKey = 'JUPSWAP' + accountDefinition.name
-
-    const swap: JupiterSwap = {
-        stage: 'SWAP',
-        in: inMint === USDC_MINT ? 'USDC' : 'SOL',
-        out: outMint === USDC_MINT ? 'USDC' : 'SOL',
-        inAmount,
-        outAmount,
-        txAmount: 0
-    }
-    setItem(cacheKey, swap.stage)
-    if (!client.mangoAccount) {
-        console.log('Mango account not found')
-    } else if (inMint === USDC_MINT) {
-        if (sol - SOL_RESERVE >= outAmount) {
-            // import SOL
-            console.log('Importing SOL')
-            swap.stage = 'DEPOSIT'
-            setItem(cacheKey, swap.stage)
-            const depositAmount = sol- SOL_RESERVE
-            swap.txAmount = depositAmount
-            await client.client.tokenDeposit(
-                client.group,
-                client.mangoAccount,
-                new PublicKey(SOL_MINT),
-                depositAmount,
-            )
-        } else if (usdc < inAmount) {
-            // borrow usdc
-            swap.stage = 'BORROW'
-            console.log('Borrowing USDC')
-            setItem(cacheKey, swap.stage)
-            console.log('Borrowing USDC')
-            const borrowAmount = inAmount - usdc + USDC_BUFFER
-            swap.txAmount = borrowAmount
-            await client.client.tokenWithdraw(
-                client.group,
-                client.mangoAccount,
-                new PublicKey(USDC_MINT),
-                borrowAmount,
-                true,
-            )
-        } else if (usdc >= inAmount) {
-            // swap usdc to sol
-            console.log('Swapping USDC to SOL: ' + usdc)
-            swap.txAmount = usdc
-            await performJupiterSwap(client.client,
-                client.user.publicKey,
-                inMint,
-                outMint,
-                usdc,
-                USDC_DECIMALS,
-                client.wallet)
-        }
-    } else {
-        if (usdc - MIN_SPOT_USDC_DIFF >= outAmount) {
-            // import USDC
-            console.log('Importing USDC')
-            swap.stage = 'DEPOSIT'
-            setItem(cacheKey, swap.stage)
-            swap.txAmount = usdc
-            await client.client.tokenDeposit(
-                client.group,
-                client.mangoAccount,
-                new PublicKey(USDC_MINT),
-                usdc,
-            )
-        } else if (sol - SOL_RESERVE < inAmount) {
-            // borrow SOL
-            const borrowAmount = inAmount - sol - SOL_RESERVE + SOL_BUFFER
-            swap.stage = 'BORROW'
-            setItem(cacheKey, swap.stage)
-            swap.txAmount = borrowAmount
-            console.log('Borrowing SOL')
-            await client.client.tokenWithdraw(
-                client.group,
-                client.mangoAccount,
-                new PublicKey(SOL_MINT),
-                borrowAmount,
-                true,
-            )
-        } else if (sol >= inAmount) {
-            // swap sol to USDC
-            console.log('Swapping SOL to USDC: ' + inAmount)
-            swap.txAmount = inAmount
-            await performJupiterSwap(client.client,
-                client.user.publicKey,
-                inMint,
-                outMint,
-                inAmount,
-                SOL_DECIMALS,
-                client.wallet)
-        }
-    }
-
-    return swap;
-}
-
-export const spotTrade = async (
-    amount: number,
-    inBank: Bank,
-    outBank: Bank,
-    client: MangoClient,
-    mangoAccount: MangoAccount,
-    user: Keypair,
-    group: Group,
-    side: 'BUY' | 'SELL',
-    accountDefinition: AccountDefinition) => {
-
-    const amountBn = toNative(
-        Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
-        inBank.mintDecimals,
-    );
-    console.log('finding best route for amount = ' + amount);
-    const onlyDirectRoutes = SWAP_ONLY_DIRECT_ROUTES
-    const slippage = 100
-    const maxAccounts = 64
-    const swapMode = 'ExactIn'
-    const paramObj: any = {
-        inputMint: inBank.mint.toString(),
-        outputMint: outBank.mint.toString(),
-        amount: amountBn.toString(),
-        slippageBps: Math.ceil(slippage * 100).toString(),
-        swapMode,
-        onlyDirectRoutes: `${onlyDirectRoutes}`,
-        maxAccounts: `${maxAccounts}`,
-    }
-    const paramsString = new URLSearchParams(paramObj).toString()
-    const res = await axios.get(
-        `${JUPITER_V6_QUOTE_API_MAINNET}/quote?${paramsString}`,
-    )
-    const bestRoute = res.data
-    const [ixs, alts] = await fetchJupiterTransaction(
-        client.connection,
-        bestRoute,
-        user.publicKey,
-        0,
-        inBank.mint,
-        outBank.mint
-    );
-    let price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
-    if (side === 'BUY') {
-        price = (bestRoute.inAmount / 10 ** inBank.mintDecimals) / (bestRoute.outAmount / 10 ** outBank.mintDecimals)
-    }
-    console.log(`*** ${accountDefinition.name} MARGIN ${side}: `, amount, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
-    const sig = await client.marginTrade({
-        group: group,
-        mangoAccount: mangoAccount,
-        inputMintPk: inBank.mint,
-        amountIn: Number(amount.toFixed(3)),
-        outputMintPk: outBank.mint,
-        userDefinedInstructions: ixs,
-        userDefinedAlts: alts,
-        flashLoanType: FlashLoanType.swap
-    });
-    console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
-    return sig.signature
-
-}
-
 export const perpTrade = async (
     client: MangoClient,
     group: Group,
@@ -599,7 +290,7 @@ export const perpTrade = async (
 export const getClient = async (user: Keypair): Promise<Client> => {
     const options = AnchorProvider.defaultOptions();
     const connection = new Connection(CLUSTER_URL!, COMMITTMENT);
-    const backupConnections = [new Connection(LAVA_CONNECTION_URL)];
+    // const backupConnections = [new Connection(LAVA_CONNECTION_URL)];
 
     const wallet = new Wallet(user);
     const provider = new AnchorProvider(connection, wallet, options);
@@ -607,7 +298,7 @@ export const getClient = async (user: Keypair): Promise<Client> => {
     const client = MangoClient.connect(provider, CLUSTER, MANGO_V4_ID[CLUSTER], {
         idsSource: 'get-program-accounts',
         prioritizationFee: DEFAULT_PRIORITY_FEE,
-        multipleConnections: backupConnections,
+        // multipleConnections: backupConnections,
         postSendTxCallback: (txCallbackOptions: any) => {
             console.log('<<<<>>>> Transaction txCallbackOptions', txCallbackOptions)
         }
@@ -623,10 +314,17 @@ export async function getAccountData(
     accountDefinition: AccountDefinition,
     client: any,
     group: any,
-    mangoAccount: MangoAccount
+    mangoAccount: MangoAccount,
+    user: Keypair
 ): Promise<AccountDetail> {
     const values = group.perpMarketsMapByMarketIndex.values()
     const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+
+    const tokens = await getTokenAccountsByOwnerWithWrappedSol(client.connection, user.publicKey)
+    const usdcToken = tokens.find((t) => t.mint.toString() === USDC_MINT)
+    const solToken = tokens.find((t) => t.mint.toString() === SOL_MINT)
+    const usdc = usdcToken?.uiAmount || 0
+    const sol = solToken?.uiAmount || 0
 
     const pp = mangoAccount
         .perpActive()
@@ -657,7 +355,7 @@ export async function getAccountData(
     const solBank: any = banks.find((bank: any) => bank.name === 'SOL');
     const usdcBank: any = banks.find((bank: any) => bank.name === 'USDC');
     const solBalance = solBank ? mangoAccount.getTokenBalanceUi(solBank) : 0;
-    const usdcBalance = solBank ? mangoAccount.getTokenBalanceUi(solBank) : 0;
+    const usdcBalance = usdcBank ? mangoAccount.getTokenBalanceUi(usdcBank) : 0;
 
     let borrow = toUiDecimalsForQuote(mangoAccount.getCollateralValue(group)!.toNumber())
     const equity = toUiDecimalsForQuote(mangoAccount.getEquity(group)!.toNumber())
@@ -683,7 +381,9 @@ export async function getAccountData(
         perpMarket,
         bestAsk,
         bestBid,
-        historicalFunding
+        historicalFunding,
+        walletSol: sol,
+        walletUsdc: usdc
     }
 }
 

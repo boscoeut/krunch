@@ -14,6 +14,12 @@ export type JupiterSwap = {
     inAmount: number,
     outAmount:number,
     txAmount:number
+    failed:boolean 
+}
+
+export type CacheItem = {
+  date: Date,
+  item: any
 }
 
 export type TotalAccountFundingItem = {
@@ -42,7 +48,9 @@ export type AccountDetail = {
     perpMarket: PerpMarket;
     bestBid: number;
     bestAsk: number;
-    historicalFunding:number
+    historicalFunding:number;
+    walletSol: number;
+    walletUsdc: number;
 };
 
 export type AccountDefinition = {

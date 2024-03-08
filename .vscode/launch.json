@@ -56,5 +56,24 @@
                 "<node_internals>/**"
             ]
         },
+
+        {
+            "name": "Run PM Sniper Bot",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceRoot}/bots/mango",
+            "console": "integratedTerminal",
+            "runtimeExecutable": "/Users/mebert/.nvm/versions/node/v21.5.0/bin/npm",
+            "env": {                      
+                "ANCHOR_WALLET": "/Users/mebert/.config/solana/solanaTradingWalletProd.txt"
+            },
+            "runtimeArgs": [
+                "run-script",
+                "pm"
+            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
     ]
 }
