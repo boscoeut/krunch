@@ -3,7 +3,7 @@ import {
 } from '@blockworks-foundation/mango-v4';
 
 // THRESHOLDS
-export const MAX_SHORT_PERP = -60
+export const MAX_SHORT_PERP = -70
 export const MAX_LONG_PERP = 1
 export const MAX_SPOT_TRADE_SIZE = 2
 export const MAX_PERP_TRADE_SIZE = 2
@@ -22,7 +22,7 @@ export const PLUS_THRESHOLD = 100
 // TRADING PARAMS
 export const MIN_SIZE = 0.1
 export const QUOTE_BUFFER = 0.12
-export const TRADE_SIZE = 1
+export const TRADE_SIZE = 1.5
 export const ORDER_TYPE = PerpOrderType.limit
 export const ENFORCE_BEST_PRICE = false
 export const USDC_BUFFER = 1
@@ -32,6 +32,7 @@ export const JUP_ONLY_DIRECT_ROUTES = false
 
 // MAIN LOOP
 export const CAN_TRADE = true
+export const NO_TRADE_TIMEOUT = 2
 export const SLEEP_MAIN_LOOP = CAN_TRADE ? 0.1 : 1
 export const FILTER_TO_ACCOUNTS:Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']

@@ -34,7 +34,8 @@ import {
     MAX_PERP_TRADE_SIZE,
     SOL_RESERVE,
     MIN_SOL_WALLET_AMOUNT,
-    MIN_USDC_WALLET_AMOUNT
+    MIN_USDC_WALLET_AMOUNT,
+    NO_TRADE_TIMEOUT
 } from './constants';
 import { getItem } from './db'
 import { DB_KEYS, incrementItem } from './db';
@@ -382,13 +383,12 @@ async function main(): Promise<void> {
             const accountDetails: AccountDetail[] = run.map((result: any) => result.accountDetails).filter((f: any) => f !== undefined) as AccountDetail[]
             await updateGoogleSheet(googleSheets, accountDetails, hourlyRate, accountDetails[0].solPrice, openTransactions, prices.jupPrice, prices.solPrice)
 
-            openTransactions = openTransactions.filter((transaction) => transaction.timestamp > new Date().getTime() - TRANSACTION_EXPIRATION)
-            // print out open transactions
-            for (const transaction of openTransactions) {
-                console.log('Open Tx > ', transaction.accountName, transaction.type, transaction.side, transaction.amount, transaction.price)
+            let sleepAmount = SLEEP_MAIN_LOOP
+            if (hourlyRateAPR > MINUS_THRESHOLD && hourlyRateAPR < PLUS_THRESHOLD) {
+                sleepAmount = NO_TRADE_TIMEOUT
             }
-            console.log('Sleeping for', SLEEP_MAIN_LOOP > 1 ? SLEEP_MAIN_LOOP : SLEEP_MAIN_LOOP * 60, SLEEP_MAIN_LOOP > 1 ? 'minutes' : 'seconds')
-            await sleep(SLEEP_MAIN_LOOP * 1000 * 60)
+            console.log('Sleeping for', sleepAmount > 1 ? sleepAmount : sleepAmount * 60, sleepAmount > 1 ? 'minutes' : 'seconds')
+            await sleep(sleepAmount * 1000 * 60)
         } catch (e: any) {
             console.error(e.message + ", sleeping for 5 seconds")
             await sleep(5000)
