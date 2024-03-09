@@ -239,6 +239,7 @@ export const perpTrade = async (
         return order.signature
     } catch (e: any) {
         swap.status = 'FAILED'
+        console.log('Error in perpTrade', e.message)
         db.incrementItem(db.DB_KEYS.NUM_TRADES_FAIL, { cacheKey: swap.type + '-FAIL' })
     }
 }

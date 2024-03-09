@@ -16,12 +16,12 @@ export const MIN_USDC_WALLET_AMOUNT = 10
 
 // TRADING TRIGGERS
 export const MINUS_THRESHOLD = -75
-export const PLUS_THRESHOLD = 75
+export const PLUS_THRESHOLD = 40
 
 // TRADING PARAMS
 export const MIN_SIZE = 0.1
 export const QUOTE_BUFFER = 0.12
-export const TRADE_SIZE = 1.5
+export const TRADE_SIZE = 0.2
 export const ORDER_TYPE = PerpOrderType.limit
 export const ENFORCE_BEST_PRICE = false
 export const USDC_BUFFER = 1
@@ -77,7 +77,7 @@ export const PRIORITY_FEE_LEVELS = [
     { label: 'High', value: 4 },
   ]
 
-  export const DEFAULT_PRIORITY_FEE = 400
+  export const DEFAULT_PRIORITY_FEE = 500
   
   // JUP
   export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL"

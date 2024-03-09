@@ -145,7 +145,7 @@ async function snipePrices(
         const hasOpenTransaction = openTransaction && openTransaction.status === 'PENDING'
 
         if (hasOpenTransaction) {
-            console.log(`Skipping ${accountDefinition.name} due to openTx`)
+            console.log(`Skipping ${accountDefinition.name} due to openTx: ${openTransaction.type} ${openTransaction.amount} ${openTransaction.status}`)
         } else if (!canTrade) {
             console.log(`Skipping ${accountDefinition.name} due to canTrade=${canTrade}`)
         } else if (CHECK_OPEN_ORDERS && await getOpenOrders(client, accountDetails) > 0) {
@@ -268,9 +268,10 @@ async function main(): Promise<void> {
         console.log('Sniping Bot', new Date().toTimeString())
         try {
             const hourlyRateAPR = await db.get<number>(DB_KEYS.FUNDING_RATE)
+            const rateInRange = hourlyRateAPR < MINUS_THRESHOLD || hourlyRateAPR > PLUS_THRESHOLD
 
 
-            if (checkAccounts) {
+            if (checkAccounts || rateInRange) {
                 for (const accountDefinition of accountDefinitions) {
                     try {
                         let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { params: [accountDefinition], cacheKey: accountDefinition.name })

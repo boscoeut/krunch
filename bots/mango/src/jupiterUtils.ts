@@ -151,7 +151,7 @@ export const doDeposit = async (
         swap.status = 'COMPLETE'
         return swap
     } catch (e: any) {
-        console.log('Error in doDeposit', e)
+        console.log('Error in doDeposit', e.message)
         swap.status = 'FAILED'
         return swap
     }
@@ -177,8 +177,8 @@ export const doJupiterTrade = async (
         timestamp: Date.now(),
         status: 'PENDING'
     }
+    const cacheKey = accountDefinition.name
     try {
-        const cacheKey = accountDefinition.name
         setItem(DB_KEYS.SWAP, swap, { cacheKey })
         if (!client.mangoAccount) {
             console.log('Mango account not found')
@@ -262,10 +262,12 @@ export const doJupiterTrade = async (
         }
         swap.status = 'COMPLETE'
         incrementItem(DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey : swap.type+'-SUCCESS' })
+        setItem(DB_KEYS.SWAP, swap, { cacheKey })
         return swap
     } catch (e: any) {
-        console.log('Error in doJupiterTrade', e)
+        console.log('Error in doJupiterTrade', e.message)
         incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey : swap.type+'-FAIL' })
+        setItem(DB_KEYS.SWAP, swap, { cacheKey })
         swap.status = 'FAILED'
         return swap
     }

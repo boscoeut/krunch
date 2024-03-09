@@ -184,9 +184,9 @@ export const spotTrade = async (
         swap.status = 'COMPLETE'
         db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey : swap.type+'-SUCCESS' })
         return sig.signature
-    } catch (e) {
+    } catch (e:any) {
         swap.status = 'FAILED'
         db.incrementItem(db.DB_KEYS.NUM_TRADES_FAIL, { cacheKey : swap.type+'-FAIL' })
-        console.error('Error in spotTrade: ', e)
+        console.error('Error in spotTrade: ', e.message)
     }
 }
