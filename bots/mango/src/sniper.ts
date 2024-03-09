@@ -257,7 +257,6 @@ async function main(): Promise<void> {
     if (FILTER_TO_ACCOUNTS.length > 0) {
         accountDefinitions = accountDefinitions.filter((f: any) => FILTER_TO_ACCOUNTS.includes(f.name))
     }
-    const clients: Map<string, any> = new Map()
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
 
@@ -265,13 +264,11 @@ async function main(): Promise<void> {
         console.log('Sniping Bot', new Date().toTimeString())
         try {
             const hourlyRateAPR = await db.get<number>(DB_KEYS.FUNDING_RATE)            
-            const prices = await db.get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)
-
-            const run: any = []
+            
             for (const accountDefinition of accountDefinitions) {
                 try {
                     let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { params: [accountDefinition], cacheKey: accountDefinition.name })
-                    const result = await snipePrices(accountDefinition,
+                    await snipePrices(accountDefinition,
                         TRADE_SIZE,
                         MINUS_THRESHOLD,
                         PLUS_THRESHOLD,
@@ -279,28 +276,26 @@ async function main(): Promise<void> {
                         MAX_SHORT_PERP,
                         MAX_LONG_PERP,
                         client,
-                        CAN_TRADE && accountDefinition.canTrade)
-                    run.push(result)
+                        CAN_TRADE && accountDefinition.canTrade)            
                 } catch (e) {
                     console.error(`${accountDefinition.name} SNIPE ERROR`, e)
                 }
             }
 
             // update google sheet
-            const accountDetails: AccountDetail[] = run.map((result: any) => result.accountDetails).filter((f: any) => f !== undefined) as AccountDetail[]
+            const accountDetails = db.getItems([DB_KEYS.ACCOUNT_DETAILS])
             await updateGoogleSheet(googleSheets, accountDetails)
-
             const openTransactions: PendingTransaction[] = db.getItems([DB_KEYS.SWAP]).filter((f: any) => f.status === 'PENDING')
             const solDiff = db.getItems([DB_KEYS.ACCOUNT_DETAILS])
-                .filter((f: AccountDetail) => Math.abs(f.solDiff) > MIN_DIFF_SIZE || f.walletUsdc > MIN_USDC_WALLET_AMOUNT || f.walletSol > MIN_SOL_WALLET_AMOUNT)
+                .filter((f: AccountDetail) => 
+                    Math.abs(f.solDiff) > MIN_DIFF_SIZE 
+                    || f.walletUsdc > MIN_USDC_WALLET_AMOUNT 
+                    || f.walletSol > MIN_SOL_WALLET_AMOUNT)
 
             const shouldNotTrade = hourlyRateAPR > MINUS_THRESHOLD && hourlyRateAPR < PLUS_THRESHOLD 
                 && openTransactions.length === 0 && solDiff.length === 0
 
-            let sleepAmount = SLEEP_MAIN_LOOP
-            if (shouldNotTrade) {
-                sleepAmount = NO_TRADE_TIMEOUT
-            }
+            let sleepAmount = shouldNotTrade? NO_TRADE_TIMEOUT: SLEEP_MAIN_LOOP
             console.log('Sleeping for', sleepAmount > 1 ? sleepAmount : sleepAmount * 60, sleepAmount > 1 ? 'minutes' : 'seconds')
             await sleep(sleepAmount * 1000 * 60)
         } catch (e: any) {

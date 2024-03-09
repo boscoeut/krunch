@@ -31,7 +31,7 @@ export const JUP_ONLY_DIRECT_ROUTES = false
 
 // MAIN LOOP
 export const CAN_TRADE = true
-export const NO_TRADE_TIMEOUT = 2
+export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP = CAN_TRADE ? 0.1 : 1
 export const FILTER_TO_ACCOUNTS:Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import * as db from './db';
 import { DB_KEYS, Increment, getItems, getItem } from './db';
 import { AccountDetail, PendingTransaction } from './types';
 
@@ -25,8 +26,8 @@ export async function updateGoogleSheet(googleSheets: any,
     accountDetails: AccountDetail[] = []
     ) {
     try {
-        const fundingRate = getItem<number>(DB_KEYS.FUNDING_RATE)        
-        const jupPrice= <{solPrice:number, jupPrice:number}>getItem(DB_KEYS.JUP_PRICE)
+        const fundingRate = getItem<number>(DB_KEYS.FUNDING_RATE)      
+        const jupPrice = await db.get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)          
         const solPrice = getItem<number>(DB_KEYS.SOL_PRICE) || jupPrice.solPrice
 
         const openTransactions: PendingTransaction[] = getItems([DB_KEYS.SWAP])

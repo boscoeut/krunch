@@ -41,9 +41,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ]
-        },
-
-       
+        },       
         {
             "name": "Sniper Nodemon",
             "type": "node",
