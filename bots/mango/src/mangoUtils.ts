@@ -14,65 +14,35 @@ import {
 import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import { TokenInstructions } from '@project-serum/serum';
 import {
-    Cluster, Connection, Keypair, PublicKey
+    Connection, Keypair, PublicKey
 } from '@solana/web3.js';
 import axios from 'axios';
 import * as bs58 from 'bs58';
 import fs from 'fs';
 import {
-    ACCOUNT_REFRESH_EXPIRATION,
-    BID_ASK_CACHE_EXPIRATION,
+    CLUSTER,
+    CLUSTER_URL,
     COMMITTMENT,
-    CONNECTION_URL,
-    DEFAULT_CACHE_EXPIRATION,
     DEFAULT_PRIORITY_FEE,
-    FUNDING_CACHE_EXPIRATION,
     FUNDING_RATE_API,
-    FUNDING_RATE_CACHE_EXPIRATION,
-    INTEREST_CACHE_EXPIRATION,
-    JUP_PRICE_EXPIRATION,
+    GROUP_PK,
     JUP_PRICE_URL,
     MANGO_DATA_API_URL,
     ORDER_EXPIRATION,
     ORDER_TYPE,
-    SOL_GROUP_PK,
     SOL_MINT,
     USDC_MINT
 } from './constants';
+import * as db from './db';
 import {
     AccountDefinition,
     AccountDetail,
-    CacheItem,
     Client,
+    PendingTransaction,
     TokenAccount,
     TotalAccountFundingItem,
     TotalInterestDataItem
 } from './types';
-
-const CLUSTER_URL = CONNECTION_URL;
-export const GROUP_PK = process.env.GROUP_PK || SOL_GROUP_PK; // SOL GROUP
-const CLUSTER: Cluster =
-    (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
-
-
-const CACHE = new Map<string, CacheItem>()
-
-export const getFromCache = (key: string, expirationInMinutes: number = DEFAULT_CACHE_EXPIRATION) => {
-    const item = CACHE.get(key)
-    if (item) {
-        const now = new Date()
-        const diff = (now.getTime() - item.date.getTime()) / 1000
-        if (diff < expirationInMinutes * 60) {
-            return item.item
-        }
-    }
-    return null
-}
-
-const setToCache = (key: string, item: any) => {
-    const now = new Date()
-    CACHE.set(key, { date: now, item })
-}
 
 export function createKeypair() {
     let mnemonic = bip39.generateMnemonic();
@@ -85,98 +55,62 @@ export function createKeypair() {
 }
 
 export const fetchInterestData = async (mangoAccountPk: string) => {
-    const cacheKey = 'INT' + mangoAccountPk
     try {
-        const intData = getFromCache(cacheKey, INTEREST_CACHE_EXPIRATION)
-        if (intData) {
-            return intData
-        } else {
-            const response = await axios.get(
-                `${MANGO_DATA_API_URL}/stats/interest-account-total?mango-account=${mangoAccountPk}`,
-            )
-            const parsedResponse: Omit<TotalInterestDataItem, 'symbol'>[] | null = response.data
-            if (parsedResponse) {
-                const entries: [string, Omit<TotalInterestDataItem, 'symbol'>][] =
-                    Object.entries(parsedResponse).sort((a, b) => b[0].localeCompare(a[0]))
+        const response = await axios.get(
+            `${MANGO_DATA_API_URL}/stats/interest-account-total?mango-account=${mangoAccountPk}`,
+        )
+        const parsedResponse: Omit<TotalInterestDataItem, 'symbol'>[] | null = response.data
+        if (parsedResponse) {
+            const entries: [string, Omit<TotalInterestDataItem, 'symbol'>][] =
+                Object.entries(parsedResponse).sort((a, b) => b[0].localeCompare(a[0]))
 
-                const stats: TotalInterestDataItem[] = entries
-                    .map(([key, value]) => {
-                        return { ...value, symbol: key }
-                    })
-                    .filter((x) => x)
-                setToCache(cacheKey, stats)
-                return stats
-            } else return []
-        }
+            const stats: TotalInterestDataItem[] = entries
+                .map(([key, value]) => {
+                    return { ...value, symbol: key }
+                })
+                .filter((x) => x)
+            return stats
+        } else return []
     } catch (e) {
         console.log('Failed to fetch account funding', e)
         return []
     }
 }
 
-export const fetchRefreshKey = (accountName: string, value: Date) => {
-    const cacheKey = 'REFRESH_KEY' + accountName
-    try {
-        const cache = getFromCache(cacheKey, ACCOUNT_REFRESH_EXPIRATION)
-        if (cache) {
-            return cache
-        } else {
-            setToCache(cacheKey, value)
-            return cache
-        }
-    } catch (e) {
-        console.log('Failed to fetchRefreshKey', e)
-        return new Date()
-    }
-}
 
 export const fetchJupPrice = async () => {
-    const cacheKey = 'JUP_PRICE'
     try {
-        const cache = getFromCache(cacheKey, JUP_PRICE_EXPIRATION)
-        if (cache) {
-            return cache
-        } else {
-            const url = JUP_PRICE_URL
-            const response = await axios.get(url)
-            const jupPrice = response.data.data.JUP.price
-            const solPrice = response.data.data.SOL.price
-            setToCache(cacheKey, { jupPrice, solPrice })
-            return { jupPrice, solPrice }
-        }
+        const url = JUP_PRICE_URL
+        const response = await axios.get(url)
+        const jupPrice = response.data.data.JUP.price
+        const solPrice = response.data.data.SOL.price
+        return { jupPrice, solPrice }
     } catch (e) {
         console.log('Failed to fetch jup price', e)
-        return 0
+        return { jupPrice: 0, solPrice: 0 }
     }
 }
 
 export const fetchFundingData = async (mangoAccountPk: string) => {
-    const cacheKey = 'FUND' + mangoAccountPk
     try {
-        const cache = getFromCache(cacheKey, FUNDING_CACHE_EXPIRATION)
-        if (cache) {
-            return cache
-        } else {
-            const url = `${MANGO_DATA_API_URL}/stats/funding-account-total?mango-account=${mangoAccountPk}`
-            const response = await axios.get(url)
-            const res: any = response.data
-            if (res) {
-                const entries: [string, Omit<TotalAccountFundingItem, 'market'>][] =
-                    Object.entries(res)
+        const url = `${MANGO_DATA_API_URL}/stats/funding-account-total?mango-account=${mangoAccountPk}`
+        const response = await axios.get(url)
+        const res: any = response.data
+        if (res) {
+            const entries: [string, Omit<TotalAccountFundingItem, 'market'>][] =
+                Object.entries(res)
 
-                const stats: TotalAccountFundingItem[] = entries
-                    .map(([key, value]) => {
-                        return {
-                            long_funding: value.long_funding * -1,
-                            short_funding: value.short_funding * -1,
-                            market: key,
-                        }
-                    })
-                    .filter((x) => x)
-                setToCache(cacheKey, stats)
-                return stats
-            } else return []
-        }
+            const stats: TotalAccountFundingItem[] = entries
+                .map(([key, value]) => {
+                    return {
+                        long_funding: value.long_funding * -1,
+                        short_funding: value.short_funding * -1,
+                        market: key,
+                    }
+                })
+                .filter((x) => x)
+            return stats
+        } else return []
     } catch (e) {
         console.log('Failed to fetch account funding', e)
         return []
@@ -184,30 +118,32 @@ export const fetchFundingData = async (mangoAccountPk: string) => {
 }
 
 export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient) => {
-    const cacheKey = 'BidAsks'
     try {
-        const cache = getFromCache(cacheKey, BID_ASK_CACHE_EXPIRATION)
-        if (cache) {
-            return cache
-        } else {
-            const [bids, asks] = await Promise.all([
-                perpMarket.loadBids(client, true),
-                perpMarket.loadAsks(client, true)
-            ]);
-            const item = {
-                bestBid: bids.best()?.uiPrice || 0,
-                bestAsk: asks.best()?.uiPrice || 0
-            }
-            setToCache(cacheKey, item)
-            return item
+        const [bids, asks] = await Promise.all([
+            perpMarket.loadBids(client, true),
+            perpMarket.loadAsks(client, true)
+        ]);
+        const item = {
+            bestBid: bids.best()?.uiPrice || 0,
+            bestAsk: asks.best()?.uiPrice || 0
         }
-
+        return item
     } catch (e) {
         console.log('Failed to fetch bids and asks', e)
-        return null
+        return { bestBid: 0, bestAsk: 0 }
     }
 }
 
+export async function getFundingRate() {
+    const fundingRate = await axios.get(FUNDING_RATE_API)
+    const data: any = fundingRate.data
+    if (data.find) {
+        const hourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
+        return Number((hourlyRate * 100 * 24 * 365).toFixed(3))
+    } else {
+        return 0
+    }
+}
 
 export const getUser = (accountKey: string): Keypair => {
     let file = fs.readFileSync(accountKey, 'utf8');
@@ -267,24 +203,40 @@ export const perpTrade = async (
     side: PerpOrderSide,
     accountDefinition: AccountDefinition,
     reduceOnly: boolean) => {
+    const swap: PendingTransaction = {
+        type: side === PerpOrderSide.bid ? 'PERP-BUY' : 'PERP-SELL',
+        amount: size,
+        accountName: accountDefinition.name,
+        price: 0,
+        oracle: price,
+        timestamp: Date.now(),
+        status: 'PENDING'
+    }
+    try {
+        const cacheKey = accountDefinition.name
+        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
 
-    const expiryTimestamp = Date.now() / 1000 + ORDER_EXPIRATION;
-    console.log(`**** ${accountDefinition.name} PERP ${side === PerpOrderSide.ask ? "SELL" : "BUY"} order for ${size} at ${price}`)
-    const order = await client.perpPlaceOrder(
-        group,
-        mangoAccount,
-        perpMarket.perpMarketIndex,
-        side,
-        price, // ui price 
-        size, // ui base quantity
-        undefined, // max quote quantity
-        Date.now(), // order id
-        ORDER_TYPE,
-        reduceOnly,
-        expiryTimestamp
-    );
-    console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
-    return order.signature
+        const expiryTimestamp = Date.now() / 1000 + ORDER_EXPIRATION;
+        console.log(`**** ${accountDefinition.name} PERP ${side === PerpOrderSide.ask ? "SELL" : "BUY"} order for ${size} at ${price}`)
+        const order = await client.perpPlaceOrder(
+            group,
+            mangoAccount,
+            perpMarket.perpMarketIndex,
+            side,
+            price, // ui price 
+            size, // ui base quantity
+            undefined, // max quote quantity
+            Date.now(), // order id
+            ORDER_TYPE,
+            reduceOnly,
+            expiryTimestamp
+        );
+        console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
+        swap.status = 'COMPLETE'
+        return order.signature
+    } catch (e: any) {
+        swap.status = 'FAILED'
+    }
 }
 
 export const getClient = async (user: Keypair): Promise<Client> => {
@@ -308,6 +260,16 @@ export const getClient = async (user: Keypair): Promise<Client> => {
     return {
         client, user, group, ids, wallet
     }
+}
+
+export async function reloadClient(client: Client) {
+    if (!client.mangoAccount) return
+    await Promise.all([
+        client.mangoAccount.reload(client.client),
+        client.group.reloadBanks(client.client, client.ids),
+        client.group.reloadPerpMarkets(client.client, client.ids),
+        client.group.reloadPerpMarketOraclePrices(client.client),
+    ]);
 }
 
 export async function getAccountData(
@@ -338,15 +300,15 @@ export async function getAccountData(
         fundingAmount += pp.getCumulativeFundingUi(perpMarket);
         solAmount = pp.basePositionLots.toNumber() / 100
     }
-    const { bestBid, bestAsk } = await getBidsAndAsks(perpMarket, client)
-    const fundingData = await fetchFundingData(mangoAccount.publicKey.toBase58())
+    const { bestBid, bestAsk } = await db.get<{ bestBid: number, bestAsk: number }>(db.DB_KEYS.BIDS_AND_ASKS, { params: [perpMarket, client], cacheKey: accountDefinition.name })
+    const fundingData = await db.get<any[]>(db.DB_KEYS.FUNDING_DATA, { cacheKey: accountDefinition.name, params: [mangoAccount.publicKey.toBase58()] })
     if (fundingData && fundingData.length > 0) {
         for (const funding of fundingData || []) {
             historicalFunding += funding.long_funding + funding.short_funding
         }
     }
 
-    const interestData = await fetchInterestData(mangoAccount.publicKey.toBase58())
+    const interestData = await db.get<any[]>(db.DB_KEYS.INTEREST_DATA, { cacheKey: accountDefinition.name, params: [mangoAccount.publicKey.toBase58()] })
     for (const interest of interestData || []) {
         interestAmount += interest.deposit_interest_usd - interest.borrow_interest_usd
     }
@@ -396,23 +358,7 @@ export const setupClient = async (accountDefinition: AccountDefinition): Promise
     }
 }
 
-export async function getFundingRate() {
-    const cacheKey = 'FUND_RATE'
-    const rate = getFromCache(cacheKey, FUNDING_RATE_CACHE_EXPIRATION)
-    if (rate) {
-        return rate
-    } else {
-        const fundingRate = await axios.get(FUNDING_RATE_API)
-        const data: any = fundingRate.data
-        if (data.find) {
-            const hourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
-            setToCache(cacheKey, hourlyRate)
-            return hourlyRate
-        } else {
-            return 0
-        }
-    }
-}
+
 
 export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));

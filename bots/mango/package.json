@@ -7,12 +7,15 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node src/index.ts",
     "sniper": "ts-node src/sniper.ts",
-    "pm": "pm2 start -x ts-node src/sniper.ts"
+    "pm2": "pm2 start -x ts-node src/pm2Test.ts",
+    "pm": "pm2 start -x ts-node src/sniper.ts",
+    "nodemon": "nodemon"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "nodemon": "^3.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },

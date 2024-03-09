@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { AccountDetail, JupiterSwap, PendingTransaction } from './types';
-import { getItem, getAll } from './db'
+import { DB_KEYS, getItems } from './db';
+import { AccountDetail, PendingTransaction } from './types';
 
 import { SPREADSHEET_ID } from './constants';
 const { authenticate } = require('@google-cloud/local-auth');
@@ -25,11 +25,11 @@ export async function updateGoogleSheet(googleSheets: any,
     accountDetails: AccountDetail[] = [],
     fundingRate: number,
     solPrice: number,
-    openTransactions: PendingTransaction[] = [],
     jupPrice: number,
     jupSolPrice:number ) {
     try {
         
+        const openTransactions: PendingTransaction[] = getItems([DB_KEYS.SWAP])
         // clear old transactions
         const transactionRow = 20
         const maxTransactionRows = 20
@@ -63,30 +63,22 @@ export async function updateGoogleSheet(googleSheets: any,
         const bestBid = accountDetails[0].bestBid
         const bestAsk = accountDetails[0].bestAsk
 
-
         const transactionValues: any = []
         openTransactions.forEach((pendingTx) => {
-            const cacheKey = 'JUPSWAP' + pendingTx.accountName
-            const jupSwap:JupiterSwap = getItem(cacheKey)
-            const amount = pendingTx.type === 'JUPSWAP' ? jupSwap?.txAmount : pendingTx.amount
+            const amount = pendingTx.amount
             transactionValues.push([
                 pendingTx.accountName,
-                pendingTx.type === 'JUPSWAP' ? 'JUP-' + jupSwap?.stage : pendingTx.type,
-                pendingTx.side,
+                pendingTx.type,
+                pendingTx.status,
                 pendingTx.price,
                 pendingTx.oracle,
-                pendingTx.type === 'PERP' || pendingTx.type === 'JUPSWAP' ?  amount : amount / solPrice,
+                pendingTx.type.startsWith('PERP') || pendingTx.type.startsWith('JUP') ?  amount : amount / solPrice,
                 toGoogleSheetsDate(new Date(pendingTx.timestamp))
             ])
         })
 
         // update stats
-        const db = getAll()
-        const statValues: any = []
-        for (const [key, value] of db.entries()) {
-            if (key.indexOf('NUM') === -1) continue
-            statValues.push([value, key])
-        }
+        const statValues: any = getItems([DB_KEYS.NUM_TRADES, DB_KEYS.NUM_TRADES_FAIL, DB_KEYS.NUM_TRADES_SUCCESS])
         statValues.sort((a: string, b: string) => a[1].localeCompare(b[1]));
 
         await googleSheets.spreadsheets.values.batchUpdate({
@@ -104,7 +96,7 @@ export async function updateGoogleSheet(googleSheets: any,
                 }, {
                     range: `SOL!B1:C2`,
                     values: [[solPrice, bestBid],
-                    [fundingRate * 24 * 365, bestAsk]],
+                    [fundingRate/100, bestAsk]],
 
                 }, {
                     range: ACCOUNT_VALUES_RANGE,

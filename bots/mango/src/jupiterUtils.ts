@@ -23,11 +23,11 @@ import {
     USDC_DECIMALS,
     USDC_MINT
 } from './constants';
-import { setItem } from './db';
+import { DB_KEYS, setItem } from './db';
 import {
     AccountDefinition,
     Client,
-    JupiterSwap
+    PendingTransaction
 } from './types';
 
 
@@ -104,20 +104,20 @@ export const doDeposit = async (
     accountDefinition: AccountDefinition,
     client: Client,
     usdc: number,
-    sol: number,): Promise<JupiterSwap> => {
+    sol: number,): Promise<PendingTransaction> => {
 
-    const swap: JupiterSwap = {
-        stage: 'SWAP',
-        in: 'USDC',
-        out: 'SOL',
-        inAmount: usdc,
-        outAmount: sol,
-        failed: false,
-        txAmount: 0
+    const swap: PendingTransaction = {
+        type: 'DEPOSIT',
+        amount: 0,
+        accountName: accountDefinition.name,
+        price: 0,
+        oracle: 0,
+        timestamp: Date.now(),
+        status: 'PENDING'
     }
     try {
-        const cacheKey = 'JUPSWAP' + accountDefinition.name
-        setItem(cacheKey, swap)
+        const cacheKey = accountDefinition.name
+        setItem(DB_KEYS.SWAP, swap, { cacheKey })
         if (!client.mangoAccount) {
             console.log('Mango account not found')
             return swap
@@ -125,10 +125,9 @@ export const doDeposit = async (
 
         if (sol - SOL_RESERVE >= MIN_SOL_WALLET_AMOUNT) {
             // import SOL
-            swap.stage = 'DEPOSIT'
             const depositAmount = sol - SOL_RESERVE
-            swap.txAmount = depositAmount
-            console.log('Importing SOL', swap.txAmount)
+            swap.amount = depositAmount
+            console.log('Importing SOL', swap.amount)
             await client.client.tokenDeposit(
                 client.group,
                 client.mangoAccount,
@@ -139,8 +138,7 @@ export const doDeposit = async (
 
         if (usdc >= MIN_USDC_WALLET_AMOUNT) {
             // import USDC
-            swap.stage = 'DEPOSIT'
-            swap.txAmount = usdc
+            swap.amount = usdc
             console.log('Importing USDC', usdc)
             await client.client.tokenDeposit(
                 client.group,
@@ -149,10 +147,11 @@ export const doDeposit = async (
                 usdc,
             )
         }
+        swap.status = 'COMPLETE'
         return swap
     } catch (e: any) {
         console.log('Error in doJupiterTrade', e)
-        swap.failed = true
+        swap.status = 'FAILED'
         return swap
     }
 
@@ -166,29 +165,29 @@ export const doJupiterTrade = async (
     inAmount: number,
     outAmount: number,
     usdc: number,
-    sol: number, solPrice: number): Promise<JupiterSwap> => {
+    sol: number, solPrice: number): Promise<PendingTransaction> => {
 
-    const swap: JupiterSwap = {
-        stage: 'SWAP',
-        in: inMint === USDC_MINT ? 'USDC' : 'SOL',
-        out: outMint === USDC_MINT ? 'USDC' : 'SOL',
-        inAmount,
-        outAmount,
-        failed: false,
-        txAmount: 0
+    const swap: PendingTransaction = {
+        type: inMint === USDC_MINT ? 'JUP-BUY' : 'JUP-SELL',
+        amount: inAmount,
+        accountName: accountDefinition.name,
+        price: 0,
+        oracle: solPrice,
+        timestamp: Date.now(),
+        status: 'PENDING'
     }
     try {
-        const cacheKey = 'JUPSWAP' + accountDefinition.name
-        setItem(cacheKey, swap)
+        const cacheKey = accountDefinition.name
+        setItem(DB_KEYS.SWAP, swap, { cacheKey })
         if (!client.mangoAccount) {
             console.log('Mango account not found')
         } else if (inMint === USDC_MINT) {
             if (sol - SOL_RESERVE >= MIN_SOL_WALLET_AMOUNT) {
                 // import SOL
-                swap.stage = 'DEPOSIT'
+                swap.type = 'DEPOSIT'
                 const depositAmount = sol - SOL_RESERVE
-                swap.txAmount = depositAmount
-                console.log('Importing SOL', swap.txAmount)
+                swap.amount = depositAmount
+                console.log('Importing SOL', swap.amount)
                 await client.client.tokenDeposit(
                     client.group,
                     client.mangoAccount,
@@ -198,11 +197,10 @@ export const doJupiterTrade = async (
             }
             if (usdc < inAmount) {
                 // borrow usdc
-                swap.stage = 'BORROW'
+                swap.type = 'BORROW'
                 const borrowAmount = Math.max(MIN_USDC_BORROW, inAmount - usdc + USDC_BUFFER)
-                swap.txAmount = borrowAmount
-                setItem(cacheKey, swap)
-                console.log('Borrowing USDC', swap.txAmount)
+                swap.amount = borrowAmount
+                console.log('Borrowing USDC', swap.amount)
                 await client.client.tokenWithdraw(
                     client.group,
                     client.mangoAccount,
@@ -212,7 +210,7 @@ export const doJupiterTrade = async (
                 )
             } else if (usdc >= inAmount) {
                 // swap usdc to sol
-                swap.txAmount = usdc
+                swap.amount = usdc
                 console.log('Swapping USDC to SOL: ' + usdc)
                 await performJupiterSwap(client.client,
                     client.user.publicKey,
@@ -225,8 +223,8 @@ export const doJupiterTrade = async (
         } else {
             if (usdc >= MIN_USDC_WALLET_AMOUNT) {
                 // import USDC
-                swap.stage = 'DEPOSIT'
-                swap.txAmount = usdc
+                swap.type = 'DEPOSIT'
+                swap.amount = usdc
                 console.log('Importing USDC', usdc)
                 await client.client.tokenDeposit(
                     client.group,
@@ -238,9 +236,8 @@ export const doJupiterTrade = async (
             if (sol - SOL_RESERVE < inAmount) {
                 // borrow SOL                
                 const borrowAmount = Math.max(MIN_SOL_BORROW, inAmount - sol - SOL_RESERVE + SOL_BUFFER)
-                swap.stage = 'BORROW'
-                swap.txAmount = borrowAmount
-                setItem(cacheKey, swap)
+                swap.type = 'BORROW'
+                swap.amount = borrowAmount
                 console.log('Borrowing SOL', borrowAmount)
                 await client.client.tokenWithdraw(
                     client.group,
@@ -251,21 +248,22 @@ export const doJupiterTrade = async (
                 )
             } else if (sol - SOL_RESERVE >= inAmount) {
                 // swap sol to USDC
-                swap.txAmount = sol - SOL_RESERVE
-                console.log('Swapping SOL to USDC: ' + swap.txAmount)
+                swap.amount = sol - SOL_RESERVE
+                console.log('Swapping SOL to USDC: ' + swap.amount)
                 await performJupiterSwap(client.client,
                     client.user.publicKey,
                     inMint,
                     outMint,
-                    swap.txAmount,
+                    swap.amount,
                     SOL_DECIMALS,
                     client.wallet)
             }
         }
+        swap.status = 'COMPLETE'
         return swap
     } catch (e: any) {
         console.log('Error in doJupiterTrade', e)
-        swap.failed = true
+        swap.status = 'FAILED'
         return swap
     }
 

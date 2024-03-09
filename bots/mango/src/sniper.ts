@@ -2,43 +2,48 @@ import {
     PerpOrderSide
 } from '@blockworks-foundation/mango-v4';
 import fs from 'fs';
+import {
+    CAN_TRADE,
+    ENFORCE_BEST_PRICE,
+    EXTRA_USDC_AMOUNT,
+    FILTER_TO_ACCOUNTS,
+    MAX_LONG_PERP,
+    MAX_PERP_TRADE_SIZE,
+    MAX_SHORT_PERP,
+    MAX_SPOT_TRADE_SIZE,
+    MINUS_THRESHOLD,
+    MIN_DIFF_SIZE,
+    MIN_SIZE,
+    MIN_SOL_WALLET_AMOUNT,
+    MIN_USDC_WALLET_AMOUNT,
+    NO_TRADE_TIMEOUT,
+    PLUS_THRESHOLD,
+    QUOTE_BUFFER,
+    SLEEP_MAIN_LOOP,
+    SOL_RESERVE,
+    TRADE_SIZE
+} from './constants';
+import * as db from './db';
+import { DB_KEYS } from './db';
 import { authorize, updateGoogleSheet } from './googleUtils';
 import {
-    getAccountData, fetchRefreshKey,
-    getFundingRate, perpTrade, setupClient, sleep, 
-    fetchJupPrice
-} from './mangoUtils';
+    doDeposit,
+    doJupiterTrade
+} from './jupiterUtils';
 import {
     spotTrade
 } from './mangoSpotUtils';
 import {
-    doJupiterTrade, doDeposit
-} from './jupiterUtils';
+    getAccountData,
+    perpTrade, sleep
+} from './mangoUtils';
 import {
     AccountDefinition,
     AccountDetail,
     Client,
-    JupiterSwap,
     PendingTransaction,
     SnipeResponse
 } from './types';
-import {
-    ENFORCE_BEST_PRICE,
-    TRADE_SIZE, MINUS_THRESHOLD,
-    MIN_SIZE, MAX_SPOT_TRADE_SIZE,
-    CAN_TRADE, SLEEP_MAIN_LOOP,
-    PLUS_THRESHOLD, MAX_SHORT_PERP, MAX_LONG_PERP,
-    MIN_DIFF_SIZE, EXTRA_USDC_AMOUNT, QUOTE_BUFFER,
-    FILTER_TO_ACCOUNTS,
-    TRANSACTION_EXPIRATION,
-    MAX_PERP_TRADE_SIZE,
-    SOL_RESERVE,
-    MIN_SOL_WALLET_AMOUNT,
-    MIN_USDC_WALLET_AMOUNT,
-    NO_TRADE_TIMEOUT
-} from './constants';
-import { getItem } from './db'
-import { DB_KEYS, incrementItem } from './db';
 
 const { google } = require('googleapis');
 
@@ -55,7 +60,6 @@ async function snipePrices(
     minPerp: number,
     maxPerp: number,
     client: Client,
-    openTransactions: Array<PendingTransaction>,
     canTrade: boolean
 ): Promise<SnipeResponse> {
     let accountDetails: AccountDetail | undefined
@@ -65,17 +69,7 @@ async function snipePrices(
             throw new Error('Mango account not found: ' + accountDefinition.name)
         }
 
-        const lastRefresh = new Date()
-        const needsRefresh = fetchRefreshKey(accountDefinition.name, lastRefresh) != lastRefresh
-        if (canTrade || needsRefresh) {
-            console.log('Reloading Mango Account', accountDefinition.name)
-            await Promise.all([
-                client.mangoAccount.reload(client.client),
-                client.group.reloadBanks(client.client, client.ids),
-                client.group.reloadPerpMarkets(client.client, client.ids),
-                client.group.reloadPerpMarketOraclePrices(client.client),
-            ]);
-        }
+        db.get<void>(DB_KEYS.RELOAD_CLIENT, { params: [client], cacheKey: accountDefinition.name, force: canTrade })
 
         accountDetails = await getAccountData(accountDefinition,
             client.client,
@@ -90,10 +84,10 @@ async function snipePrices(
             true
         )
         const numOpenOrders = orders.filter(order => !order.isExpired).length
+        const openTransaction = db.getItem<PendingTransaction>(DB_KEYS.SWAP, { cacheKey: accountDefinition.name })
 
-
-        if (openTransactions.length > 0) {
-            console.log(`Skipping ${accountDefinition.name} due to openTx=${openTransactions.length}`)
+        if (openTransaction && openTransaction.status !== 'COMPLETE') {
+            console.log(`Skipping ${accountDefinition.name} due to openTx=${openTransaction}`)
         } else if (numOpenOrders > 0) {
             console.log(`Skipping ${accountDefinition.name} due to # Open Orders=${numOpenOrders}`)
         } else if (!canTrade) {
@@ -147,52 +141,25 @@ async function snipePrices(
 
             if (action === 'BUY') {
                 if (!spotUnbalanced && (walletSol > MIN_SOL_WALLET_AMOUNT || accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT)) {
-                    promises.push({
-                        type: 'JUPSWAP',
-                        accountName: accountDefinition.name,
-                        side: 'SELL',
-                        oracle: solPrice,
-                        amount: walletSol,
-                        timestamp: new Date().getTime(),
-                        price: solPrice,
-                        promise: doDeposit(
-                            accountDefinition,
-                            client, 
-                            accountDetails.walletUsdc,
-                            accountDetails.walletSol,
-                        )
-                    })
+                    doDeposit(
+                        accountDefinition,
+                        client,
+                        accountDetails.walletUsdc,
+                        accountDetails.walletSol,
+                    )
                 } else if (spotUnbalanced && spotVsPerpDiff > 0) {
                     console.log('SELL SOL', tradeSize, spotVsPerpDiff)
                     const amount = Math.min(MAX_SPOT_TRADE_SIZE, Number(Math.abs(spotVsPerpDiff).toFixed(2)))
                     if (accountDefinition.useMangoSpotTrades) {
-                        promises.push({
-                            type: 'SWAP',
-                            accountName: accountDefinition.name,
-                            side: 'SELL',
-                            oracle: solPrice,
-                            timestamp: new Date().getTime(),
-                            amount,
-                            price: solPrice,
-                            promise: spotTrade(amount, solBank, usdcBank, client.client, client.mangoAccount, client.user, client.group, 'SELL', accountDefinition)
-                        })
+                        spotTrade(amount, solBank, usdcBank, client.client, client.mangoAccount, client.user, client.group, 'SELL', accountDefinition)
                     } else {
-                        promises.push({
-                            type: 'JUPSWAP',
-                            accountName: accountDefinition.name,
-                            side: 'SELL',
-                            timestamp: new Date().getTime(),
-                            oracle: solPrice,
-                            amount,
-                            price: solPrice,
-                            promise: doJupiterTrade(accountDefinition,
-                                client, solBank.mint.toString(),
-                                usdcBank.mint.toString(),
-                                amount, amount * solPrice,
-                                accountDetails.walletUsdc,
-                                accountDetails.walletSol,
-                                solPrice)
-                        })
+                        doJupiterTrade(accountDefinition,
+                            client, solBank.mint.toString(),
+                            usdcBank.mint.toString(),
+                            amount, amount * solPrice,
+                            accountDetails.walletUsdc,
+                            accountDetails.walletSol,
+                            solPrice)
                     }
                 }
                 else if (increaseExposure || (spotVsPerpDiff < 0 && spotUnbalanced)) {
@@ -205,68 +172,32 @@ async function snipePrices(
                         console.log('**** SNIPING BUY NOT EXECUTED', `(midPrice)=${midPrice} (bestAsk=${accountDetails.bestAsk}) (Oracle=${solPrice})`)
                     } else {
                         console.log(`**** SNIPING BUY (midPrice)=${midPrice} (bestAsk=${accountDetails.bestAsk}) (Oracle=${solPrice}) (Trade Size=${tradeSize})`)
-                        promises.push({
-                            type: 'PERP',
-                            side: 'BUY',
-                            timestamp: new Date().getTime(),
-                            oracle: solPrice,
-                            amount: tradeSize,
-                            price: midPrice,
-                            accountName: accountDefinition.name,
-                            promise: perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.bid, accountDefinition, false)
-                        })
+                        perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.bid, accountDefinition, false)
                     }
                 }
                 console.log('BUY PERP:', promises.length, 'new transaction(s)')
             }
             if (action === 'SELL') {
                 if (!spotUnbalanced && (walletSol > MIN_SOL_WALLET_AMOUNT || accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT)) {
-                    promises.push({
-                        type: 'JUPSWAP',
-                        accountName: accountDefinition.name,
-                        side: 'BUY',
-                        oracle: solPrice,
-                        amount: accountDetails.walletUsdc,
-                        timestamp: new Date().getTime(),
-                        price: solPrice,
-                        promise: doDeposit(
-                            accountDefinition,
-                            client, 
-                            accountDetails.walletUsdc,
-                            accountDetails.walletSol,
-                        )
-                    })
+                    doDeposit(
+                        accountDefinition,
+                        client,
+                        accountDetails.walletUsdc,
+                        accountDetails.walletSol,
+                    )
                 } else if (spotUnbalanced && spotVsPerpDiff < 0) {
                     console.log('BUY SOL', spotVsPerpDiff)
                     const buySize = Math.min(MAX_SPOT_TRADE_SIZE, Math.abs(spotVsPerpDiff))
                     const amount = Number((buySize * solPrice + EXTRA_USDC_AMOUNT).toFixed(2))
                     if (accountDefinition.useMangoSpotTrades) {
-                        promises.push({
-                            type: 'SWAP',
-                            accountName: accountDefinition.name,
-                            side: 'BUY',
-                            oracle: solPrice,
-                            timestamp: new Date().getTime(),
-                            amount,
-                            price: solPrice,
-                            promise: spotTrade(amount, usdcBank, solBank, client.client, client.mangoAccount, client.user, client.group, 'BUY', accountDefinition)
-                        })
+                        spotTrade(amount, usdcBank, solBank, client.client, client.mangoAccount, client.user, client.group, 'BUY', accountDefinition)
                     } else {
-                        promises.push({
-                            type: 'JUPSWAP',
-                            accountName: accountDefinition.name,
-                            side: 'BUY',
-                            oracle: solPrice,
-                            amount,
-                            timestamp: new Date().getTime(),
-                            price: solPrice,
-                            promise: doJupiterTrade(accountDefinition,
-                                client, usdcBank.mint.toString(), solBank.mint.toString(),
-                                amount, buySize,
-                                accountDetails.walletUsdc,
-                                accountDetails.walletSol,
-                                solPrice)
-                        })
+                        doJupiterTrade(accountDefinition,
+                            client, usdcBank.mint.toString(), solBank.mint.toString(),
+                            amount, buySize,
+                            accountDetails.walletUsdc,
+                            accountDetails.walletSol,
+                            solPrice)
                     }
                 }
                 else if (increaseExposure || (spotVsPerpDiff > 0 && spotUnbalanced)) {
@@ -278,16 +209,7 @@ async function snipePrices(
                         console.log('**** SNIPING SELL NOT EXECUTED', `(midPrice)=${midPrice} (bestBid=${accountDetails.bestBid}) (Oracle=${solPrice})`)
                     } else {
                         console.log('**** SNIPING SELL', midPrice, "Oracle", solPrice, 'Trade Size', `${tradeSize}`)
-                        promises.push({
-                            type: 'PERP',
-                            oracle: solPrice,
-                            amount: tradeSize,
-                            price: midPrice,
-                            side: 'SELL',
-                            timestamp: new Date().getTime(),
-                            accountName: accountDefinition.name,
-                            promise: perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false)
-                        })
+                        perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false)
                     }
                 }
                 console.log('SELL PERP', promises.length, 'new transaction(s)')
@@ -297,7 +219,6 @@ async function snipePrices(
         console.error(`${accountDefinition.name} SNIPE PROCESS ERROR`, e)
     }
     return {
-        promises,
         accountDetails
     }
 }
@@ -311,30 +232,19 @@ async function main(): Promise<void> {
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
 
-    let openTransactions: Array<PendingTransaction> = []
-    let successfulTransactions = 0
-    let failedTransactions = 0
     while (true) {
         console.log('Sniping Bot', new Date().toTimeString())
         try {
             let numberOfTransactions = 0
-            const hourlyRate = await getFundingRate()
-            const hourlyRateAPR = Number((hourlyRate * 100 * 24 * 365).toFixed(3))
+            const hourlyRateAPR = await db.get<number>(DB_KEYS.FUNDING_RATE)
             console.log(`hourlyRateAPR = ${hourlyRateAPR}%`)
 
-            const prices = await fetchJupPrice()
+            const prices = await db.get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)
 
             const run: any = []
             for (const accountDefinition of accountDefinitions) {
-                // check for open transactions
-                const openTxs = openTransactions.filter((transaction) => transaction.accountName === accountDefinition.name)
-
                 try {
-                    let client = clients.get(accountDefinition.name)
-                    if (!client) {
-                        client = await setupClient(accountDefinition)
-                        clients.set(accountDefinition.name, client)
-                    }
+                    let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { params: [accountDefinition], cacheKey: accountDefinition.name })
                     const result = await snipePrices(accountDefinition,
                         TRADE_SIZE,
                         MINUS_THRESHOLD,
@@ -343,7 +253,6 @@ async function main(): Promise<void> {
                         MAX_SHORT_PERP,
                         MAX_LONG_PERP,
                         client,
-                        openTxs,
                         CAN_TRADE && accountDefinition.canTrade)
                     run.push(result)
                 } catch (e) {
@@ -351,37 +260,9 @@ async function main(): Promise<void> {
                 }
             }
 
-            for (const snipeResponses of run) {
-                // promises
-                numberOfTransactions += snipeResponses?.promises.length || 0
-                for (const transaction of snipeResponses.promises) {
-                    openTransactions.push(transaction)
-                    transaction.promise.then((result: any) => {
-                        successfulTransactions++
-                        const cacheKey = 'JUPSWAP' + transaction.accountName
-                        const jupSwap: JupiterSwap = getItem(cacheKey)
-                        const key = transaction.type === 'JUPSWAP' ? 'JUP-' + jupSwap.stage : transaction.type
-                        let name = DB_KEYS.NUM_TRADES_SUCCESS
-                        if (transaction.type === 'JUPSWAP' && !jupSwap.failed) {
-                            name = DB_KEYS.NUM_TRADES_FAIL
-                        }
-                        failedTransactions++
-                        incrementItem(key + '_' + name, 1)
-                    }).catch((error: any) => {
-                        const cacheKey = 'JUPSWAP' + transaction.accountName
-                        const jupSwap: JupiterSwap = getItem(cacheKey)
-                        const key = transaction.type === 'JUPSWAP' ? 'JUP-' + jupSwap.stage : transaction.type
-                        failedTransactions++
-                        incrementItem(key + '_' + DB_KEYS.NUM_TRADES_FAIL, 1)
-                    }).finally(() => {
-                        openTransactions.splice(openTransactions.indexOf(transaction), 1)
-                    })
-                }
-            }
-
             // update google sheet
             const accountDetails: AccountDetail[] = run.map((result: any) => result.accountDetails).filter((f: any) => f !== undefined) as AccountDetail[]
-            await updateGoogleSheet(googleSheets, accountDetails, hourlyRate, accountDetails[0].solPrice, openTransactions, prices.jupPrice, prices.solPrice)
+            await updateGoogleSheet(googleSheets, accountDetails, hourlyRateAPR, accountDetails[0].solPrice, prices.jupPrice, prices.solPrice)
 
             let sleepAmount = SLEEP_MAIN_LOOP
             if (hourlyRateAPR > MINUS_THRESHOLD && hourlyRateAPR < PLUS_THRESHOLD) {

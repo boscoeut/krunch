@@ -1,6 +1,5 @@
-import {
-    PerpOrderType
-} from '@blockworks-foundation/mango-v4';
+import {PerpOrderType} from '@blockworks-foundation/mango-v4';
+import {Cluster} from '@solana/web3.js';
 
 // THRESHOLDS
 export const MAX_SHORT_PERP = -70
@@ -54,14 +53,6 @@ export const SOL_MINT = 'So11111111111111111111111111111111111111112'
 export const SOL_RESERVE = 0.035
 export const USDC_DECIMALS = 6
 export const SOL_DECIMALS = 9
-
-export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy
-// export const CONNECTION_URL = 'https://mango-mango-d092.mainnet.rpcpool.com/';
-// export const CONNECTION_URL = 'https://side-indulgent-research.solana-mainnet.quiknode.pro/75ae6800554082022fe1a77e3f3b56e70067fdce';  //quicknode
-// export const CONNECTION_URL = 'https://ssc-dao.genesysgo.net';  //genesysgo
-// export const CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
-// export const LAVA_CONNECTION_URL = 'https://g.w.lavanet.xyz:443/gateway/solana/rpc-http/bbc072e803a9a135fe62f7b3ad32d971'; // lava
-
 // MANGO
 export const JUPITER_V6_QUOTE_API_MAINNET = 'https://quote-api.jup.ag/v6'
 export const FUNDING_RATE_API = 'https://api.mngo.cloud/data/v4/one-hour-funding-rate?mango-group=78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
@@ -69,6 +60,15 @@ export const FUNDING_HOURLY = 'https://api.mngo.cloud/data/v4/one-hour-funding-r
 export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
 export const SOL_GROUP_PK = '78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
 export const COMMITTMENT = 'processed'
+export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy
+export const GROUP_PK = process.env.GROUP_PK || SOL_GROUP_PK; // SOL GROUP
+export const CLUSTER: Cluster = (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
+export const CLUSTER_URL = CONNECTION_URL;
+// export const CONNECTION_URL = 'https://mango-mango-d092.mainnet.rpcpool.com/';
+// export const CONNECTION_URL = 'https://side-indulgent-research.solana-mainnet.quiknode.pro/75ae6800554082022fe1a77e3f3b56e70067fdce';  //quicknode
+// export const CONNECTION_URL = 'https://ssc-dao.genesysgo.net';  //genesysgo
+// export const CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
+// export const LAVA_CONNECTION_URL = 'https://g.w.lavanet.xyz:443/gateway/solana/rpc-http/bbc072e803a9a135fe62f7b3ad32d971'; // lava
 
 export const PRIORITY_FEE_LEVELS = [
     { label: 'None', value: 0 },

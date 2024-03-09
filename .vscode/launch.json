@@ -4,21 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Launch via NPM",
-            "type": "node",
-            "request": "launch",
-            "cwd": "${workspaceRoot}/ui",
-            "console": "integratedTerminal",
-            "runtimeExecutable": "/Users/mebert/.nvm/versions/node/v21.5.0/bin/npm",
-            "runtimeArgs": [
-                "run-script",
-                "start"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ]
-        },
+       
         {
             "name": "Run Drift Bot",
             "type": "node",
@@ -57,19 +43,20 @@
             ]
         },
 
+       
         {
-            "name": "Run PM Sniper Bot",
+            "name": "Sniper Nodemon",
             "type": "node",
             "request": "launch",
             "cwd": "${workspaceRoot}/bots/mango",
             "console": "integratedTerminal",
             "runtimeExecutable": "/Users/mebert/.nvm/versions/node/v21.5.0/bin/npm",
             "env": {                      
-                "ANCHOR_WALLET": "/Users/mebert/.config/solana/solanaTradingWalletProd.txt"
+               
             },
             "runtimeArgs": [
                 "run-script",
-                "pm"
+                "nodemon"
             ],
             "skipFiles": [
                 "<node_internals>/**"

@@ -7,15 +7,6 @@ import {
 } from '@solana/web3.js';
 import { Wallet } from '@coral-xyz/anchor';
 
-export type JupiterSwap = {
-    stage: 'BORROW' | 'DEPOSIT' | 'SWAP' ,
-    in: 'USDC'|'SOL',
-    out: 'USDC'|'SOL',
-    inAmount: number,
-    outAmount:number,
-    txAmount:number
-    failed:boolean 
-}
 
 export type CacheItem = {
   date: Date,
@@ -64,14 +55,14 @@ export type AccountDefinition = {
     useMangoSpotTrades:boolean,
 };
 export type PendingTransaction = {
-    promise: Promise<any>,
-    type: 'PERP' | 'SWAP' | 'JUPSWAP'
+    type: 'PERP-BUY'|'PERP-SELL' | 'SPOT-BUY'|'SPOT-SELL' 
+      | 'JUP-BUY'  | 'JUP-SELL' | 'DEPOSIT' | 'BORROW',
     accountName: string,
-    side: 'BUY' | 'SELL',
     amount: number,
     price: number,
     oracle: number,
-    timestamp:number
+    timestamp:number,
+    status: 'COMPLETE' | 'FAILED' | 'PENDING',
 }
 
 export class TokenAccount {
@@ -116,7 +107,6 @@ export interface TotalInterestDataItem {
 }
 
 export interface SnipeResponse {
-    promises: Array<PendingTransaction>,
     accountDetails?: AccountDetail
 }
 

@@ -20,9 +20,10 @@ import {
     SWAP_ONLY_DIRECT_ROUTES
 } from './constants';
 import {
-    AccountDefinition
+    AccountDefinition, 
+    PendingTransaction
 } from './types';
-
+import * as db from './db';
 
 
 export const deserializeJupiterIxAndAlt = async (
@@ -119,53 +120,71 @@ export const spotTrade = async (
     side: 'BUY' | 'SELL',
     accountDefinition: AccountDefinition) => {
 
-    const amountBn = toNative(
-        Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
-        inBank.mintDecimals,
-    );
-    console.log('finding best route for amount = ' + amount);
-    const onlyDirectRoutes = SWAP_ONLY_DIRECT_ROUTES
-    const slippage = 100
-    const maxAccounts = 64
-    const swapMode = 'ExactIn'
-    const paramObj: any = {
-        inputMint: inBank.mint.toString(),
-        outputMint: outBank.mint.toString(),
-        amount: amountBn.toString(),
-        slippageBps: Math.ceil(slippage * 100).toString(),
-        swapMode,
-        onlyDirectRoutes: `${onlyDirectRoutes}`,
-        maxAccounts: `${maxAccounts}`,
-    }
-    const paramsString = new URLSearchParams(paramObj).toString()
-    const res = await axios.get(
-        `${JUPITER_V6_QUOTE_API_MAINNET}/quote?${paramsString}`,
-    )
-    const bestRoute = res.data
-    const [ixs, alts] = await fetchJupiterTransaction(
-        client.connection,
-        bestRoute,
-        user.publicKey,
-        0,
-        inBank.mint,
-        outBank.mint
-    );
-    let price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
-    if (side === 'BUY') {
-        price = (bestRoute.inAmount / 10 ** inBank.mintDecimals) / (bestRoute.outAmount / 10 ** outBank.mintDecimals)
-    }
-    console.log(`*** ${accountDefinition.name} MARGIN ${side}: `, amount, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
-    const sig = await client.marginTrade({
-        group: group,
-        mangoAccount: mangoAccount,
-        inputMintPk: inBank.mint,
-        amountIn: Number(amount.toFixed(3)),
-        outputMintPk: outBank.mint,
-        userDefinedInstructions: ixs,
-        userDefinedAlts: alts,
-        flashLoanType: FlashLoanType.swap
-    });
-    console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
-    return sig.signature
+        const swap: PendingTransaction = {
+            type: side === 'BUY' ? 'SPOT-BUY' : 'SPOT-SELL',
+            amount,
+            accountName: accountDefinition.name,
+            price: 0,
+            oracle: 0,
+            timestamp: Date.now(),
+            status: 'PENDING'
+        }
+    try {
+        const cacheKey = accountDefinition.name
+        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
 
+        const amountBn = toNative(
+            Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
+            inBank.mintDecimals,
+        );
+        console.log('finding best route for amount = ' + amount);
+        const onlyDirectRoutes = SWAP_ONLY_DIRECT_ROUTES
+        const slippage = 100
+        const maxAccounts = 64
+        const swapMode = 'ExactIn'
+        const paramObj: any = {
+            inputMint: inBank.mint.toString(),
+            outputMint: outBank.mint.toString(),
+            amount: amountBn.toString(),
+            slippageBps: Math.ceil(slippage * 100).toString(),
+            swapMode,
+            onlyDirectRoutes: `${onlyDirectRoutes}`,
+            maxAccounts: `${maxAccounts}`,
+        }
+        const paramsString = new URLSearchParams(paramObj).toString()
+        const res = await axios.get(
+            `${JUPITER_V6_QUOTE_API_MAINNET}/quote?${paramsString}`,
+        )
+        const bestRoute = res.data
+        const [ixs, alts] = await fetchJupiterTransaction(
+            client.connection,
+            bestRoute,
+            user.publicKey,
+            0,
+            inBank.mint,
+            outBank.mint
+        );
+        let price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
+        if (side === 'BUY') {
+            price = (bestRoute.inAmount / 10 ** inBank.mintDecimals) / (bestRoute.outAmount / 10 ** outBank.mintDecimals)
+        }
+        console.log(`*** ${accountDefinition.name} MARGIN ${side}: `, amount, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
+        swap.price = price
+        const sig = await client.marginTrade({
+            group: group,
+            mangoAccount: mangoAccount,
+            inputMintPk: inBank.mint,
+            amountIn: Number(amount.toFixed(3)),
+            outputMintPk: outBank.mint,
+            userDefinedInstructions: ixs,
+            userDefinedAlts: alts,
+            flashLoanType: FlashLoanType.swap
+        });
+        console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
+        swap.status = 'COMPLETE'
+        return sig.signature
+    } catch (e) {
+        swap.status = 'FAILED'
+        console.error('Error in spotTrade: ', e)
+    }
 }
