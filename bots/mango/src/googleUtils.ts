@@ -73,7 +73,7 @@ export async function updateGoogleSheet(googleSheets: any,
                 pendingTx.status,
                 pendingTx.price,
                 pendingTx.oracle,
-                pendingTx.type.startsWith('PERP') || pendingTx.type.startsWith('JUP') ?  amount : amount / solPrice,
+                amount,
                 toGoogleSheetsDate(new Date(pendingTx.timestamp))
             ])
         })

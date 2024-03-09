@@ -208,7 +208,7 @@ export const perpTrade = async (
         type: side === PerpOrderSide.bid ? 'PERP-BUY' : 'PERP-SELL',
         amount: size,
         accountName: accountDefinition.name,
-        price: 0,
+        price: price,
         oracle: price,
         timestamp: Date.now(),
         status: 'PENDING'
@@ -233,6 +233,7 @@ export const perpTrade = async (
             expiryTimestamp
         );
         console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
+        await sleep(ORDER_EXPIRATION * 1000)   
         swap.status = 'COMPLETE'
         db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey: swap.type + '-SUCCESS' })
         return order.signature

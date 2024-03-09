@@ -104,6 +104,7 @@ export function getItems(dbKeys: DB_KEYS[]) {
         for (const stringKey of stringKeys) {
             if (key.startsWith(stringKey)) {
                 items.push(value.item)
+                break
             }
         }
     }

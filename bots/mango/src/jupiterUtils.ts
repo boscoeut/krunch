@@ -235,7 +235,7 @@ export const doJupiterTrade = async (
             }
             if (sol - SOL_RESERVE < inAmount) {
                 // borrow SOL                
-                const borrowAmount = Math.max(MIN_SOL_BORROW, inAmount - sol - SOL_RESERVE + SOL_BUFFER)
+                const borrowAmount = Math.max(MIN_SOL_BORROW, inAmount - sol + SOL_RESERVE + SOL_BUFFER)
                 swap.type = 'BORROW'
                 swap.amount = borrowAmount
                 console.log('Borrowing SOL', borrowAmount)

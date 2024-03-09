@@ -21,7 +21,8 @@ import {
     QUOTE_BUFFER,
     SLEEP_MAIN_LOOP,
     SOL_RESERVE,
-    TRADE_SIZE
+    TRADE_SIZE,
+    TRANSACTION_EXPIRATION
 } from './constants';
 import * as db from './db';
 import { DB_KEYS } from './db';
@@ -140,7 +141,8 @@ async function snipePrices(
                 client.user]
         })
 
-        const hasOpenTransaction = db.getItem<PendingTransaction>(DB_KEYS.SWAP, { cacheKey: accountDefinition.name })?.status !== 'COMPLETE'
+        const openTransaction = db.getItem<PendingTransaction>(DB_KEYS.SWAP, { cacheKey: accountDefinition.name })
+        const hasOpenTransaction = openTransaction && openTransaction.status === 'PENDING'
 
         if (hasOpenTransaction) {
             console.log(`Skipping ${accountDefinition.name} due to openTx`)
@@ -160,8 +162,8 @@ async function snipePrices(
 
             let tradeSize = getTradeSize(requestedTradeSize, solAmount, action,
                 borrow, accountDefinition, solPrice, minPerp, maxPerp)
-            let increaseExposure = canIncreaseExposedPosition(hourlyRateAPR, 
-                aprMinThreshold, aprMaxThreshold, tradeSize, 
+            let increaseExposure = canIncreaseExposedPosition(hourlyRateAPR,
+                aprMinThreshold, aprMaxThreshold, tradeSize,
                 action, solAmount, minPerp, maxPerp)
 
             const walletSol = accountDetails.walletSol - SOL_RESERVE
@@ -169,12 +171,12 @@ async function snipePrices(
             const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
 
             if (action === 'BUY') {
-                if (!spotUnbalanced && (walletSol > MIN_SOL_WALLET_AMOUNT || accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT)) {
+                if ((!spotUnbalanced && walletSol > MIN_SOL_WALLET_AMOUNT) || accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT) {
                     doDeposit(
                         accountDefinition,
                         client,
                         accountDetails.walletUsdc,
-                        accountDetails.walletSol,
+                        spotUnbalanced ? 0 : accountDetails.walletSol,
                     )
                 } else if (spotUnbalanced && spotVsPerpDiff > 0) {
                     console.log('SELL SOL', tradeSize, spotVsPerpDiff)
@@ -207,11 +209,11 @@ async function snipePrices(
                 console.log('BUY PERP:', accountDefinition.name, promises.length, 'new transaction(s)')
             }
             if (action === 'SELL') {
-                if (!spotUnbalanced && (walletSol > MIN_SOL_WALLET_AMOUNT || accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT)) {
+                if ((!spotUnbalanced && accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT) || walletSol > MIN_SOL_WALLET_AMOUNT) {
                     doDeposit(
                         accountDefinition,
                         client,
-                        accountDetails.walletUsdc,
+                        spotUnbalanced ? 0 : accountDetails.walletUsdc,
                         accountDetails.walletSol,
                     )
                 } else if (spotUnbalanced && spotVsPerpDiff < 0) {
@@ -263,8 +265,8 @@ async function main(): Promise<void> {
     while (true) {
         console.log('Sniping Bot', new Date().toTimeString())
         try {
-            const hourlyRateAPR = await db.get<number>(DB_KEYS.FUNDING_RATE)            
-            
+            const hourlyRateAPR = await db.get<number>(DB_KEYS.FUNDING_RATE)
+
             for (const accountDefinition of accountDefinitions) {
                 try {
                     let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { params: [accountDefinition], cacheKey: accountDefinition.name })
@@ -276,26 +278,40 @@ async function main(): Promise<void> {
                         MAX_SHORT_PERP,
                         MAX_LONG_PERP,
                         client,
-                        CAN_TRADE && accountDefinition.canTrade)            
+                        CAN_TRADE && accountDefinition.canTrade)
                 } catch (e) {
                     console.error(`${accountDefinition.name} SNIPE ERROR`, e)
                 }
             }
 
             // update google sheet
+            const openTransactions: PendingTransaction[] = db.getItems([DB_KEYS.SWAP])
+            let numOpenTransactions = 0
+            for (const transaction of openTransactions) {
+                const expiresON = Date.now() - TRANSACTION_EXPIRATION
+                if (transaction.timestamp < expiresON && transaction.status === 'PENDING') {
+                    transaction.status = 'EXPIRED'
+                    db.incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey: transaction.type + '-EXPIRED' })
+                }
+                if (transaction.status === 'PENDING') {
+                    numOpenTransactions++
+                }
+            }
+
+
             const accountDetails = db.getItems([DB_KEYS.ACCOUNT_DETAILS])
             await updateGoogleSheet(googleSheets, accountDetails)
-            const openTransactions: PendingTransaction[] = db.getItems([DB_KEYS.SWAP]).filter((f: any) => f.status === 'PENDING')
+
             const solDiff = db.getItems([DB_KEYS.ACCOUNT_DETAILS])
-                .filter((f: AccountDetail) => 
-                    Math.abs(f.solDiff) > MIN_DIFF_SIZE 
-                    || f.walletUsdc > MIN_USDC_WALLET_AMOUNT 
+                .filter((f: AccountDetail) =>
+                    Math.abs(f.solDiff) > MIN_DIFF_SIZE
+                    || f.walletUsdc > MIN_USDC_WALLET_AMOUNT
                     || f.walletSol > MIN_SOL_WALLET_AMOUNT)
 
-            const shouldNotTrade = hourlyRateAPR > MINUS_THRESHOLD && hourlyRateAPR < PLUS_THRESHOLD 
-                && openTransactions.length === 0 && solDiff.length === 0
+            const shouldNotTrade = hourlyRateAPR > MINUS_THRESHOLD && hourlyRateAPR < PLUS_THRESHOLD
+                && numOpenTransactions === 0 && solDiff.length === 0
 
-            let sleepAmount = shouldNotTrade? NO_TRADE_TIMEOUT: SLEEP_MAIN_LOOP
+            let sleepAmount = shouldNotTrade ? NO_TRADE_TIMEOUT : SLEEP_MAIN_LOOP
             console.log('Sleeping for', sleepAmount > 1 ? sleepAmount : sleepAmount * 60, sleepAmount > 1 ? 'minutes' : 'seconds')
             await sleep(sleepAmount * 1000 * 60)
         } catch (e: any) {

@@ -4,7 +4,7 @@ import {Cluster} from '@solana/web3.js';
 // THRESHOLDS
 export const MAX_SHORT_PERP = -70
 export const MAX_LONG_PERP = 1
-export const MAX_SPOT_TRADE_SIZE = 2
+export const MAX_SPOT_TRADE_SIZE = 3
 export const MAX_PERP_TRADE_SIZE = 2
 export const EXTRA_USDC_AMOUNT = 0.02
 export const MIN_DIFF_SIZE = 0.1
@@ -25,7 +25,7 @@ export const TRADE_SIZE = 1.5
 export const ORDER_TYPE = PerpOrderType.limit
 export const ENFORCE_BEST_PRICE = false
 export const USDC_BUFFER = 1
-export const SOL_BUFFER = 0.015
+export const SOL_BUFFER = 0.005
 export const SWAP_ONLY_DIRECT_ROUTES = false
 export const JUP_ONLY_DIRECT_ROUTES = false
 
@@ -38,7 +38,7 @@ export const FILTER_TO_ACCOUNTS:Array<String> = []
 
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 0.9 * 60  
-export const TRANSACTION_EXPIRATION = .5 * 60 * 1000   
+export const TRANSACTION_EXPIRATION = 2 * 60 * 1000   
 export const FUNDING_RATE_CACHE_EXPIRATION = 1
 export const INTEREST_CACHE_EXPIRATION = 5
 export const FUNDING_CACHE_EXPIRATION = 5
