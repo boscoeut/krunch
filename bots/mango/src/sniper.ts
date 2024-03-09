@@ -175,7 +175,7 @@ async function snipePrices(
                         perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.bid, accountDefinition, false)
                     }
                 }
-                console.log('BUY PERP:', promises.length, 'new transaction(s)')
+                console.log('BUY PERP:', accountDefinition.name, promises.length, 'new transaction(s)')
             }
             if (action === 'SELL') {
                 if (!spotUnbalanced && (walletSol > MIN_SOL_WALLET_AMOUNT || accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT)) {
@@ -212,7 +212,7 @@ async function snipePrices(
                         perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false)
                     }
                 }
-                console.log('SELL PERP', promises.length, 'new transaction(s)')
+                console.log('SELL PERP', accountDefinition.name, promises.length, 'new transaction(s)')
             }
         }
     } catch (e) {
