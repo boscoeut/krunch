@@ -182,9 +182,11 @@ export const spotTrade = async (
         });
         console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
         swap.status = 'COMPLETE'
+        db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey : swap.type+'-SUCCESS' })
         return sig.signature
     } catch (e) {
         swap.status = 'FAILED'
+        db.incrementItem(db.DB_KEYS.NUM_TRADES_FAIL, { cacheKey : swap.type+'-FAIL' })
         console.error('Error in spotTrade: ', e)
     }
 }

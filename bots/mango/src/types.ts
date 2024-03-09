@@ -42,6 +42,7 @@ export type AccountDetail = {
     historicalFunding:number;
     walletSol: number;
     walletUsdc: number;
+    solDiff: number;
 };
 
 export type AccountDefinition = {

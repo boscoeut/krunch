@@ -1,29 +1,36 @@
-import { ACCOUNT_REFRESH_EXPIRATION, BID_ASK_CACHE_EXPIRATION, 
-    DEFAULT_CACHE_EXPIRATION, 
-    FUNDING_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION, 
-    INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION } from "./constants";
-import { fetchFundingData, fetchInterestData, fetchJupPrice, getBidsAndAsks, getFundingRate, reloadClient, setupClient } from './mangoUtils';
+import {
+    ACCOUNT_REFRESH_EXPIRATION, BID_ASK_CACHE_EXPIRATION,
+    DEFAULT_CACHE_EXPIRATION,
+    FUNDING_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION,
+    INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION
+} from "./constants";
+import { fetchFundingData, fetchInterestData, fetchJupPrice, getAccountData, getBidsAndAsks, getFundingRate, reloadClient, setupClient } from './mangoUtils';
 import { CacheItem } from "./types";
-const cache = new Map<string, any>();
 
 export enum DB_KEYS {
-    NUM_TRADES,
-    FUNDING_RATE,
-    FUNDING_DATA,
-    NUM_TRADES_SUCCESS,
-    NUM_TRADES_FAIL,
-    INTEREST_DATA,
-    JUP_PRICE,
-    RELOAD_CLIENT,
-    BIDS_AND_ASKS,
-    GET_CLIENT, 
-    SWAP
+    NUM_TRADES = "NUM_TRADES",
+    FUNDING_RATE = "FUNDING_RATE",
+    FUNDING_DATA = "FUNDING_DATA",
+    NUM_TRADES_SUCCESS = "NUM_TRADES_SUCCESS",
+    NUM_TRADES_FAIL = "NUM_TRADES_FAIL",
+    INTEREST_DATA = "INTEREST_DATA",
+    JUP_PRICE = "JUP_PRICE",
+    RELOAD_CLIENT = "RELOAD_CLIENT",
+    BIDS_AND_ASKS = "BIDS_AND_ASKS",
+    GET_CLIENT = "GET_CLIENT",
+    SWAP = "SWAP",
+    SOL_PRICE = "SOL_PRICE",
+    ACCOUNT_DETAILS = "ACCOUNT_DETAILS"
 }
 
 export type GetOptions = {
     force?: boolean,
     params?: any[],
     cacheKey?: string
+}
+export type Increment = {
+    key: string,
+    item: number
 }
 
 export type DBModifier<T> = {
@@ -38,7 +45,7 @@ export function registerModifier(key: DB_KEYS, modifier: DBModifier<any>) {
 }
 
 const getDBKey = (key: DB_KEYS, options?: GetOptions) => {
-    return key.toString() +"_"+ (options?.cacheKey || "")
+    return key.toString() + "_" + (options?.cacheKey || "")
 }
 
 export async function get<T>(key: DB_KEYS, options?: GetOptions): Promise<T> {
@@ -79,10 +86,14 @@ export function setItem(key: DB_KEYS, value: any, options?: GetOptions) {
 
 export function incrementItem(key: DB_KEYS, options?: GetOptions) {
     const dbKey = getDBKey(key, options)
-    const value = dbCache.get(dbKey)?.item || 0
+    const item = dbCache.get(dbKey)?.item
+    const value = item?.item || 0
     dbCache.set(dbKey, {
         date: new Date(),
-        item: value + 1    
+        item: {
+            item: value + 1,
+            key: options?.cacheKey || ""
+        }
     });
 }
 
@@ -90,8 +101,10 @@ export function getItems(dbKeys: DB_KEYS[]) {
     const items: any[] = []
     const stringKeys = dbKeys.map((key) => key.toString() + "_")
     for (const [key, value] of dbCache.entries()) {
-        if (stringKeys.includes(key)) {
-            items.push(value.item)
+        for (const stringKey of stringKeys) {
+            if (key.startsWith(stringKey)) {
+                items.push(value.item)
+            }
         }
     }
     return items
@@ -127,4 +140,8 @@ registerModifier(DB_KEYS.BIDS_AND_ASKS, {
 registerModifier(DB_KEYS.GET_CLIENT, {
     expiration: -1,
     modifier: setupClient
+})
+registerModifier(DB_KEYS.ACCOUNT_DETAILS, {
+    expiration: ACCOUNT_REFRESH_EXPIRATION,
+    modifier: getAccountData
 })

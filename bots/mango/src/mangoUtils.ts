@@ -31,6 +31,7 @@ import {
     ORDER_EXPIRATION,
     ORDER_TYPE,
     SOL_MINT,
+    SOL_RESERVE,
     USDC_MINT
 } from './constants';
 import * as db from './db';
@@ -233,9 +234,11 @@ export const perpTrade = async (
         );
         console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
         swap.status = 'COMPLETE'
+        db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey: swap.type + '-SUCCESS' })
         return order.signature
     } catch (e: any) {
         swap.status = 'FAILED'
+        db.incrementItem(db.DB_KEYS.NUM_TRADES_FAIL, { cacheKey: swap.type + '-FAIL' })
     }
 }
 
@@ -251,9 +254,9 @@ export const getClient = async (user: Keypair): Promise<Client> => {
         idsSource: 'get-program-accounts',
         prioritizationFee: DEFAULT_PRIORITY_FEE,
         // multipleConnections: backupConnections,
-        postSendTxCallback: (txCallbackOptions: any) => {
-            console.log('<<<<>>>> Transaction txCallbackOptions', txCallbackOptions)
-        }
+        // postSendTxCallback: (txCallbackOptions: any) => {
+        //     console.log('<<<<>>>> Transaction txCallbackOptions', txCallbackOptions)
+        // }
     });
     const group = await client.getGroup(new PublicKey(GROUP_PK));
     const ids = await client.getIds(group.publicKey);
@@ -345,7 +348,8 @@ export async function getAccountData(
         bestBid,
         historicalFunding,
         walletSol: sol,
-        walletUsdc: usdc
+        walletUsdc: usdc,
+        solDiff: solAmount + sol+solBalance-SOL_RESERVE
     }
 }
 

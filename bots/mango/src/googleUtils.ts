@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { DB_KEYS, getItems } from './db';
+import { DB_KEYS, Increment, getItems, getItem } from './db';
 import { AccountDetail, PendingTransaction } from './types';
 
 import { SPREADSHEET_ID } from './constants';
@@ -22,13 +22,13 @@ export function loadSavedCredentialsIfExist() {
 }
 
 export async function updateGoogleSheet(googleSheets: any,
-    accountDetails: AccountDetail[] = [],
-    fundingRate: number,
-    solPrice: number,
-    jupPrice: number,
-    jupSolPrice:number ) {
+    accountDetails: AccountDetail[] = []
+    ) {
     try {
-        
+        const fundingRate = getItem<number>(DB_KEYS.FUNDING_RATE)        
+        const jupPrice= <{solPrice:number, jupPrice:number}>getItem(DB_KEYS.JUP_PRICE)
+        const solPrice = getItem<number>(DB_KEYS.SOL_PRICE) || jupPrice.solPrice
+
         const openTransactions: PendingTransaction[] = getItems([DB_KEYS.SWAP])
         // clear old transactions
         const transactionRow = 20
@@ -78,18 +78,22 @@ export async function updateGoogleSheet(googleSheets: any,
         })
 
         // update stats
-        const statValues: any = getItems([DB_KEYS.NUM_TRADES, DB_KEYS.NUM_TRADES_FAIL, DB_KEYS.NUM_TRADES_SUCCESS])
-        statValues.sort((a: string, b: string) => a[1].localeCompare(b[1]));
+        const statValues: Increment[] = getItems([DB_KEYS.NUM_TRADES, DB_KEYS.NUM_TRADES_FAIL, DB_KEYS.NUM_TRADES_SUCCESS])
+        statValues.sort((a: Increment, b: Increment) => a.key.localeCompare(b.key));
+        const stats = statValues.map((stat) => [stat.key, stat.item]);
+        
 
         await googleSheets.spreadsheets.values.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,
             resource: {
                 valueInputOption: 'USER_ENTERED',
-                data: [{
+                data: [
+                    {
                     range: `SOL!J${transactionRow}:K${transactionRow + statValues.length}`,
-                    values: statValues,
+                    values: stats,
 
-                }, {
+                }, 
+                {
                     range: `SOL!A${transactionRow}:G${transactionRow + maxTransactionRows}`,
                     values: transactionValues,
 
@@ -104,7 +108,7 @@ export async function updateGoogleSheet(googleSheets: any,
 
                 }, {
                     range: `SOL!O1:O2`,
-                    values: [[jupSolPrice],[jupPrice]],
+                    values: [[jupPrice.solPrice],[jupPrice.jupPrice]],
                 }]
             }
         });

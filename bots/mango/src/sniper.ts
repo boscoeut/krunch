@@ -51,6 +51,66 @@ function roundToNearestHalf(num: number) {
     return Math.floor(num * 2) / 2;
 }
 
+async function getOpenOrders(client: Client, accountDetails: AccountDetail) {
+    if (!client.mangoAccount) return 0;
+    const orders = await client.mangoAccount.loadPerpOpenOrdersForMarket(
+        client.client,
+        client.group,
+        accountDetails.perpMarket.perpMarketIndex,
+        true
+    )
+    const numOpenOrders = orders.filter(order => !order.isExpired).length
+    return numOpenOrders
+}
+
+function canIncreaseExposedPosition(hourlyRateAPR: number,
+    aprMinThreshold: number,
+    aprMaxThreshold: number,
+    tradeSize: number,
+    action: 'BUY' | 'SELL',
+    solAmount: number,
+    minPerp: number,
+    maxPerp: number) {
+    let increaseExposure = (hourlyRateAPR > aprMaxThreshold || hourlyRateAPR < aprMinThreshold) && tradeSize >= MIN_SIZE
+    if (action === "BUY" && increaseExposure && solAmount >= maxPerp) {
+        increaseExposure = false
+    }
+    if (action === "SELL" && increaseExposure && solAmount <= minPerp) {
+        increaseExposure = false
+    }
+    return increaseExposure
+}
+
+function getTradeSize(requestedTradeSize: number, solAmount: number, action: 'BUY' | 'SELL',
+    borrow: number, accountDefinition: AccountDefinition, solPrice: number, minPerp: number, maxPerp: number
+) {
+    const freeCash = borrow - accountDefinition.healthThreshold
+    let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0
+    maxSize = roundToNearestHalf(maxSize)
+
+    if (action === 'BUY' && solAmount < maxPerp) {
+        maxSize = Math.min(maxSize, maxPerp - solAmount)
+    }
+    if (action === 'SELL' && solAmount > minPerp) {
+        maxSize = Math.min(maxSize, Math.abs(minPerp) + solAmount)
+    }
+
+    const optimalSize = maxSize
+    let tradeSize = requestedTradeSize
+
+    if (solAmount > 0 && action === "BUY") {
+        tradeSize = Math.min(requestedTradeSize, optimalSize)
+    } else if (solAmount < 0 && action === "BUY") {
+        tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount))
+    } else if (solAmount < 0 && action === "SELL") {
+        tradeSize = Math.min(requestedTradeSize, optimalSize)
+    } else if (solAmount > 0 && action === "SELL") {
+        tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount))
+    }
+
+    return tradeSize
+
+}
 async function snipePrices(
     accountDefinition: AccountDefinition,
     requestedTradeSize: number,
@@ -71,72 +131,41 @@ async function snipePrices(
 
         db.get<void>(DB_KEYS.RELOAD_CLIENT, { params: [client], cacheKey: accountDefinition.name, force: canTrade })
 
-        accountDetails = await getAccountData(accountDefinition,
-            client.client,
-            client.group,
-            client.mangoAccount,
-            client.user)
+        accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
+            cacheKey: accountDefinition.name, params: [
+                accountDefinition,
+                client.client,
+                client.group,
+                client.mangoAccount,
+                client.user]
+        })
 
-        const orders = await client.mangoAccount.loadPerpOpenOrdersForMarket(
-            client.client,
-            client.group,
-            accountDetails.perpMarket.perpMarketIndex,
-            true
-        )
-        const numOpenOrders = orders.filter(order => !order.isExpired).length
-        const openTransaction = db.getItem<PendingTransaction>(DB_KEYS.SWAP, { cacheKey: accountDefinition.name })
+        const hasOpenTransaction = db.getItem<PendingTransaction>(DB_KEYS.SWAP, { cacheKey: accountDefinition.name })?.status !== 'COMPLETE'
 
-        if (openTransaction && openTransaction.status !== 'COMPLETE') {
-            console.log(`Skipping ${accountDefinition.name} due to openTx=${openTransaction}`)
-        } else if (numOpenOrders > 0) {
-            console.log(`Skipping ${accountDefinition.name} due to # Open Orders=${numOpenOrders}`)
+        if (hasOpenTransaction) {
+            console.log(`Skipping ${accountDefinition.name} due to openTx`)
         } else if (!canTrade) {
             console.log(`Skipping ${accountDefinition.name} due to canTrade=${canTrade}`)
+        } else if (await getOpenOrders(client, accountDetails) > 0) {
+            console.log(`Skipping ${accountDefinition.name} due to # Open Orders > 0`)
         } else {
             const { solPrice, solBalance,
                 borrow, solAmount,
                 solBank, usdcBank, perpMarket } = accountDetails
-            let action: 'HOLD' | 'BUY' | 'SELL' = 'HOLD'
-            if (hourlyRateAPR < 0) {
-                action = 'BUY'
-            } else {
+            db.setItem(DB_KEYS.SOL_PRICE, solPrice)
+            let action: 'BUY' | 'SELL' = 'BUY'
+            if (hourlyRateAPR >= 0) {
                 action = 'SELL'
             }
 
-            const freeCash = borrow - accountDefinition.healthThreshold
-            let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0
-            maxSize = roundToNearestHalf(maxSize)
+            let tradeSize = getTradeSize(requestedTradeSize, solAmount, action,
+                borrow, accountDefinition, solPrice, minPerp, maxPerp)
+            let increaseExposure = canIncreaseExposedPosition(hourlyRateAPR, 
+                aprMinThreshold, aprMaxThreshold, tradeSize, 
+                action, solAmount, minPerp, maxPerp)
 
-            if (action === 'BUY' && solAmount < maxPerp) {
-                maxSize = Math.min(maxSize, maxPerp - solAmount)
-            }
-            if (action === 'SELL' && solAmount > minPerp) {
-                maxSize = Math.min(maxSize, Math.abs(minPerp) + solAmount)
-            }
-
-            const optimalSize = maxSize
-
-            let tradeSize = requestedTradeSize
-
-            if (solAmount > 0 && action === "BUY") {
-                tradeSize = Math.min(requestedTradeSize, optimalSize)
-            } else if (solAmount < 0 && action === "BUY") {
-                tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount))
-            } else if (solAmount < 0 && action === "SELL") {
-                tradeSize = Math.min(requestedTradeSize, optimalSize)
-            } else if (solAmount > 0 && action === "SELL") {
-                tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount))
-            }
-            let increaseExposure = (hourlyRateAPR > aprMaxThreshold || hourlyRateAPR < aprMinThreshold) && tradeSize >= MIN_SIZE
-            if (action === "BUY" && increaseExposure && solAmount >= maxPerp) {
-                increaseExposure = false
-            }
-            if (action === "SELL" && increaseExposure && solAmount <= minPerp) {
-                increaseExposure = false
-            }
             const walletSol = accountDetails.walletSol - SOL_RESERVE
             const spotVsPerpDiff = solBalance + solAmount + walletSol
-
             const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
 
             if (action === 'BUY') {
@@ -235,10 +264,7 @@ async function main(): Promise<void> {
     while (true) {
         console.log('Sniping Bot', new Date().toTimeString())
         try {
-            let numberOfTransactions = 0
-            const hourlyRateAPR = await db.get<number>(DB_KEYS.FUNDING_RATE)
-            console.log(`hourlyRateAPR = ${hourlyRateAPR}%`)
-
+            const hourlyRateAPR = await db.get<number>(DB_KEYS.FUNDING_RATE)            
             const prices = await db.get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)
 
             const run: any = []
@@ -262,10 +288,17 @@ async function main(): Promise<void> {
 
             // update google sheet
             const accountDetails: AccountDetail[] = run.map((result: any) => result.accountDetails).filter((f: any) => f !== undefined) as AccountDetail[]
-            await updateGoogleSheet(googleSheets, accountDetails, hourlyRateAPR, accountDetails[0].solPrice, prices.jupPrice, prices.solPrice)
+            await updateGoogleSheet(googleSheets, accountDetails)
+
+            const openTransactions: PendingTransaction[] = db.getItems([DB_KEYS.SWAP]).filter((f: any) => f.status === 'PENDING')
+            const solDiff = db.getItems([DB_KEYS.ACCOUNT_DETAILS])
+                .filter((f: AccountDetail) => Math.abs(f.solDiff) > MIN_DIFF_SIZE || f.walletUsdc > MIN_USDC_WALLET_AMOUNT || f.walletSol > MIN_SOL_WALLET_AMOUNT)
+
+            const shouldNotTrade = hourlyRateAPR > MINUS_THRESHOLD && hourlyRateAPR < PLUS_THRESHOLD 
+                && openTransactions.length === 0 && solDiff.length === 0
 
             let sleepAmount = SLEEP_MAIN_LOOP
-            if (hourlyRateAPR > MINUS_THRESHOLD && hourlyRateAPR < PLUS_THRESHOLD) {
+            if (shouldNotTrade) {
                 sleepAmount = NO_TRADE_TIMEOUT
             }
             console.log('Sleeping for', sleepAmount > 1 ? sleepAmount : sleepAmount * 60, sleepAmount > 1 ? 'minutes' : 'seconds')

@@ -23,7 +23,7 @@ import {
     USDC_DECIMALS,
     USDC_MINT
 } from './constants';
-import { DB_KEYS, setItem } from './db';
+import { DB_KEYS, incrementItem, setItem,getItem } from './db';
 import {
     AccountDefinition,
     Client,
@@ -104,14 +104,14 @@ export const doDeposit = async (
     accountDefinition: AccountDefinition,
     client: Client,
     usdc: number,
-    sol: number,): Promise<PendingTransaction> => {
+    sol: number): Promise<PendingTransaction> => {
 
     const swap: PendingTransaction = {
         type: 'DEPOSIT',
         amount: 0,
         accountName: accountDefinition.name,
-        price: 0,
-        oracle: 0,
+        price: getItem(DB_KEYS.SOL_PRICE) || 0,
+        oracle: getItem(DB_KEYS.SOL_PRICE) || 0,
         timestamp: Date.now(),
         status: 'PENDING'
     }
@@ -171,7 +171,7 @@ export const doJupiterTrade = async (
         type: inMint === USDC_MINT ? 'JUP-BUY' : 'JUP-SELL',
         amount: inAmount,
         accountName: accountDefinition.name,
-        price: 0,
+        price: solPrice,
         oracle: solPrice,
         timestamp: Date.now(),
         status: 'PENDING'
@@ -260,9 +260,11 @@ export const doJupiterTrade = async (
             }
         }
         swap.status = 'COMPLETE'
+        incrementItem(DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey : swap.type+'-SUCCESS' })
         return swap
     } catch (e: any) {
         console.log('Error in doJupiterTrade', e)
+        incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey : swap.type+'-FAIL' })
         swap.status = 'FAILED'
         return swap
     }
