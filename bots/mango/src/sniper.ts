@@ -22,6 +22,7 @@ import {
     SLEEP_MAIN_LOOP,
     SOL_RESERVE,
     TRADE_SIZE,
+    CHECK_OPEN_ORDERS,
     TRANSACTION_EXPIRATION
 } from './constants';
 import * as db from './db';
@@ -35,7 +36,6 @@ import {
     spotTrade
 } from './mangoSpotUtils';
 import {
-    getAccountData,
     perpTrade, sleep
 } from './mangoUtils';
 import {
@@ -148,7 +148,7 @@ async function snipePrices(
             console.log(`Skipping ${accountDefinition.name} due to openTx`)
         } else if (!canTrade) {
             console.log(`Skipping ${accountDefinition.name} due to canTrade=${canTrade}`)
-        } else if (await getOpenOrders(client, accountDetails) > 0) {
+        } else if (CHECK_OPEN_ORDERS && await getOpenOrders(client, accountDetails) > 0) {
             console.log(`Skipping ${accountDefinition.name} due to # Open Orders > 0`)
         } else {
             const { solPrice, solBalance,
@@ -262,25 +262,30 @@ async function main(): Promise<void> {
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
 
+    let checkAccounts = true
+    let timeout: NodeJS.Timeout | undefined
     while (true) {
         console.log('Sniping Bot', new Date().toTimeString())
         try {
             const hourlyRateAPR = await db.get<number>(DB_KEYS.FUNDING_RATE)
 
-            for (const accountDefinition of accountDefinitions) {
-                try {
-                    let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { params: [accountDefinition], cacheKey: accountDefinition.name })
-                    await snipePrices(accountDefinition,
-                        TRADE_SIZE,
-                        MINUS_THRESHOLD,
-                        PLUS_THRESHOLD,
-                        hourlyRateAPR,
-                        MAX_SHORT_PERP,
-                        MAX_LONG_PERP,
-                        client,
-                        CAN_TRADE && accountDefinition.canTrade)
-                } catch (e) {
-                    console.error(`${accountDefinition.name} SNIPE ERROR`, e)
+
+            if (checkAccounts) {
+                for (const accountDefinition of accountDefinitions) {
+                    try {
+                        let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { params: [accountDefinition], cacheKey: accountDefinition.name })
+                        await snipePrices(accountDefinition,
+                            TRADE_SIZE,
+                            MINUS_THRESHOLD,
+                            PLUS_THRESHOLD,
+                            hourlyRateAPR,
+                            MAX_SHORT_PERP,
+                            MAX_LONG_PERP,
+                            client,
+                            CAN_TRADE && accountDefinition.canTrade)
+                    } catch (e) {
+                        console.error(`${accountDefinition.name} SNIPE ERROR`, e)
+                    }
                 }
             }
 
@@ -298,7 +303,6 @@ async function main(): Promise<void> {
                 }
             }
 
-
             const accountDetails = db.getItems([DB_KEYS.ACCOUNT_DETAILS])
             await updateGoogleSheet(googleSheets, accountDetails)
 
@@ -310,8 +314,15 @@ async function main(): Promise<void> {
 
             const shouldNotTrade = hourlyRateAPR > MINUS_THRESHOLD && hourlyRateAPR < PLUS_THRESHOLD
                 && numOpenTransactions === 0 && solDiff.length === 0
+            if (shouldNotTrade && !timeout) {   
+                checkAccounts = false
+                timeout = setTimeout(() => {
+                    checkAccounts = true
+                    timeout = undefined
+                },NO_TRADE_TIMEOUT*1000*60)
+            }
 
-            let sleepAmount = shouldNotTrade ? NO_TRADE_TIMEOUT : SLEEP_MAIN_LOOP
+            let sleepAmount = SLEEP_MAIN_LOOP
             console.log('Sleeping for', sleepAmount > 1 ? sleepAmount : sleepAmount * 60, sleepAmount > 1 ? 'minutes' : 'seconds')
             await sleep(sleepAmount * 1000 * 60)
         } catch (e: any) {

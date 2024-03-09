@@ -15,8 +15,8 @@ export const MIN_SOL_WALLET_AMOUNT = 0.1
 export const MIN_USDC_WALLET_AMOUNT = 10
 
 // TRADING TRIGGERS
-export const MINUS_THRESHOLD = -100
-export const PLUS_THRESHOLD = 100
+export const MINUS_THRESHOLD = -75
+export const PLUS_THRESHOLD = 75
 
 // TRADING PARAMS
 export const MIN_SIZE = 0.1
@@ -27,12 +27,13 @@ export const ENFORCE_BEST_PRICE = false
 export const USDC_BUFFER = 1
 export const SOL_BUFFER = 0.005
 export const SWAP_ONLY_DIRECT_ROUTES = false
-export const JUP_ONLY_DIRECT_ROUTES = false
+export const JUP_ONLY_DIRECT_ROUTES = true
+export const CHECK_OPEN_ORDERS = false
 
 // MAIN LOOP
 export const CAN_TRADE = true
 export const NO_TRADE_TIMEOUT = 5
-export const SLEEP_MAIN_LOOP = CAN_TRADE ? 0.1 : 1
+export const SLEEP_MAIN_LOOP = 0.25
 export const FILTER_TO_ACCOUNTS:Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
 
@@ -76,9 +77,8 @@ export const PRIORITY_FEE_LEVELS = [
     { label: 'High', value: 4 },
   ]
 
-  export const DEFAULT_PRIORITY_FEE = 2
-  export const DEFAULT_PRIORITY_FEE_LEVEL = PRIORITY_FEE_LEVELS[1]
-
+  export const DEFAULT_PRIORITY_FEE = 400
+  
   // JUP
   export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL"
 

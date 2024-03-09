@@ -86,6 +86,7 @@ export function setItem(key: DB_KEYS, value: any, options?: GetOptions) {
 
 export function incrementItem(key: DB_KEYS, options?: GetOptions) {
     const dbKey = getDBKey(key, options)
+    console.log('INCREMENTING', dbKey)
     const item = dbCache.get(dbKey)?.item
     const value = item?.item || 0
     dbCache.set(dbKey, {

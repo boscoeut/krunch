@@ -26,7 +26,8 @@ export async function updateGoogleSheet(googleSheets: any,
     accountDetails: AccountDetail[] = []
     ) {
     try {
-        const fundingRate = getItem<number>(DB_KEYS.FUNDING_RATE)      
+        const fundingRate = getItem<number>(DB_KEYS.FUNDING_RATE)     
+        console.log('fundingRate', fundingRate) 
         const jupPrice = await db.get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)          
         const solPrice = getItem<number>(DB_KEYS.SOL_PRICE) || jupPrice.solPrice
 
@@ -42,6 +43,7 @@ export async function updateGoogleSheet(googleSheets: any,
         //  accounts
         let endRow = START_ROW + accountDetails.length
         const ACCOUNT_VALUES_RANGE = `SOL!A${START_ROW}:N${endRow}`;
+        accountDetails.sort((a, b) => a.name.localeCompare(b.name));
         const accountValues = accountDetails.map((accountDetail) => {
             return [
                 accountDetail.name,
@@ -60,11 +62,12 @@ export async function updateGoogleSheet(googleSheets: any,
                 accountDetail.usdcBalance
             ]
         });
-
+     
         const bestBid = accountDetails[0].bestBid
         const bestAsk = accountDetails[0].bestAsk
 
         const transactionValues: any = []
+        openTransactions.sort((a:PendingTransaction, b:PendingTransaction) => a.accountName.localeCompare(b.accountName));
         openTransactions.forEach((pendingTx) => {
             const amount = pendingTx.amount
             transactionValues.push([

@@ -40,7 +40,6 @@ export const performJupiterSwap = async (
     inDecimals: number,
     wallet?: Wallet
 ) => {
-    console.log('performJupiterSwap called')
     const amountBn = toNative(
         Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
         inDecimals,
@@ -75,7 +74,10 @@ export const performJupiterSwap = async (
                 // user public key to be used for the swap
                 userPublicKey: user,
                 slippageBps: Math.ceil(slippage * 100),
-                wrapAndUnwrapSol: true
+                wrapAndUnwrapSol: true, 
+                dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000
+                // custom priority fee
+                prioritizationFeeLamports: 'auto' 
             }),
         })
     ).json()
@@ -96,7 +98,6 @@ export const performJupiterSwap = async (
         maxRetries: 2
 
     });
-    console.log('>> JUPITER SWAP txid', txid);
     await client.connection.confirmTransaction(txid);
 }
 
@@ -150,7 +151,7 @@ export const doDeposit = async (
         swap.status = 'COMPLETE'
         return swap
     } catch (e: any) {
-        console.log('Error in doJupiterTrade', e)
+        console.log('Error in doDeposit', e)
         swap.status = 'FAILED'
         return swap
     }
@@ -187,7 +188,7 @@ export const doJupiterTrade = async (
                 swap.type = 'DEPOSIT'
                 const depositAmount = sol - SOL_RESERVE
                 swap.amount = depositAmount
-                console.log('Importing SOL', swap.amount)
+                console.log(accountDefinition.name,'Importing SOL', swap.amount)
                 await client.client.tokenDeposit(
                     client.group,
                     client.mangoAccount,
@@ -200,7 +201,7 @@ export const doJupiterTrade = async (
                 swap.type = 'BORROW'
                 const borrowAmount = Math.max(MIN_USDC_BORROW, inAmount - usdc + USDC_BUFFER)
                 swap.amount = borrowAmount
-                console.log('Borrowing USDC', swap.amount)
+                console.log(accountDefinition.name,'Borrowing USDC', swap.amount)
                 await client.client.tokenWithdraw(
                     client.group,
                     client.mangoAccount,
@@ -211,7 +212,7 @@ export const doJupiterTrade = async (
             } else if (usdc >= inAmount) {
                 // swap usdc to sol
                 swap.amount = usdc
-                console.log('Swapping USDC to SOL: ' + usdc)
+                console.log(accountDefinition.name,'Swapping USDC to SOL: ' + usdc)
                 await performJupiterSwap(client.client,
                     client.user.publicKey,
                     inMint,
@@ -225,7 +226,7 @@ export const doJupiterTrade = async (
                 // import USDC
                 swap.type = 'DEPOSIT'
                 swap.amount = usdc
-                console.log('Importing USDC', usdc)
+                console.log(accountDefinition.name,'Importing USDC', usdc)
                 await client.client.tokenDeposit(
                     client.group,
                     client.mangoAccount,
@@ -238,7 +239,7 @@ export const doJupiterTrade = async (
                 const borrowAmount = Math.max(MIN_SOL_BORROW, inAmount - sol + SOL_RESERVE + SOL_BUFFER)
                 swap.type = 'BORROW'
                 swap.amount = borrowAmount
-                console.log('Borrowing SOL', borrowAmount)
+                console.log(accountDefinition.name,'Borrowing SOL', borrowAmount)
                 await client.client.tokenWithdraw(
                     client.group,
                     client.mangoAccount,
@@ -249,7 +250,7 @@ export const doJupiterTrade = async (
             } else if (sol - SOL_RESERVE >= inAmount) {
                 // swap sol to USDC
                 swap.amount = sol - SOL_RESERVE
-                console.log('Swapping SOL to USDC: ' + swap.amount)
+                console.log(accountDefinition.name,'Swapping SOL to USDC: ' + swap.amount)
                 await performJupiterSwap(client.client,
                     client.user.publicKey,
                     inMint,

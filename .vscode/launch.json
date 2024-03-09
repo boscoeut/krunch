@@ -41,24 +41,6 @@
             "skipFiles": [
                 "<node_internals>/**"
             ]
-        },       
-        {
-            "name": "Sniper Nodemon",
-            "type": "node",
-            "request": "launch",
-            "cwd": "${workspaceRoot}/bots/mango",
-            "console": "integratedTerminal",
-            "runtimeExecutable": "/Users/mebert/.nvm/versions/node/v21.5.0/bin/npm",
-            "env": {                      
-               
-            },
-            "runtimeArgs": [
-                "run-script",
-                "nodemon"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ]
-        },
+        }
     ]
 }
