@@ -16,7 +16,7 @@ export const MIN_USDC_WALLET_AMOUNT = 10
 
 // TRADING TRIGGERS
 export const MINUS_THRESHOLD = -75
-export const PLUS_THRESHOLD = 40
+export const PLUS_THRESHOLD = 30
 
 // TRADING PARAMS
 export const MIN_SIZE = 0.1

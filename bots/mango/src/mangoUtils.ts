@@ -213,10 +213,9 @@ export const perpTrade = async (
         timestamp: Date.now(),
         status: 'PENDING'
     }
+    const cacheKey = accountDefinition.name
     try {
-        const cacheKey = accountDefinition.name
         db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
-
         const expiryTimestamp = Date.now() / 1000 + ORDER_EXPIRATION;
         console.log(`**** ${accountDefinition.name} PERP ${side === PerpOrderSide.ask ? "SELL" : "BUY"} order for ${size} at ${price}`)
         const order = await client.perpPlaceOrder(
@@ -235,11 +234,13 @@ export const perpTrade = async (
         console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
         await sleep(ORDER_EXPIRATION * 1000)   
         swap.status = 'COMPLETE'
+        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
         db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey: swap.type + '-SUCCESS' })
         return order.signature
     } catch (e: any) {
         swap.status = 'FAILED'
         console.log('Error in perpTrade', e.message)
+        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
         db.incrementItem(db.DB_KEYS.NUM_TRADES_FAIL, { cacheKey: swap.type + '-FAIL' })
     }
 }

@@ -116,8 +116,8 @@ export const doDeposit = async (
         timestamp: Date.now(),
         status: 'PENDING'
     }
+    const cacheKey = accountDefinition.name
     try {
-        const cacheKey = accountDefinition.name
         setItem(DB_KEYS.SWAP, swap, { cacheKey })
         if (!client.mangoAccount) {
             console.log('Mango account not found')
@@ -149,10 +149,12 @@ export const doDeposit = async (
             )
         }
         swap.status = 'COMPLETE'
+        setItem(DB_KEYS.SWAP, swap, { cacheKey })
         return swap
     } catch (e: any) {
         console.log('Error in doDeposit', e.message)
         swap.status = 'FAILED'
+        setItem(DB_KEYS.SWAP, swap, { cacheKey })
         return swap
     }
 

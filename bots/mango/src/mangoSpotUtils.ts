@@ -129,8 +129,8 @@ export const spotTrade = async (
             timestamp: Date.now(),
             status: 'PENDING'
         }
+    const cacheKey = accountDefinition.name
     try {
-        const cacheKey = accountDefinition.name
         db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
 
         const amountBn = toNative(
@@ -182,10 +182,12 @@ export const spotTrade = async (
         });
         console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
         swap.status = 'COMPLETE'
+        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
         db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey : swap.type+'-SUCCESS' })
         return sig.signature
     } catch (e:any) {
         swap.status = 'FAILED'
+        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
         db.incrementItem(db.DB_KEYS.NUM_TRADES_FAIL, { cacheKey : swap.type+'-FAIL' })
         console.error('Error in spotTrade: ', e.message)
     }
