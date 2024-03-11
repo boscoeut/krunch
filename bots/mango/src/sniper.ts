@@ -15,6 +15,7 @@ import {
     MIN_DIFF_SIZE,
     MIN_SIZE,
     DEFAULT_PRIORITY_FEE,
+    FEE_MULTIPLIER,
     MIN_SOL_WALLET_AMOUNT,
     MIN_USDC_WALLET_AMOUNT,
     NO_TRADE_TIMEOUT,
@@ -279,9 +280,9 @@ async function main(): Promise<void> {
 
             if (checkAccounts || rateInRange) {
                 const newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
-                const newFee = Math.min(newFeeEstimate, MAX_FEE)
+                const newFee = Math.min(newFeeEstimate* FEE_MULTIPLIER, MAX_FEE)
                 const feeDiff = Math.abs(newFee - feeEstimate) > FEE_DIFF_BUFFER
-                console.log(`New Fee: ${newFee} New Fee Estimate:${newFeeEstimate} FeeDiff: ${feeDiff} OldFee=${feeEstimate}`)     
+                console.log(`New Fee: ${newFee} New Fee Estimate:${newFeeEstimate} FeeDiff: ${feeDiff} OldFee=${feeEstimate}, FeeMultiplier=${FEE_MULTIPLIER}`)     
 
                 for (const accountDefinition of accountDefinitions) {
                     try {

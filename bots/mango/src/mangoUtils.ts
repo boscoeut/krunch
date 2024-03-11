@@ -284,7 +284,6 @@ export const handleEstimateFeeWithAddressLookup = async () => {
 
     const addressLookupTable= GROUP_ADDRESS_LOOKUP_TABLE_KEY
     const connection = new Connection(FEE_CONNECTION_URL!, COMMITTMENT);
-    const priorityFeeMultiplier = DEFAULT_PRIORITY_FEE
     const altResponse = await connection.getAddressLookupTable(addressLookupTable)
     const altKeys = altResponse.value?.state.addresses
     if (!altKeys) return
@@ -314,7 +313,7 @@ export const handleEstimateFeeWithAddressLookup = async () => {
             : (recentFees[mid - 1].prioritizationFee +
                 recentFees[mid].prioritizationFee) /
             2
-    console.log('FEES', priorityFeeMultiplier, medianFee)
+    console.log('FEES', medianFee)
     return medianFee
 }
 

@@ -78,13 +78,8 @@ export const GROUP_ADDRESS_LOOKUP_TABLE_KEY = new PublicKey("AgCBUZ6UMWqPLftTxeA
 // export const CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
 
 
-export const PRIORITY_FEE_LEVELS = [
-    { label: 'None', value: 0 },
-    { label: 'Low', value: 2 }, //  +100%
-    { label: 'High', value: 4 },
-  ]
-
   export const DEFAULT_PRIORITY_FEE = 55000
+  export const FEE_MULTIPLIER = 1
   
   // JUP
   export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL"
