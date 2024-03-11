@@ -32,9 +32,11 @@ import {
     ORDER_TYPE,
     SOL_MINT,
     SOL_RESERVE,
+    MAX_PRIORITY_FEE_KEYS,
     USDC_MINT
 } from './constants';
 import * as db from './db';
+import { groupBy, mapValues, maxBy, sampleSize } from 'lodash'
 import {
     AccountDefinition,
     AccountDetail,
@@ -138,7 +140,7 @@ export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient
 export async function getFundingRate() {
     const fundingRate = await axios.get(FUNDING_RATE_API)
     const data: any = fundingRate.data
-    if (data.find) {
+    if (data?.find) {
         const hourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
         return Number((hourlyRate * 100 * 24 * 365).toFixed(3))
     } else {
@@ -235,7 +237,7 @@ export const perpTrade = async (
         swap.status = 'ORDERED'
         db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey: swap.type + '-SUCCESS' })
         db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
-        await sleep(ORDER_EXPIRATION * 1000)   
+        await sleep(ORDER_EXPIRATION * 1000)
         swap.status = 'COMPLETE'
         db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
         return order.signature
@@ -247,6 +249,12 @@ export const perpTrade = async (
     }
 }
 
+export function toFixedFloor(num: number, fixed: number = 4): number {
+    const power = Math.pow(10, fixed);
+    const val = (Math.floor(num * power) / power).toFixed(fixed);
+    return Number(val)
+}
+
 export const getClient = async (user: Keypair): Promise<Client> => {
     const options = AnchorProvider.defaultOptions();
     const connection = new Connection(CLUSTER_URL!, COMMITTMENT);
@@ -254,7 +262,7 @@ export const getClient = async (user: Keypair): Promise<Client> => {
 
     const wallet = new Wallet(user);
     const provider = new AnchorProvider(connection, wallet, options);
-    provider.opts.skipPreflight = true // TODO
+    // provider.opts.skipPreflight = true // TODO
     const client = MangoClient.connect(provider, CLUSTER, MANGO_V4_ID[CLUSTER], {
         idsSource: 'get-program-accounts',
         prioritizationFee: DEFAULT_PRIORITY_FEE,
@@ -268,6 +276,50 @@ export const getClient = async (user: Keypair): Promise<Client> => {
     return {
         client, user, group, ids, wallet
     }
+}
+
+export const handleEstimateFeeWithAddressLookup = async (
+    appClient: Client
+) => {
+    const group = appClient.group
+    const client = appClient.client
+    const mangoAccount = appClient.mangoAccount
+    const priorityFeeMultiplier = DEFAULT_PRIORITY_FEE
+
+    if (!mangoAccount || !group || !client) return
+
+    const altResponse = await appClient.client.connection.getAddressLookupTable(
+        group.addressLookupTables[0],
+    )
+    const altKeys = altResponse.value?.state.addresses
+    if (!altKeys) return
+
+    const addresses = sampleSize(altKeys, MAX_PRIORITY_FEE_KEYS)
+
+    const fees = await appClient.client.connection.getRecentPrioritizationFees({
+        lockedWritableAccounts: addresses,
+    })
+
+    if (fees.length < 1) return
+
+    // get max priority fee per slot (and sort by slot from old to new)
+    const maxFeeBySlot = mapValues(groupBy(fees, 'slot'), (items) =>
+        maxBy(items, 'prioritizationFee'),
+    )
+    const maximumFees: any = Object.values(maxFeeBySlot).sort(
+        (a: any, b: any) => a!.slot - b!.slot,
+    ) as []
+
+    // get median of last 20 fees
+    const recentFees = maximumFees.slice(Math.max(maximumFees.length - 20, 0))
+    const mid = Math.floor(recentFees.length / 2)
+    const medianFee =
+        recentFees.length % 2 !== 0
+            ? recentFees[mid].prioritizationFee
+            : (recentFees[mid - 1].prioritizationFee +
+                recentFees[mid].prioritizationFee) /
+            2
+    console.log('FEES', priorityFeeMultiplier, medianFee)
 }
 
 export async function reloadClient(client: Client) {
@@ -354,7 +406,7 @@ export async function getAccountData(
         historicalFunding,
         walletSol: sol,
         walletUsdc: usdc,
-        solDiff: solAmount + sol+solBalance-SOL_RESERVE
+        solDiff: solAmount + sol + solBalance - SOL_RESERVE
     }
 }
 

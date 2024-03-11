@@ -2,8 +2,8 @@ import {PerpOrderType} from '@blockworks-foundation/mango-v4';
 import {Cluster} from '@solana/web3.js';
 
 // THRESHOLDS
-export const MAX_SHORT_PERP = -60
-export const MAX_LONG_PERP = 60
+export const MAX_SHORT_PERP = -50
+export const MAX_LONG_PERP = 0
 export const MAX_SPOT_TRADE_SIZE = 3
 export const MAX_PERP_TRADE_SIZE = 2
 export const EXTRA_USDC_AMOUNT = 0.02
@@ -19,6 +19,7 @@ export const MINUS_THRESHOLD = -75
 export const PLUS_THRESHOLD = 75
 
 // TRADING PARAMS
+export const CAN_TRADE = true
 export const MIN_SIZE = 0.1
 export const QUOTE_BUFFER = 0.12
 export const TRADE_SIZE = 0.5
@@ -31,7 +32,6 @@ export const JUP_ONLY_DIRECT_ROUTES = true
 export const CHECK_OPEN_ORDERS = false
 
 // MAIN LOOP
-export const CAN_TRADE = true
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP = 0.25
 export const FILTER_TO_ACCOUNTS:Array<String> = []
@@ -62,14 +62,16 @@ export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
 export const SOL_GROUP_PK = '78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
 export const COMMITTMENT = 'processed'
 export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy
+export const LAVA_CONNECTION_URL = 'https://g.w.lavanet.xyz:443/gateway/solana/rpc-http/bbc072e803a9a135fe62f7b3ad32d971'; // lava
 export const GROUP_PK = process.env.GROUP_PK || SOL_GROUP_PK; // SOL GROUP
 export const CLUSTER: Cluster = (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
 export const CLUSTER_URL = CONNECTION_URL;
+export const MAX_PRIORITY_FEE_KEYS = 128
 // export const CONNECTION_URL = 'https://mango-mango-d092.mainnet.rpcpool.com/';
 // export const CONNECTION_URL = 'https://side-indulgent-research.solana-mainnet.quiknode.pro/75ae6800554082022fe1a77e3f3b56e70067fdce';  //quicknode
 // export const CONNECTION_URL = 'https://ssc-dao.genesysgo.net';  //genesysgo
 // export const CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
-// export const LAVA_CONNECTION_URL = 'https://g.w.lavanet.xyz:443/gateway/solana/rpc-http/bbc072e803a9a135fe62f7b3ad32d971'; // lava
+
 
 export const PRIORITY_FEE_LEVELS = [
     { label: 'None', value: 0 },
@@ -77,7 +79,7 @@ export const PRIORITY_FEE_LEVELS = [
     { label: 'High', value: 4 },
   ]
 
-  export const DEFAULT_PRIORITY_FEE = 2000
+  export const DEFAULT_PRIORITY_FEE = 55000
   
   // JUP
   export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL"

@@ -36,7 +36,8 @@ import {
     spotTrade
 } from './mangoSpotUtils';
 import {
-    perpTrade, sleep
+    perpTrade, sleep,
+    handleEstimateFeeWithAddressLookup
 } from './mangoUtils';
 import {
     AccountDefinition,
