@@ -232,10 +232,12 @@ export const perpTrade = async (
             expiryTimestamp
         );
         console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
+        swap.status = 'ORDERED'
+        db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey: swap.type + '-SUCCESS' })
+        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
         await sleep(ORDER_EXPIRATION * 1000)   
         swap.status = 'COMPLETE'
         db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
-        db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey: swap.type + '-SUCCESS' })
         return order.signature
     } catch (e: any) {
         swap.status = 'FAILED'

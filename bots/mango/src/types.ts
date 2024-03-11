@@ -63,7 +63,7 @@ export type PendingTransaction = {
     price: number,
     oracle: number,
     timestamp:number,
-    status: 'COMPLETE' | 'FAILED' | 'PENDING' | 'EXPIRED',
+    status: 'COMPLETE' | 'FAILED' | 'PENDING' | 'EXPIRED' | 'ORDERED',
 }
 
 export class TokenAccount {

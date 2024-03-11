@@ -2,8 +2,8 @@ import {PerpOrderType} from '@blockworks-foundation/mango-v4';
 import {Cluster} from '@solana/web3.js';
 
 // THRESHOLDS
-export const MAX_SHORT_PERP = -70
-export const MAX_LONG_PERP = 1
+export const MAX_SHORT_PERP = -60
+export const MAX_LONG_PERP = 60
 export const MAX_SPOT_TRADE_SIZE = 3
 export const MAX_PERP_TRADE_SIZE = 2
 export const EXTRA_USDC_AMOUNT = 0.02
@@ -16,12 +16,12 @@ export const MIN_USDC_WALLET_AMOUNT = 10
 
 // TRADING TRIGGERS
 export const MINUS_THRESHOLD = -75
-export const PLUS_THRESHOLD = 30
+export const PLUS_THRESHOLD = 75
 
 // TRADING PARAMS
 export const MIN_SIZE = 0.1
 export const QUOTE_BUFFER = 0.12
-export const TRADE_SIZE = 0.2
+export const TRADE_SIZE = 0.5
 export const ORDER_TYPE = PerpOrderType.limit
 export const ENFORCE_BEST_PRICE = false
 export const USDC_BUFFER = 1
@@ -77,7 +77,7 @@ export const PRIORITY_FEE_LEVELS = [
     { label: 'High', value: 4 },
   ]
 
-  export const DEFAULT_PRIORITY_FEE = 500
+  export const DEFAULT_PRIORITY_FEE = 2000
   
   // JUP
   export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL"

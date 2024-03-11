@@ -188,7 +188,7 @@ export const doJupiterTrade = async (
             if (sol - SOL_RESERVE >= MIN_SOL_WALLET_AMOUNT) {
                 // import SOL
                 swap.type = 'DEPOSIT'
-                const depositAmount = sol - SOL_RESERVE
+                const depositAmount = Number((sol - SOL_RESERVE).toFixed(4))
                 swap.amount = depositAmount
                 console.log(accountDefinition.name,'Importing SOL', swap.amount)
                 await client.client.tokenDeposit(

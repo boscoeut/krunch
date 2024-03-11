@@ -142,7 +142,7 @@ async function snipePrices(
         })
 
         const openTransaction = db.getItem<PendingTransaction>(DB_KEYS.SWAP, { cacheKey: accountDefinition.name })
-        const hasOpenTransaction = openTransaction && openTransaction.status === 'PENDING'
+        const hasOpenTransaction = openTransaction && (openTransaction.status ==='PENDING' || openTransaction.status === 'ORDERED')
 
         if (hasOpenTransaction) {
             console.log(`Skipping ${accountDefinition.name} due to openTx: ${openTransaction.type} ${openTransaction.amount} ${openTransaction.status}`)
@@ -299,7 +299,7 @@ async function main(): Promise<void> {
                     transaction.status = 'EXPIRED'
                     db.incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey: transaction.type + '-EXPIRED' })
                 }
-                if (transaction.status === 'PENDING') {
+                if (transaction.status === 'PENDING' || transaction.status === 'ORDERED'){
                     numOpenTransactions++
                 }
             }

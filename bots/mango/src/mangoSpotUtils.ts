@@ -124,8 +124,8 @@ export const spotTrade = async (
             type: side === 'BUY' ? 'SPOT-BUY' : 'SPOT-SELL',
             amount,
             accountName: accountDefinition.name,
-            price: 0,
-            oracle: 0,
+            price: db.getItem(db.DB_KEYS.SOL_PRICE) || 0,
+            oracle: db.getItem(db.DB_KEYS.SOL_PRICE) || 0,
             timestamp: Date.now(),
             status: 'PENDING'
         }
