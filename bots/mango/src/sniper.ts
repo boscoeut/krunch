@@ -14,6 +14,7 @@ import {
     MINUS_THRESHOLD,
     MIN_DIFF_SIZE,
     MIN_SIZE,
+    DEFAULT_PRIORITY_FEE,
     MIN_SOL_WALLET_AMOUNT,
     MIN_USDC_WALLET_AMOUNT,
     NO_TRADE_TIMEOUT,
@@ -23,7 +24,9 @@ import {
     SOL_RESERVE,
     TRADE_SIZE,
     CHECK_OPEN_ORDERS,
-    TRANSACTION_EXPIRATION
+    TRANSACTION_EXPIRATION,
+    MAX_FEE,
+    FEE_DIFF_BUFFER
 } from './constants';
 import * as db from './db';
 import { DB_KEYS } from './db';
@@ -143,7 +146,7 @@ async function snipePrices(
         })
 
         const openTransaction = db.getItem<PendingTransaction>(DB_KEYS.SWAP, { cacheKey: accountDefinition.name })
-        const hasOpenTransaction = openTransaction && (openTransaction.status ==='PENDING' || openTransaction.status === 'ORDERED')
+        const hasOpenTransaction = openTransaction && (openTransaction.status === 'PENDING' || openTransaction.status === 'ORDERED')
 
         if (hasOpenTransaction) {
             console.log(`Skipping ${accountDefinition.name} due to openTx: ${openTransaction.type} ${openTransaction.amount} ${openTransaction.status}`)
@@ -264,6 +267,8 @@ async function main(): Promise<void> {
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
 
     let checkAccounts = true
+    let feeEstimate = DEFAULT_PRIORITY_FEE
+    
     let timeout: NodeJS.Timeout | undefined
     while (true) {
         console.log('Sniping Bot', new Date().toTimeString())
@@ -273,9 +278,15 @@ async function main(): Promise<void> {
 
 
             if (checkAccounts || rateInRange) {
+                const newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
+                const newFee = Math.min(newFeeEstimate, MAX_FEE)
+                const feeDiff = Math.abs(Math.min(newFee) - feeEstimate) < FEE_DIFF_BUFFER
+                console.log(`New Fee: ${newFee} New Fee Estimate:${newFeeEstimate} FeeDiff: ${feeDiff} OldFee=${feeEstimate}`)     
+
                 for (const accountDefinition of accountDefinitions) {
                     try {
-                        let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { params: [accountDefinition], cacheKey: accountDefinition.name })
+                                          
+                        let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { params: [accountDefinition, newFee], cacheKey: accountDefinition.name, force: feeDiff })                    
                         await snipePrices(accountDefinition,
                             TRADE_SIZE,
                             MINUS_THRESHOLD,
@@ -289,6 +300,10 @@ async function main(): Promise<void> {
                         console.error(`${accountDefinition.name} SNIPE ERROR`, e)
                     }
                 }
+                if (feeDiff) {
+                    console.log(`*** Updating Fee Estimate to ${newFee}.  Old Fee = ${feeEstimate}`)
+                    feeEstimate = newFee
+                }
             }
 
             // update google sheet
@@ -300,13 +315,13 @@ async function main(): Promise<void> {
                     transaction.status = 'EXPIRED'
                     db.incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey: transaction.type + '-EXPIRED' })
                 }
-                if (transaction.status === 'PENDING' || transaction.status === 'ORDERED'){
+                if (transaction.status === 'PENDING' || transaction.status === 'ORDERED') {
                     numOpenTransactions++
                 }
             }
 
             const accountDetails = db.getItems([DB_KEYS.ACCOUNT_DETAILS])
-            await updateGoogleSheet(googleSheets, accountDetails)
+            await updateGoogleSheet(googleSheets, accountDetails,feeEstimate)
 
             const solDiff = db.getItems([DB_KEYS.ACCOUNT_DETAILS])
                 .filter((f: AccountDetail) =>
@@ -316,12 +331,12 @@ async function main(): Promise<void> {
 
             const shouldNotTrade = hourlyRateAPR > MINUS_THRESHOLD && hourlyRateAPR < PLUS_THRESHOLD
                 && numOpenTransactions === 0 && solDiff.length === 0
-            if (shouldNotTrade && !timeout) {   
+            if (shouldNotTrade && !timeout) {
                 checkAccounts = false
                 timeout = setTimeout(() => {
                     checkAccounts = true
                     timeout = undefined
-                },NO_TRADE_TIMEOUT*1000*60)
+                }, NO_TRADE_TIMEOUT * 1000 * 60)
             }
 
             let sleepAmount = SLEEP_MAIN_LOOP

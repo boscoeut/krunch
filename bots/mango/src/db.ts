@@ -2,9 +2,12 @@ import {
     ACCOUNT_REFRESH_EXPIRATION, BID_ASK_CACHE_EXPIRATION,
     DEFAULT_CACHE_EXPIRATION,
     FUNDING_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION,
-    INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION
+    INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION, FEE_CACHE_EXPIRATION
 } from "./constants";
-import { fetchFundingData, fetchInterestData, fetchJupPrice, getAccountData, getBidsAndAsks, getFundingRate, reloadClient, setupClient } from './mangoUtils';
+import {
+    fetchFundingData, fetchInterestData, fetchJupPrice, getAccountData,
+    handleEstimateFeeWithAddressLookup, getBidsAndAsks, getFundingRate, reloadClient, setupClient
+} from './mangoUtils';
 import { CacheItem } from "./types";
 
 export enum DB_KEYS {
@@ -20,7 +23,8 @@ export enum DB_KEYS {
     GET_CLIENT = "GET_CLIENT",
     SWAP = "SWAP",
     SOL_PRICE = "SOL_PRICE",
-    ACCOUNT_DETAILS = "ACCOUNT_DETAILS"
+    ACCOUNT_DETAILS = "ACCOUNT_DETAILS",
+    FEE_ESTIMATE = "FEE_ESTIMATE"
 }
 
 export type GetOptions = {
@@ -146,4 +150,8 @@ registerModifier(DB_KEYS.GET_CLIENT, {
 registerModifier(DB_KEYS.ACCOUNT_DETAILS, {
     expiration: ACCOUNT_REFRESH_EXPIRATION,
     modifier: getAccountData
+})
+registerModifier(DB_KEYS.FEE_ESTIMATE, {
+    expiration: FEE_CACHE_EXPIRATION,
+    modifier: handleEstimateFeeWithAddressLookup
 })

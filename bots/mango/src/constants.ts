@@ -1,5 +1,5 @@
 import {PerpOrderType} from '@blockworks-foundation/mango-v4';
-import {Cluster} from '@solana/web3.js';
+import {Cluster, PublicKey} from '@solana/web3.js';
 
 // THRESHOLDS
 export const MAX_SHORT_PERP = -50
@@ -38,7 +38,7 @@ export const FILTER_TO_ACCOUNTS:Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
 
 // CACHE EXPIRATIONS
-export const ORDER_EXPIRATION = 0.9 * 60  
+export const ORDER_EXPIRATION = 3 * 60  
 export const TRANSACTION_EXPIRATION = 2 * 60 * 1000   
 export const FUNDING_RATE_CACHE_EXPIRATION = 1
 export const INTEREST_CACHE_EXPIRATION = 5
@@ -47,6 +47,9 @@ export const JUP_PRICE_EXPIRATION = 0.5
 export const DEFAULT_CACHE_EXPIRATION = 15
 export const BID_ASK_CACHE_EXPIRATION = 0.5
 export const ACCOUNT_REFRESH_EXPIRATION = 1
+export const FEE_CACHE_EXPIRATION = 1/60
+export const MAX_FEE = 100_000
+export const FEE_DIFF_BUFFER = 25000
 
 // MINTS
 export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
@@ -66,7 +69,9 @@ export const LAVA_CONNECTION_URL = 'https://g.w.lavanet.xyz:443/gateway/solana/r
 export const GROUP_PK = process.env.GROUP_PK || SOL_GROUP_PK; // SOL GROUP
 export const CLUSTER: Cluster = (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
 export const CLUSTER_URL = CONNECTION_URL;
+export const FEE_CONNECTION_URL = LAVA_CONNECTION_URL
 export const MAX_PRIORITY_FEE_KEYS = 128
+export const GROUP_ADDRESS_LOOKUP_TABLE_KEY = new PublicKey("AgCBUZ6UMWqPLftTxeAqpQxtrfiCyL2HgRfmmM6QTfCj")
 // export const CONNECTION_URL = 'https://mango-mango-d092.mainnet.rpcpool.com/';
 // export const CONNECTION_URL = 'https://side-indulgent-research.solana-mainnet.quiknode.pro/75ae6800554082022fe1a77e3f3b56e70067fdce';  //quicknode
 // export const CONNECTION_URL = 'https://ssc-dao.genesysgo.net';  //genesysgo

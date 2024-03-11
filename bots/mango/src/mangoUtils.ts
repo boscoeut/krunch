@@ -21,6 +21,7 @@ import * as bs58 from 'bs58';
 import fs from 'fs';
 import {
     CLUSTER,
+    GROUP_ADDRESS_LOOKUP_TABLE_KEY,
     CLUSTER_URL,
     COMMITTMENT,
     DEFAULT_PRIORITY_FEE,
@@ -33,7 +34,8 @@ import {
     SOL_MINT,
     SOL_RESERVE,
     MAX_PRIORITY_FEE_KEYS,
-    USDC_MINT
+    USDC_MINT,
+    FEE_CONNECTION_URL
 } from './constants';
 import * as db from './db';
 import { groupBy, mapValues, maxBy, sampleSize } from 'lodash'
@@ -255,7 +257,7 @@ export function toFixedFloor(num: number, fixed: number = 4): number {
     return Number(val)
 }
 
-export const getClient = async (user: Keypair): Promise<Client> => {
+export const getClient = async (user: Keypair, prioritizationFee: number): Promise<Client> => {
     const options = AnchorProvider.defaultOptions();
     const connection = new Connection(CLUSTER_URL!, COMMITTMENT);
     // const backupConnections = [new Connection(LAVA_CONNECTION_URL)];
@@ -265,7 +267,7 @@ export const getClient = async (user: Keypair): Promise<Client> => {
     // provider.opts.skipPreflight = true // TODO
     const client = MangoClient.connect(provider, CLUSTER, MANGO_V4_ID[CLUSTER], {
         idsSource: 'get-program-accounts',
-        prioritizationFee: DEFAULT_PRIORITY_FEE,
+        prioritizationFee,
         // multipleConnections: backupConnections,
         // postSendTxCallback: (txCallbackOptions: any) => {
         //     console.log('<<<<>>>> Transaction txCallbackOptions', txCallbackOptions)
@@ -278,25 +280,18 @@ export const getClient = async (user: Keypair): Promise<Client> => {
     }
 }
 
-export const handleEstimateFeeWithAddressLookup = async (
-    appClient: Client
-) => {
-    const group = appClient.group
-    const client = appClient.client
-    const mangoAccount = appClient.mangoAccount
+export const handleEstimateFeeWithAddressLookup = async () => {
+
+    const addressLookupTable= GROUP_ADDRESS_LOOKUP_TABLE_KEY
+    const connection = new Connection(FEE_CONNECTION_URL!, COMMITTMENT);
     const priorityFeeMultiplier = DEFAULT_PRIORITY_FEE
-
-    if (!mangoAccount || !group || !client) return
-
-    const altResponse = await appClient.client.connection.getAddressLookupTable(
-        group.addressLookupTables[0],
-    )
+    const altResponse = await connection.getAddressLookupTable(addressLookupTable)
     const altKeys = altResponse.value?.state.addresses
     if (!altKeys) return
 
     const addresses = sampleSize(altKeys, MAX_PRIORITY_FEE_KEYS)
 
-    const fees = await appClient.client.connection.getRecentPrioritizationFees({
+    const fees = await connection.getRecentPrioritizationFees({
         lockedWritableAccounts: addresses,
     })
 
@@ -320,6 +315,7 @@ export const handleEstimateFeeWithAddressLookup = async (
                 recentFees[mid].prioritizationFee) /
             2
     console.log('FEES', priorityFeeMultiplier, medianFee)
+    return medianFee
 }
 
 export async function reloadClient(client: Client) {
@@ -410,16 +406,14 @@ export async function getAccountData(
     }
 }
 
-export const setupClient = async (accountDefinition: AccountDefinition): Promise<Client> => {
+export const setupClient = async (accountDefinition: AccountDefinition, prioritizationFee: number = DEFAULT_PRIORITY_FEE): Promise<Client> => {
     const user = getUser(accountDefinition.privateKey);
-    const { client, group, ids, wallet } = await getClient(user)
+    const { client, group, ids, wallet } = await getClient(user, prioritizationFee)
     const mangoAccount = await client.getMangoAccount(new PublicKey(accountDefinition.key));
     return {
         client, user, mangoAccount, group, ids, wallet
     }
 }
-
-
 
 export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));

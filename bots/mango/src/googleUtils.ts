@@ -23,13 +23,14 @@ export function loadSavedCredentialsIfExist() {
 }
 
 export async function updateGoogleSheet(googleSheets: any,
-    accountDetails: AccountDetail[] = []
+    accountDetails: AccountDetail[] = [], fee:number
     ) {
     try {
         const fundingRate = getItem<number>(DB_KEYS.FUNDING_RATE)     
         console.log('fundingRate', fundingRate) 
         const jupPrice = await db.get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)          
         const solPrice = getItem<number>(DB_KEYS.SOL_PRICE) || jupPrice.solPrice
+        const feeEstimate = getItem<number>(DB_KEYS.FEE_ESTIMATE) || 0
 
         const openTransactions: PendingTransaction[] = getItems([DB_KEYS.SWAP])
         // clear old transactions
@@ -105,6 +106,10 @@ export async function updateGoogleSheet(googleSheets: any,
                     range: `SOL!B1:C2`,
                     values: [[solPrice, bestBid],
                     [fundingRate/100, bestAsk]],
+
+                },{
+                    range: `SOL!J1:J2`,
+                    values: [[fee],[feeEstimate]],
 
                 }, {
                     range: ACCOUNT_VALUES_RANGE,
