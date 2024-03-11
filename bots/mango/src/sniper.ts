@@ -128,7 +128,7 @@ async function snipePrices(
     canTrade: boolean
 ): Promise<SnipeResponse> {
     let accountDetails: AccountDetail | undefined
-    const promises: Array<PendingTransaction> = [];
+    const promises: Array<any> = [];
     try {
         if (!client.mangoAccount) {
             throw new Error('Mango account not found: ' + accountDefinition.name)
@@ -176,25 +176,25 @@ async function snipePrices(
 
             if (action === 'BUY') {
                 if ((!spotUnbalanced && walletSol > MIN_SOL_WALLET_AMOUNT) || accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT) {
-                    doDeposit(
+                    promises.push(doDeposit(
                         accountDefinition,
                         client,
                         accountDetails.walletUsdc,
                         spotUnbalanced ? 0 : accountDetails.walletSol,
-                    )
+                    ))
                 } else if (spotUnbalanced && spotVsPerpDiff > 0) {
                     console.log('SELL SOL', tradeSize, spotVsPerpDiff)
                     const amount = Math.min(MAX_SPOT_TRADE_SIZE, Number(Math.abs(spotVsPerpDiff).toFixed(2)))
                     if (accountDefinition.useMangoSpotTrades) {
-                        spotTrade(amount, solBank, usdcBank, client.client, client.mangoAccount, client.user, client.group, 'SELL', accountDefinition)
+                        promises.push(spotTrade(amount, solBank, usdcBank, client.client, client.mangoAccount, client.user, client.group, 'SELL', accountDefinition))
                     } else {
-                        doJupiterTrade(accountDefinition,
+                        promises.push(doJupiterTrade(accountDefinition,
                             client, solBank.mint.toString(),
                             usdcBank.mint.toString(),
                             amount, amount * solPrice,
                             accountDetails.walletUsdc,
                             accountDetails.walletSol,
-                            solPrice)
+                            solPrice))
                     }
                 }
                 else if (increaseExposure || (spotVsPerpDiff < 0 && spotUnbalanced)) {
@@ -207,32 +207,32 @@ async function snipePrices(
                         console.log('**** SNIPING BUY NOT EXECUTED', `(midPrice)=${midPrice} (bestAsk=${accountDetails.bestAsk}) (Oracle=${solPrice})`)
                     } else {
                         console.log(`**** SNIPING BUY (midPrice)=${midPrice} (bestAsk=${accountDetails.bestAsk}) (Oracle=${solPrice}) (Trade Size=${tradeSize})`)
-                        perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.bid, accountDefinition, false)
+                        promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.bid, accountDefinition, false))
                     }
                 }
                 console.log('BUY PERP:', accountDefinition.name, promises.length, 'new transaction(s)')
             }
             if (action === 'SELL') {
                 if ((!spotUnbalanced && accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT) || walletSol > MIN_SOL_WALLET_AMOUNT) {
-                    doDeposit(
+                    promises.push(doDeposit(
                         accountDefinition,
                         client,
                         spotUnbalanced ? 0 : accountDetails.walletUsdc,
                         accountDetails.walletSol,
-                    )
+                    ))
                 } else if (spotUnbalanced && spotVsPerpDiff < 0) {
                     console.log('BUY SOL', spotVsPerpDiff)
                     const buySize = Math.min(MAX_SPOT_TRADE_SIZE, Math.abs(spotVsPerpDiff))
                     const amount = Number((buySize * solPrice + EXTRA_USDC_AMOUNT).toFixed(2))
                     if (accountDefinition.useMangoSpotTrades) {
-                        spotTrade(amount, usdcBank, solBank, client.client, client.mangoAccount, client.user, client.group, 'BUY', accountDefinition)
+                        promises.push(spotTrade(amount, usdcBank, solBank, client.client, client.mangoAccount, client.user, client.group, 'BUY', accountDefinition))
                     } else {
-                        doJupiterTrade(accountDefinition,
+                        promises.push(doJupiterTrade(accountDefinition,
                             client, usdcBank.mint.toString(), solBank.mint.toString(),
                             amount, buySize,
                             accountDetails.walletUsdc,
                             accountDetails.walletSol,
-                            solPrice)
+                            solPrice))
                     }
                 }
                 else if (increaseExposure || (spotVsPerpDiff > 0 && spotUnbalanced)) {
@@ -244,7 +244,7 @@ async function snipePrices(
                         console.log('**** SNIPING SELL NOT EXECUTED', `(midPrice)=${midPrice} (bestBid=${accountDetails.bestBid}) (Oracle=${solPrice})`)
                     } else {
                         console.log('**** SNIPING SELL', midPrice, "Oracle", solPrice, 'Trade Size', `${tradeSize}`)
-                        perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false)
+                        promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false))
                     }
                 }
                 console.log('SELL PERP', accountDefinition.name, promises.length, 'new transaction(s)')
@@ -280,7 +280,7 @@ async function main(): Promise<void> {
             if (checkAccounts || rateInRange) {
                 const newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
                 const newFee = Math.min(newFeeEstimate, MAX_FEE)
-                const feeDiff = Math.abs(Math.min(newFee) - feeEstimate) < FEE_DIFF_BUFFER
+                const feeDiff = Math.abs(newFee - feeEstimate) > FEE_DIFF_BUFFER
                 console.log(`New Fee: ${newFee} New Fee Estimate:${newFeeEstimate} FeeDiff: ${feeDiff} OldFee=${feeEstimate}`)     
 
                 for (const accountDefinition of accountDefinitions) {

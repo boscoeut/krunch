@@ -48,7 +48,7 @@ export const DEFAULT_CACHE_EXPIRATION = 15
 export const BID_ASK_CACHE_EXPIRATION = 0.5
 export const ACCOUNT_REFRESH_EXPIRATION = 1
 export const FEE_CACHE_EXPIRATION = 1/60
-export const MAX_FEE = 100_000
+export const MAX_FEE = 125_000
 export const FEE_DIFF_BUFFER = 25000
 
 // MINTS

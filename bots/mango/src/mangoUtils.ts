@@ -264,7 +264,7 @@ export const getClient = async (user: Keypair, prioritizationFee: number): Promi
 
     const wallet = new Wallet(user);
     const provider = new AnchorProvider(connection, wallet, options);
-    // provider.opts.skipPreflight = true // TODO
+    provider.opts.skipPreflight = true // TODO
     const client = MangoClient.connect(provider, CLUSTER, MANGO_V4_ID[CLUSTER], {
         idsSource: 'get-program-accounts',
         prioritizationFee,
