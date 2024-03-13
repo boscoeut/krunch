@@ -17,6 +17,7 @@ import {
     DEFAULT_PRIORITY_FEE,
     FEE_MULTIPLIER,
     MIN_SOL_WALLET_AMOUNT,
+    MIN_SOL_WALLET_BALANCE,
     MIN_USDC_WALLET_AMOUNT,
     NO_TRADE_TIMEOUT,
     PLUS_THRESHOLD,
@@ -34,6 +35,7 @@ import { DB_KEYS } from './db';
 import { authorize, updateGoogleSheet } from './googleUtils';
 import {
     doDeposit,
+    doSolWithdrawal,
     doJupiterTrade
 } from './jupiterUtils';
 import {
@@ -175,7 +177,17 @@ async function snipePrices(
             const spotVsPerpDiff = solBalance + solAmount + walletSol
             const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
 
-            if (action === 'BUY') {
+            // check for min wallet balance
+            if (accountDetails.walletSol < MIN_SOL_WALLET_BALANCE) {
+                // refresh wallet balance
+                const borrowAmount = SOL_RESERVE - accountDetails.walletSol
+                promises.push(doSolWithdrawal(
+                    accountDefinition,
+                    client,
+                    borrowAmount))
+            }
+
+            else if (action === 'BUY') {
                 if ((!spotUnbalanced && walletSol > MIN_SOL_WALLET_AMOUNT) || accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT) {
                     promises.push(doDeposit(
                         accountDefinition,
@@ -211,9 +223,9 @@ async function snipePrices(
                         promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.bid, accountDefinition, false))
                     }
                 }
-                console.log('BUY PERP:', accountDefinition.name, promises.length, 'new transaction(s)')
+                console.log('BUY PERP:', accountDefinition.name, promises.length, 'new transaction(s)', `Increase Exposure: ${increaseExposure}`)
             }
-            if (action === 'SELL') {
+            else if (action === 'SELL') {
                 if ((!spotUnbalanced && accountDetails.walletUsdc > MIN_USDC_WALLET_AMOUNT) || walletSol > MIN_SOL_WALLET_AMOUNT) {
                     promises.push(doDeposit(
                         accountDefinition,
@@ -248,7 +260,7 @@ async function snipePrices(
                         promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false))
                     }
                 }
-                console.log('SELL PERP', accountDefinition.name, promises.length, 'new transaction(s)')
+                console.log('SELL PERP', accountDefinition.name, promises.length, 'new transaction(s)', `Increase Exposure: ${increaseExposure}.  TradeSize=${tradeSize}`)  
             }
         }
     } catch (e) {
@@ -268,7 +280,7 @@ async function main(): Promise<void> {
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
 
     let checkAccounts = true
-    let feeEstimate = DEFAULT_PRIORITY_FEE
+    let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE,MAX_FEE)
     
     let timeout: NodeJS.Timeout | undefined
     while (true) {
@@ -280,14 +292,17 @@ async function main(): Promise<void> {
 
             if (checkAccounts || rateInRange) {
                 const newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
-                const newFee = Math.min(newFeeEstimate* FEE_MULTIPLIER, MAX_FEE)
+                const newFee = Math.floor(Math.min(newFeeEstimate* FEE_MULTIPLIER, MAX_FEE))
                 const feeDiff = Math.abs(newFee - feeEstimate) > FEE_DIFF_BUFFER
                 console.log(`New Fee: ${newFee} New Fee Estimate:${newFeeEstimate} FeeDiff: ${feeDiff} OldFee=${feeEstimate}, FeeMultiplier=${FEE_MULTIPLIER}`)     
 
                 for (const accountDefinition of accountDefinitions) {
                     try {
-                                          
-                        let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { params: [accountDefinition, newFee], cacheKey: accountDefinition.name, force: feeDiff })                    
+                        const forceNewClient = feeDiff && CAN_TRADE && accountDefinition.canTrade  && rateInRange                                       
+                        let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { 
+                            params: [accountDefinition, newFee], 
+                            cacheKey: accountDefinition.name, 
+                            force: forceNewClient})                    
                         await snipePrices(accountDefinition,
                             TRADE_SIZE,
                             MINUS_THRESHOLD,

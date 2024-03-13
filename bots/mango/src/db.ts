@@ -61,7 +61,7 @@ export async function get<T>(key: DB_KEYS, options?: GetOptions): Promise<T> {
     const diff = (now.getTime() - item.date.getTime()) / 1000
     const shouldRefresh = (diff > expiration * 60 || options?.force) && expiration > 0
     const shouldInit = expiration < 0 && !item.item
-    if (shouldRefresh || shouldInit) {
+    if (shouldRefresh || shouldInit || options?.force === true) {
         const value = await modifier?.modifier(...(options?.params || []))
         item = { date: now, item: value }
         dbCache.set(dbKey, item)

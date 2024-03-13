@@ -313,8 +313,9 @@ export const handleEstimateFeeWithAddressLookup = async () => {
             : (recentFees[mid - 1].prioritizationFee +
                 recentFees[mid].prioritizationFee) /
             2
-    console.log('FEES', medianFee)
-    return medianFee
+    const feeResult = Math.floor(medianFee)
+    console.log('FEES', feeResult)
+    return feeResult
 }
 
 export async function reloadClient(client: Client) {

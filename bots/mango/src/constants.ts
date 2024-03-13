@@ -1,45 +1,46 @@
-import {PerpOrderType} from '@blockworks-foundation/mango-v4';
-import {Cluster, PublicKey} from '@solana/web3.js';
+import { PerpOrderType } from '@blockworks-foundation/mango-v4';
+import { Cluster, PublicKey } from '@solana/web3.js';
 
 // THRESHOLDS
-export const MAX_SHORT_PERP = -50
-export const MAX_LONG_PERP = 0
-export const MAX_SPOT_TRADE_SIZE = 3
-export const MAX_PERP_TRADE_SIZE = 2
+export const MAX_SPOT_TRADE_SIZE = 4
+export const MAX_PERP_TRADE_SIZE = 4
 export const EXTRA_USDC_AMOUNT = 0.02
 export const MIN_DIFF_SIZE = 0.1
 export const MIN_SPOT_USDC_DIFF = 0.15
 export const MIN_SOL_BORROW = 0.02
 export const MIN_USDC_BORROW = 1
 export const MIN_SOL_WALLET_AMOUNT = 0.1
+export const MIN_SOL_WALLET_BALANCE = 0.02
 export const MIN_USDC_WALLET_AMOUNT = 10
 
 // TRADING TRIGGERS
 export const MINUS_THRESHOLD = -75
 export const PLUS_THRESHOLD = 75
+export const MAX_SHORT_PERP = -75
+export const MAX_LONG_PERP = 1
 
 // TRADING PARAMS
 export const CAN_TRADE = true
 export const MIN_SIZE = 0.1
 export const QUOTE_BUFFER = 0.12
-export const TRADE_SIZE = 0.5
+export const TRADE_SIZE = 4
 export const ORDER_TYPE = PerpOrderType.limit
 export const ENFORCE_BEST_PRICE = false
 export const USDC_BUFFER = 1
 export const SOL_BUFFER = 0.005
-export const SWAP_ONLY_DIRECT_ROUTES = false
+export const SWAP_ONLY_DIRECT_ROUTES = true
 export const JUP_ONLY_DIRECT_ROUTES = true
 export const CHECK_OPEN_ORDERS = false
 
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP = 0.25
-export const FILTER_TO_ACCOUNTS:Array<String> = []
+export const FILTER_TO_ACCOUNTS: Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
 
 // CACHE EXPIRATIONS
-export const ORDER_EXPIRATION = 3 * 60  
-export const TRANSACTION_EXPIRATION = 2 * 60 * 1000   
+export const ORDER_EXPIRATION = 2 * 60
+export const TRANSACTION_EXPIRATION = 2 * 60 * 1000
 export const FUNDING_RATE_CACHE_EXPIRATION = 1
 export const INTEREST_CACHE_EXPIRATION = 5
 export const FUNDING_CACHE_EXPIRATION = 5
@@ -47,9 +48,7 @@ export const JUP_PRICE_EXPIRATION = 0.5
 export const DEFAULT_CACHE_EXPIRATION = 15
 export const BID_ASK_CACHE_EXPIRATION = 0.5
 export const ACCOUNT_REFRESH_EXPIRATION = 1
-export const FEE_CACHE_EXPIRATION = 1/60
-export const MAX_FEE = 125_000
-export const FEE_DIFF_BUFFER = 25000
+export const FEE_CACHE_EXPIRATION = 2
 
 // MINTS
 export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
@@ -78,11 +77,13 @@ export const GROUP_ADDRESS_LOOKUP_TABLE_KEY = new PublicKey("AgCBUZ6UMWqPLftTxeA
 // export const CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
 
 
-  export const DEFAULT_PRIORITY_FEE = 55000
-  export const FEE_MULTIPLIER = 1
-  
-  // JUP
-  export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL"
+export const MAX_FEE = 100_000
+export const FEE_DIFF_BUFFER = 25000
+export const DEFAULT_PRIORITY_FEE = 75_000
+export const FEE_MULTIPLIER = 1.5
 
-  // GOOGLE SHEETS
-  export const SPREADSHEET_ID = '1-k6Lv4quwIS-rRck-JYLA0WiuC9x43nDuMa_95q8CIw';
+// JUP
+export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL"
+
+// GOOGLE SHEETS
+export const SPREADSHEET_ID = '1-k6Lv4quwIS-rRck-JYLA0WiuC9x43nDuMa_95q8CIw';

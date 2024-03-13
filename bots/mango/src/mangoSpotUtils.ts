@@ -75,7 +75,10 @@ export const fetchJupiterTransaction = async (
                 // user public key to be used for the swap
                 userPublicKey,
                 slippageBps: Math.ceil(slippage * 100),
-                wrapAndUnwrapSol: false
+                wrapAndUnwrapSol: false, 
+                dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000
+                // custom priority fee
+                prioritizationFeeLamports: 'auto' 
             }),
         })
     ).json()

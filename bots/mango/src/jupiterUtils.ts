@@ -23,7 +23,7 @@ import {
     USDC_DECIMALS,
     USDC_MINT
 } from './constants';
-import { DB_KEYS, incrementItem, setItem,getItem } from './db';
+import { DB_KEYS, incrementItem, setItem, getItem } from './db';
 import {
     AccountDefinition,
     Client,
@@ -75,10 +75,10 @@ export const performJupiterSwap = async (
                 // user public key to be used for the swap
                 userPublicKey: user,
                 slippageBps: Math.ceil(slippage * 100),
-                wrapAndUnwrapSol: true, 
+                wrapAndUnwrapSol: true,
                 dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000
                 // custom priority fee
-                prioritizationFeeLamports: 'auto' 
+                prioritizationFeeLamports: 'auto'
             }),
         })
     ).json()
@@ -162,6 +162,47 @@ export const doDeposit = async (
 
 }
 
+export const doSolWithdrawal = async (
+    accountDefinition: AccountDefinition,
+    client: Client,
+    borrowAmount: number): Promise<PendingTransaction> => {
+
+    const swap: PendingTransaction = {
+        type: 'BORROW',
+        amount: toFixedFloor(borrowAmount),
+        accountName: accountDefinition.name,
+        price: getItem(DB_KEYS.SOL_PRICE) || 0,
+        oracle: getItem(DB_KEYS.SOL_PRICE) || 0,
+        timestamp: Date.now(),
+        status: 'PENDING'
+    }
+    const cacheKey = accountDefinition.name
+    try {
+        setItem(DB_KEYS.SWAP, swap, { cacheKey })
+        if (!client.mangoAccount) {
+            console.log('Mango account not found')
+        } else {
+            await client.client.tokenWithdraw(
+                client.group,
+                client.mangoAccount,
+                new PublicKey(SOL_MINT),
+                toFixedFloor(borrowAmount),
+                true,
+            )
+        }
+        swap.status = 'COMPLETE'
+        setItem(DB_KEYS.SWAP, swap, { cacheKey })
+        return swap
+    } catch (e: any) {
+        console.log('Error in doSolWithdrawal', e.message)
+        swap.status = 'FAILED'
+        setItem(DB_KEYS.SWAP, swap, { cacheKey })
+        return swap
+    }
+
+}
+
+
 export const doJupiterTrade = async (
     accountDefinition: AccountDefinition,
     client: Client,
@@ -192,7 +233,7 @@ export const doJupiterTrade = async (
                 swap.type = 'DEPOSIT'
                 const depositAmount = toFixedFloor(sol - SOL_RESERVE)
                 swap.amount = depositAmount
-                console.log(accountDefinition.name,'Importing SOL', swap.amount)
+                console.log(accountDefinition.name, 'Importing SOL', swap.amount)
                 await client.client.tokenDeposit(
                     client.group,
                     client.mangoAccount,
@@ -205,7 +246,7 @@ export const doJupiterTrade = async (
                 swap.type = 'BORROW'
                 const borrowAmount = toFixedFloor(Math.max(MIN_USDC_BORROW, inAmount - usdc + USDC_BUFFER))
                 swap.amount = borrowAmount
-                console.log(accountDefinition.name,'Borrowing USDC', swap.amount)
+                console.log(accountDefinition.name, 'Borrowing USDC', swap.amount)
                 await client.client.tokenWithdraw(
                     client.group,
                     client.mangoAccount,
@@ -217,7 +258,7 @@ export const doJupiterTrade = async (
                 // swap usdc to sol
                 const swapAmount = toFixedFloor(usdc)
                 swap.amount = swapAmount
-                console.log(accountDefinition.name,'Swapping USDC to SOL: ' + swapAmount)
+                console.log(accountDefinition.name, 'Swapping USDC to SOL: ' + swapAmount)
                 await performJupiterSwap(client.client,
                     client.user.publicKey,
                     inMint,
@@ -231,8 +272,8 @@ export const doJupiterTrade = async (
                 // import USDC
                 swap.type = 'DEPOSIT'
                 const depositAmount = toFixedFloor(usdc)
-                swap.amount =  depositAmount
-                console.log(accountDefinition.name,'Importing USDC', usdc)
+                swap.amount = depositAmount
+                console.log(accountDefinition.name, 'Importing USDC', usdc)
                 await client.client.tokenDeposit(
                     client.group,
                     client.mangoAccount,
@@ -245,7 +286,7 @@ export const doJupiterTrade = async (
                 const borrowAmount = toFixedFloor(Math.max(MIN_SOL_BORROW, inAmount - sol + SOL_RESERVE + SOL_BUFFER))
                 swap.type = 'BORROW'
                 swap.amount = borrowAmount
-                console.log(accountDefinition.name,'Borrowing SOL', borrowAmount)
+                console.log(accountDefinition.name, 'Borrowing SOL', borrowAmount)
                 await client.client.tokenWithdraw(
                     client.group,
                     client.mangoAccount,
@@ -255,9 +296,9 @@ export const doJupiterTrade = async (
                 )
             } else if (sol - SOL_RESERVE >= inAmount) {
                 // swap sol to USDC
-                const swapAmount = toFixedFloor(sol - SOL_RESERVE)  
+                const swapAmount = toFixedFloor(sol - SOL_RESERVE)
                 swap.amount = swapAmount
-                console.log(accountDefinition.name,'Swapping SOL to USDC: ' + swap.amount)
+                console.log(accountDefinition.name, 'Swapping SOL to USDC: ' + swap.amount)
                 await performJupiterSwap(client.client,
                     client.user.publicKey,
                     inMint,
@@ -268,12 +309,12 @@ export const doJupiterTrade = async (
             }
         }
         swap.status = 'COMPLETE'
-        incrementItem(DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey : swap.type+'-SUCCESS' })
+        incrementItem(DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey: swap.type + '-SUCCESS' })
         setItem(DB_KEYS.SWAP, swap, { cacheKey })
         return swap
     } catch (e: any) {
         console.log('Error in doJupiterTrade', e.message)
-        incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey : swap.type+'-FAIL' })
+        incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey: swap.type + '-FAIL' })
         setItem(DB_KEYS.SWAP, swap, { cacheKey })
         swap.status = 'FAILED'
         return swap
