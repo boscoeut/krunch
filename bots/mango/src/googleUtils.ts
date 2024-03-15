@@ -43,12 +43,12 @@ export async function updateGoogleSheet(googleSheets: any,
 
         //  accounts
         let endRow = START_ROW + accountDetails.length
-        const ACCOUNT_VALUES_RANGE = `SOL!A${START_ROW}:N${endRow}`;
+        const ACCOUNT_VALUES_RANGE = `SOL!A${START_ROW}:O${endRow}`;
         accountDetails.sort((a, b) => a.name.localeCompare(b.name));
         const accountValues = accountDetails.map((accountDetail) => {
             return [
                 accountDetail.name,
-                accountDetail.historicalFunding,
+                accountDetail.fundingAmount,
                 accountDetail.borrow,
                 accountDetail.equity,
                 accountDetail.health / 100,
@@ -60,7 +60,8 @@ export async function updateGoogleSheet(googleSheets: any,
                 accountDetail.solBalance,
                 accountDetail.walletSol,
                 accountDetail.walletUsdc,
-                accountDetail.usdcBalance
+                accountDetail.usdcBalance,
+                accountDetail.historicalFunding
             ]
         });
      

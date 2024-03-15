@@ -24,6 +24,7 @@ import {
     GROUP_ADDRESS_LOOKUP_TABLE_KEY,
     CLUSTER_URL,
     COMMITTMENT,
+    ALCHEMY_WS_URL,
     DEFAULT_PRIORITY_FEE,
     FUNDING_RATE_API,
     GROUP_PK,
@@ -35,7 +36,11 @@ import {
     SOL_RESERVE,
     MAX_PRIORITY_FEE_KEYS,
     USDC_MINT,
-    FEE_CONNECTION_URL
+    FEE_CONNECTION_URL,
+    QUICKNODE_CONNECTION_URL,
+    LAVA_CONNECTION_URL,
+    LITE_RPC_URL,
+    USE_PRIORITY_FEE
 } from './constants';
 import * as db from './db';
 import { groupBy, mapValues, maxBy, sampleSize } from 'lodash'
@@ -259,19 +264,28 @@ export function toFixedFloor(num: number, fixed: number = 4): number {
 
 export const getClient = async (user: Keypair, prioritizationFee: number): Promise<Client> => {
     const options = AnchorProvider.defaultOptions();
-    const connection = new Connection(CLUSTER_URL!, COMMITTMENT);
-    // const backupConnections = [new Connection(LAVA_CONNECTION_URL)];
+    options.skipPreflight = true
+    options.maxRetries = 20
+    // options.preflightCommitment= 'confirmed'
+    const connection = new Connection(CLUSTER_URL!, {
+        commitment: COMMITTMENT,
+        wsEndpoint: ALCHEMY_WS_URL
+    });
+    const backupConnections = [
+        new Connection(LITE_RPC_URL),
+        new Connection(LAVA_CONNECTION_URL),
+        new Connection(QUICKNODE_CONNECTION_URL),
+    ];
 
     const wallet = new Wallet(user);
     const provider = new AnchorProvider(connection, wallet, options);
-    provider.opts.skipPreflight = true // TODO
     const client = MangoClient.connect(provider, CLUSTER, MANGO_V4_ID[CLUSTER], {
-        idsSource: 'get-program-accounts',
-        prioritizationFee,
-        // multipleConnections: backupConnections,
-        // postSendTxCallback: (txCallbackOptions: any) => {
-        //     console.log('<<<<>>>> Transaction txCallbackOptions', txCallbackOptions)
-        // }
+        idsSource: 'api',
+        prioritizationFee: USE_PRIORITY_FEE ? prioritizationFee : undefined,
+        multipleConnections: backupConnections,
+        postSendTxCallback: (txCallbackOptions: any) => {
+            console.log('<<<<>>>> Transaction txCallbackOptions', txCallbackOptions)
+        }
     });
     const group = await client.getGroup(new PublicKey(GROUP_PK));
     const ids = await client.getIds(group.publicKey);
@@ -282,7 +296,7 @@ export const getClient = async (user: Keypair, prioritizationFee: number): Promi
 
 export const handleEstimateFeeWithAddressLookup = async () => {
 
-    const addressLookupTable= GROUP_ADDRESS_LOOKUP_TABLE_KEY
+    const addressLookupTable = GROUP_ADDRESS_LOOKUP_TABLE_KEY
     const connection = new Connection(FEE_CONNECTION_URL!, COMMITTMENT);
     const altResponse = await connection.getAddressLookupTable(addressLookupTable)
     const altKeys = altResponse.value?.state.addresses
@@ -305,6 +319,11 @@ export const handleEstimateFeeWithAddressLookup = async () => {
     ) as []
 
     // get median of last 20 fees
+    // Calculate the sum of prioritizationFee
+    const sum = maximumFees.slice(Math.max(maximumFees.length - 20, 0)).reduce((acc: any, fee: any) => acc + fee.prioritizationFee, 0);
+    const averageFee = sum / maximumFees.length;
+    console.log('Average Fee', averageFee);
+
     const recentFees = maximumFees.slice(Math.max(maximumFees.length - 20, 0))
     const mid = Math.floor(recentFees.length / 2)
     const medianFee =
@@ -314,18 +333,18 @@ export const handleEstimateFeeWithAddressLookup = async () => {
                 recentFees[mid].prioritizationFee) /
             2
     const feeResult = Math.floor(medianFee)
-    console.log('FEES', feeResult)
+    console.log('Median Fee', feeResult)
     return feeResult
 }
 
 export async function reloadClient(client: Client) {
-    if (!client.mangoAccount) return
-    await Promise.all([
-        client.mangoAccount.reload(client.client),
-        client.group.reloadBanks(client.client, client.ids),
-        client.group.reloadPerpMarkets(client.client, client.ids),
-        client.group.reloadPerpMarketOraclePrices(client.client),
-    ]);
+    if (client.mangoAccount) {
+        await client.mangoAccount.reload(client.client)
+        await client.group.reloadBanks(client.client, client.ids)
+        await client.group.reloadPerpMarkets(client.client, client.ids)
+        await client.group.reloadPerpMarketOraclePrices(client.client)
+        await client.group.reloadVaults(client.client)
+    }
 }
 
 export async function getAccountData(
@@ -353,7 +372,9 @@ export async function getAccountData(
     let interestAmount = 0;
     let solAmount = 0;
     if (pp) {
-        fundingAmount += pp.getCumulativeFundingUi(perpMarket);
+        // fundingAmount += pp.getCumulativeFundingUi(perpMarket);
+        const cumFunding = pp.getCumulativeFunding(perpMarket);
+        fundingAmount = (cumFunding.cumulativeLongFunding + cumFunding.cumulativeShortFunding) / 10 ** 6
         solAmount = pp.basePositionLots.toNumber() / 100
     }
     const { bestBid, bestAsk } = await db.get<{ bestBid: number, bestAsk: number }>(db.DB_KEYS.BIDS_AND_ASKS, { params: [perpMarket, client], cacheKey: accountDefinition.name })

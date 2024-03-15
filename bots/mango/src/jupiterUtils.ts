@@ -76,9 +76,8 @@ export const performJupiterSwap = async (
                 userPublicKey: user,
                 slippageBps: Math.ceil(slippage * 100),
                 wrapAndUnwrapSol: true,
-                dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000
-                // custom priority fee
-                prioritizationFeeLamports: 'auto'
+                // dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000
+                // prioritizationFeeLamports: 'auto' // custom priority fee
             }),
         })
     ).json()
@@ -94,11 +93,15 @@ export const performJupiterSwap = async (
 
     // Execute the transaction
     const rawTransaction = transaction.serialize()
-    const txid = await client.connection.sendRawTransaction(rawTransaction, {
-        skipPreflight: true,
-        maxRetries: 2
-
-    });
+    const allConnections = [client.connection, ...client.multipleConnections!];
+    const txid = await Promise.any(
+      allConnections.map((c) => {
+        return c.sendRawTransaction(rawTransaction, {
+          skipPreflight: true, // mergedOpts.skipPreflight,
+        });
+      }),
+    );
+    console.log('New Jupiter Transaction',txid);
     await client.connection.confirmTransaction(txid);
 }
 
@@ -181,7 +184,7 @@ export const doSolWithdrawal = async (
         setItem(DB_KEYS.SWAP, swap, { cacheKey })
         if (!client.mangoAccount) {
             console.log('Mango account not found')
-        } else {
+        } else {            
             await client.client.tokenWithdraw(
                 client.group,
                 client.mangoAccount,

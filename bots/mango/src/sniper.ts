@@ -1,9 +1,13 @@
 import {
-    PerpOrderSide
+    PerpOrderSide, toNative
 } from '@blockworks-foundation/mango-v4';
 import fs from 'fs';
 import {
+    Connection, Keypair, PublicKey
+} from '@solana/web3.js';
+import {
     CAN_TRADE,
+    SOL_MINT,
     ENFORCE_BEST_PRICE,
     EXTRA_USDC_AMOUNT,
     FILTER_TO_ACCOUNTS,
@@ -42,8 +46,7 @@ import {
     spotTrade
 } from './mangoSpotUtils';
 import {
-    perpTrade, sleep,
-    handleEstimateFeeWithAddressLookup
+    perpTrade, sleep,toFixedFloor
 } from './mangoUtils';
 import {
     AccountDefinition,
@@ -109,11 +112,13 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: 'BU
     if (solAmount > 0 && action === "BUY") {
         tradeSize = Math.min(requestedTradeSize, optimalSize)
     } else if (solAmount < 0 && action === "BUY") {
-        tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount))
+        // tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount)) // if you want to make sure it doesn't go past zero
+        tradeSize = Math.min(requestedTradeSize, optimalSize)
     } else if (solAmount < 0 && action === "SELL") {
         tradeSize = Math.min(requestedTradeSize, optimalSize)
     } else if (solAmount > 0 && action === "SELL") {
-        tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount))
+        // tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount)) // if you want to make sure it doesn't go past zero
+        tradeSize = Math.min(requestedTradeSize, optimalSize)
     }
 
     return tradeSize
@@ -136,7 +141,6 @@ async function snipePrices(
         if (!client.mangoAccount) {
             throw new Error('Mango account not found: ' + accountDefinition.name)
         }
-
         db.get<void>(DB_KEYS.RELOAD_CLIENT, { params: [client], cacheKey: accountDefinition.name, force: canTrade })
 
         accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
@@ -302,7 +306,7 @@ async function main(): Promise<void> {
                         let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { 
                             params: [accountDefinition, newFee], 
                             cacheKey: accountDefinition.name, 
-                            force: forceNewClient})                    
+                            force: forceNewClient})                                         
                         await snipePrices(accountDefinition,
                             TRADE_SIZE,
                             MINUS_THRESHOLD,

@@ -2,8 +2,8 @@ import { PerpOrderType } from '@blockworks-foundation/mango-v4';
 import { Cluster, PublicKey } from '@solana/web3.js';
 
 // THRESHOLDS
-export const MAX_SPOT_TRADE_SIZE = 4
-export const MAX_PERP_TRADE_SIZE = 4
+export const MAX_SPOT_TRADE_SIZE = 5
+export const MAX_PERP_TRADE_SIZE = 5
 export const EXTRA_USDC_AMOUNT = 0.02
 export const MIN_DIFF_SIZE = 0.1
 export const MIN_SPOT_USDC_DIFF = 0.15
@@ -14,16 +14,16 @@ export const MIN_SOL_WALLET_BALANCE = 0.02
 export const MIN_USDC_WALLET_AMOUNT = 10
 
 // TRADING TRIGGERS
-export const MINUS_THRESHOLD = -75
-export const PLUS_THRESHOLD = 75
+export const MINUS_THRESHOLD = -100
+export const PLUS_THRESHOLD = 100
 export const MAX_SHORT_PERP = -75
-export const MAX_LONG_PERP = 1
+export const MAX_LONG_PERP = 0
 
 // TRADING PARAMS
 export const CAN_TRADE = true
 export const MIN_SIZE = 0.1
 export const QUOTE_BUFFER = 0.12
-export const TRADE_SIZE = 4
+export const TRADE_SIZE = 5
 export const ORDER_TYPE = PerpOrderType.limit
 export const ENFORCE_BEST_PRICE = false
 export const USDC_BUFFER = 1
@@ -34,13 +34,13 @@ export const CHECK_OPEN_ORDERS = false
 
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
-export const SLEEP_MAIN_LOOP = 0.25
+export const SLEEP_MAIN_LOOP = 0.2
 export const FILTER_TO_ACCOUNTS: Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
 
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 2 * 60
-export const TRANSACTION_EXPIRATION = 2 * 60 * 1000
+export const TRANSACTION_EXPIRATION = 0.75 * 60 * 1000
 export const FUNDING_RATE_CACHE_EXPIRATION = 1
 export const INTEREST_CACHE_EXPIRATION = 5
 export const FUNDING_CACHE_EXPIRATION = 5
@@ -48,7 +48,7 @@ export const JUP_PRICE_EXPIRATION = 0.5
 export const DEFAULT_CACHE_EXPIRATION = 15
 export const BID_ASK_CACHE_EXPIRATION = 0.5
 export const ACCOUNT_REFRESH_EXPIRATION = 1
-export const FEE_CACHE_EXPIRATION = 2
+export const FEE_CACHE_EXPIRATION = 1
 
 // MINTS
 export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
@@ -63,7 +63,14 @@ export const FUNDING_HOURLY = 'https://api.mngo.cloud/data/v4/one-hour-funding-r
 export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
 export const SOL_GROUP_PK = '78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
 export const COMMITTMENT = 'processed'
-export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy
+// export const CONNECTION_URL = "http://0.0.0.0:8890"
+// export const CONNECTION_URL = "https://api.mainnet-beta.solana.com"
+// export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy robo
+export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/TwEGOh2Jxfb6fiqCCsZ9k3urgbjOtRSH'; // alchemy boscoe
+
+// export const CONNECTION_URL = "https://solana-mainnet.core.chainstack.com/2fd6c27a358f211ccd140996c7374eec" // chainstack
+export const ALCHEMY_WS_URL = "wss://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0"
+export const LITE_RPC_URL = "https://api.mngo.cloud/lite-rpc/v1/"
 export const LAVA_CONNECTION_URL = 'https://g.w.lavanet.xyz:443/gateway/solana/rpc-http/bbc072e803a9a135fe62f7b3ad32d971'; // lava
 export const GROUP_PK = process.env.GROUP_PK || SOL_GROUP_PK; // SOL GROUP
 export const CLUSTER: Cluster = (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
@@ -71,16 +78,15 @@ export const CLUSTER_URL = CONNECTION_URL;
 export const FEE_CONNECTION_URL = LAVA_CONNECTION_URL
 export const MAX_PRIORITY_FEE_KEYS = 128
 export const GROUP_ADDRESS_LOOKUP_TABLE_KEY = new PublicKey("AgCBUZ6UMWqPLftTxeAqpQxtrfiCyL2HgRfmmM6QTfCj")
-// export const CONNECTION_URL = 'https://mango-mango-d092.mainnet.rpcpool.com/';
-// export const CONNECTION_URL = 'https://side-indulgent-research.solana-mainnet.quiknode.pro/75ae6800554082022fe1a77e3f3b56e70067fdce';  //quicknode
+export const QUICKNODE_CONNECTION_URL = 'https://side-indulgent-research.solana-mainnet.quiknode.pro/75ae6800554082022fe1a77e3f3b56e70067fdce';  //quicknode
 // export const CONNECTION_URL = 'https://ssc-dao.genesysgo.net';  //genesysgo
 // export const CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
 
-
+export const USE_PRIORITY_FEE=false
 export const MAX_FEE = 100_000
-export const FEE_DIFF_BUFFER = 25000
-export const DEFAULT_PRIORITY_FEE = 75_000
-export const FEE_MULTIPLIER = 1.5
+export const FEE_DIFF_BUFFER = 25_000
+export const DEFAULT_PRIORITY_FEE = 50_000
+export const FEE_MULTIPLIER = 2
 
 // JUP
 export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL"

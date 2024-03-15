@@ -76,9 +76,8 @@ export const fetchJupiterTransaction = async (
                 userPublicKey,
                 slippageBps: Math.ceil(slippage * 100),
                 wrapAndUnwrapSol: false, 
-                dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000
-                // custom priority fee
-                prioritizationFeeLamports: 'auto' 
+                // dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000                
+                // prioritizationFeeLamports: 'auto' // custom priority fee
             }),
         })
     ).json()
