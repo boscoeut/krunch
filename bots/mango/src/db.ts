@@ -2,10 +2,11 @@ import {
     ACCOUNT_REFRESH_EXPIRATION, BID_ASK_CACHE_EXPIRATION,
     DEFAULT_CACHE_EXPIRATION,
     FUNDING_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION,
-    INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION, FEE_CACHE_EXPIRATION
+    INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION, FEE_CACHE_EXPIRATION,
+    CURRENT_FUNDING_EXPIRATION
 } from "./constants";
 import {
-    fetchFundingData, fetchInterestData, fetchJupPrice, getAccountData,
+    fetchFundingData, fetchInterestData, fetchJupPrice, getAccountData, getCurrentFunding,
     handleEstimateFeeWithAddressLookup, getBidsAndAsks, getFundingRate, reloadClient, setupClient
 } from './mangoUtils';
 import { CacheItem } from "./types";
@@ -13,7 +14,7 @@ import { CacheItem } from "./types";
 export enum DB_KEYS {
     NUM_TRADES = "NUM_TRADES",
     FUNDING_RATE = "FUNDING_RATE",
-    FUNDING_DATA = "FUNDING_DATA",
+    HISTORICAL_FUNDING_DATA = "HISTORICAL_FUNDING_DATA",
     NUM_TRADES_SUCCESS = "NUM_TRADES_SUCCESS",
     NUM_TRADES_FAIL = "NUM_TRADES_FAIL",
     INTEREST_DATA = "INTEREST_DATA",
@@ -24,7 +25,8 @@ export enum DB_KEYS {
     SWAP = "SWAP",
     SOL_PRICE = "SOL_PRICE",
     ACCOUNT_DETAILS = "ACCOUNT_DETAILS",
-    FEE_ESTIMATE = "FEE_ESTIMATE"
+    FEE_ESTIMATE = "FEE_ESTIMATE",
+    CURR_FUNDING_DATA = "CURR_FUNDING_DATA",
 }
 
 export type GetOptions = {
@@ -122,7 +124,7 @@ registerModifier(DB_KEYS.FUNDING_RATE, {
     modifier: getFundingRate
 })
 
-registerModifier(DB_KEYS.FUNDING_DATA, {
+registerModifier(DB_KEYS.HISTORICAL_FUNDING_DATA, {
     expiration: FUNDING_CACHE_EXPIRATION,
     modifier: fetchFundingData
 })
@@ -144,7 +146,7 @@ registerModifier(DB_KEYS.BIDS_AND_ASKS, {
     modifier: getBidsAndAsks
 })
 registerModifier(DB_KEYS.GET_CLIENT, {
-    expiration: -1,
+    expiration: ACCOUNT_REFRESH_EXPIRATION,
     modifier: setupClient
 })
 registerModifier(DB_KEYS.ACCOUNT_DETAILS, {
@@ -154,4 +156,8 @@ registerModifier(DB_KEYS.ACCOUNT_DETAILS, {
 registerModifier(DB_KEYS.FEE_ESTIMATE, {
     expiration: FEE_CACHE_EXPIRATION,
     modifier: handleEstimateFeeWithAddressLookup
+})
+registerModifier(DB_KEYS.CURR_FUNDING_DATA, {
+    expiration: CURRENT_FUNDING_EXPIRATION,
+    modifier: getCurrentFunding
 })

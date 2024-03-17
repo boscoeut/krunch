@@ -40,7 +40,8 @@ import {
     QUICKNODE_CONNECTION_URL,
     LAVA_CONNECTION_URL,
     LITE_RPC_URL,
-    USE_PRIORITY_FEE
+    USE_PRIORITY_FEE,
+    CONNECTION_URL
 } from './constants';
 import * as db from './db';
 import { groupBy, mapValues, maxBy, sampleSize } from 'lodash'
@@ -264,17 +265,15 @@ export function toFixedFloor(num: number, fixed: number = 4): number {
 
 export const getClient = async (user: Keypair, prioritizationFee: number): Promise<Client> => {
     const options = AnchorProvider.defaultOptions();
-    options.skipPreflight = true
-    options.maxRetries = 20
-    // options.preflightCommitment= 'confirmed'
+    options.skipPreflight = false
     const connection = new Connection(CLUSTER_URL!, {
         commitment: COMMITTMENT,
         wsEndpoint: ALCHEMY_WS_URL
     });
     const backupConnections = [
         new Connection(LITE_RPC_URL),
-        new Connection(LAVA_CONNECTION_URL),
-        new Connection(QUICKNODE_CONNECTION_URL),
+        // new Connection(LAVA_CONNECTION_URL),
+        // new Connection(QUICKNODE_CONNECTION_URL),
     ];
 
     const wallet = new Wallet(user);
@@ -363,22 +362,16 @@ export async function getAccountData(
     const usdc = usdcToken?.uiAmount || 0
     const sol = solToken?.uiAmount || 0
 
-    const pp = mangoAccount
+    const perpPosition = mangoAccount
         .perpActive()
         .find((pp: any) => pp.marketIndex === perpMarket.perpMarketIndex);
 
-    let fundingAmount = 0;
+    const fundingAmount = perpPosition!.getCumulativeFundingUi(perpMarket);
     let historicalFunding = 0;
     let interestAmount = 0;
-    let solAmount = 0;
-    if (pp) {
-        // fundingAmount += pp.getCumulativeFundingUi(perpMarket);
-        const cumFunding = pp.getCumulativeFunding(perpMarket);
-        fundingAmount = (cumFunding.cumulativeLongFunding + cumFunding.cumulativeShortFunding) / 10 ** 6
-        solAmount = pp.basePositionLots.toNumber() / 100
-    }
+    let solAmount = perpPosition!.basePositionLots.toNumber() / 100
     const { bestBid, bestAsk } = await db.get<{ bestBid: number, bestAsk: number }>(db.DB_KEYS.BIDS_AND_ASKS, { params: [perpMarket, client], cacheKey: accountDefinition.name })
-    const fundingData = await db.get<any[]>(db.DB_KEYS.FUNDING_DATA, { cacheKey: accountDefinition.name, params: [mangoAccount.publicKey.toBase58()] })
+    const fundingData = await db.get<any[]>(db.DB_KEYS.HISTORICAL_FUNDING_DATA, { cacheKey: accountDefinition.name, params: [mangoAccount.publicKey.toBase58()] })
     if (fundingData && fundingData.length > 0) {
         for (const funding of fundingData || []) {
             historicalFunding += funding.long_funding + funding.short_funding
@@ -425,6 +418,26 @@ export async function getAccountData(
         walletUsdc: usdc,
         solDiff: solAmount + sol + solBalance - SOL_RESERVE
     }
+}
+
+export async function getCurrentFunding(accountDefinition: AccountDefinition) {
+    const options = AnchorProvider.defaultOptions()
+    const connection = new Connection(CLUSTER_URL)
+    const provider = new AnchorProvider(
+        connection,
+        new Wallet(Keypair.generate()),
+        options,
+    )
+    const client = MangoClient.connect(provider, CLUSTER, MANGO_V4_ID[CLUSTER])
+    const mangoAccount = await client.getMangoAccount(new PublicKey(accountDefinition.key));
+    const group = await client.getGroup(new PublicKey(GROUP_PK));
+    const values = group.perpMarketsMapByMarketIndex.values()
+    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+    const perpPosition = mangoAccount
+        .perpActive()
+        .find((pp: any) => pp.marketIndex === perpMarket.perpMarketIndex);
+    const fundingAmount = perpPosition!.getCumulativeFundingUi(perpMarket);
+    return fundingAmount;
 }
 
 export const setupClient = async (accountDefinition: AccountDefinition, prioritizationFee: number = DEFAULT_PRIORITY_FEE): Promise<Client> => {

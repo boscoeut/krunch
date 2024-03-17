@@ -46,7 +46,7 @@ import {
     spotTrade
 } from './mangoSpotUtils';
 import {
-    perpTrade, sleep,toFixedFloor
+    perpTrade, sleep, toFixedFloor
 } from './mangoUtils';
 import {
     AccountDefinition,
@@ -112,13 +112,13 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: 'BU
     if (solAmount > 0 && action === "BUY") {
         tradeSize = Math.min(requestedTradeSize, optimalSize)
     } else if (solAmount < 0 && action === "BUY") {
-        // tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount)) // if you want to make sure it doesn't go past zero
-        tradeSize = Math.min(requestedTradeSize, optimalSize)
+        const amt = Math.max(Math.abs(solAmount), optimalSize)
+        tradeSize = Math.min(requestedTradeSize, amt)
     } else if (solAmount < 0 && action === "SELL") {
         tradeSize = Math.min(requestedTradeSize, optimalSize)
     } else if (solAmount > 0 && action === "SELL") {
-        // tradeSize = Math.min(requestedTradeSize, Math.abs(solAmount)) // if you want to make sure it doesn't go past zero
-        tradeSize = Math.min(requestedTradeSize, optimalSize)
+        const amt = Math.max(Math.abs(solAmount), optimalSize)
+        tradeSize = Math.min(requestedTradeSize, amt)
     }
 
     return tradeSize
@@ -141,7 +141,8 @@ async function snipePrices(
         if (!client.mangoAccount) {
             throw new Error('Mango account not found: ' + accountDefinition.name)
         }
-        db.get<void>(DB_KEYS.RELOAD_CLIENT, { params: [client], cacheKey: accountDefinition.name, force: canTrade })
+        // remove reload because it doesn't seem to work
+        // db.get<void>(DB_KEYS.RELOAD_CLIENT, { params: [client], cacheKey: accountDefinition.name, force: canTrade })
 
         accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
             cacheKey: accountDefinition.name, params: [
@@ -264,7 +265,7 @@ async function snipePrices(
                         promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false))
                     }
                 }
-                console.log('SELL PERP', accountDefinition.name, promises.length, 'new transaction(s)', `Increase Exposure: ${increaseExposure}.  TradeSize=${tradeSize}`)  
+                console.log('SELL PERP', accountDefinition.name, promises.length, 'new transaction(s)', `Increase Exposure: ${increaseExposure}.  TradeSize=${tradeSize}`)
             }
         }
     } catch (e) {
@@ -273,6 +274,16 @@ async function snipePrices(
     return {
         accountDetails
     }
+}
+
+function getActiveTransactions(accountDefinition: AccountDefinition) {
+    const transaction = db.getItem<PendingTransaction>(DB_KEYS.SWAP, { cacheKey: accountDefinition.name })
+    let numOpenTransactions = 0
+    const expiresON = Date.now() - TRANSACTION_EXPIRATION
+    if (transaction?.timestamp > expiresON) {
+        numOpenTransactions++
+    }
+    return numOpenTransactions
 }
 
 async function main(): Promise<void> {
@@ -284,8 +295,8 @@ async function main(): Promise<void> {
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
 
     let checkAccounts = true
-    let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE,MAX_FEE)
-    
+    let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
+
     let timeout: NodeJS.Timeout | undefined
     while (true) {
         console.log('Sniping Bot', new Date().toTimeString())
@@ -296,17 +307,19 @@ async function main(): Promise<void> {
 
             if (checkAccounts || rateInRange) {
                 const newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
-                const newFee = Math.floor(Math.min(newFeeEstimate* FEE_MULTIPLIER, MAX_FEE))
+                const newFee = Math.floor(Math.min(newFeeEstimate * FEE_MULTIPLIER, MAX_FEE))
                 const feeDiff = Math.abs(newFee - feeEstimate) > FEE_DIFF_BUFFER
-                console.log(`New Fee: ${newFee} New Fee Estimate:${newFeeEstimate} FeeDiff: ${feeDiff} OldFee=${feeEstimate}, FeeMultiplier=${FEE_MULTIPLIER}`)     
+                console.log(`New Fee: ${newFee} New Fee Estimate:${newFeeEstimate} FeeDiff: ${feeDiff} OldFee=${feeEstimate}, FeeMultiplier=${FEE_MULTIPLIER}`)
 
                 for (const accountDefinition of accountDefinitions) {
                     try {
-                        const forceNewClient = feeDiff && CAN_TRADE && accountDefinition.canTrade  && rateInRange                                       
-                        let client = await db.get<Client>(DB_KEYS.GET_CLIENT, { 
-                            params: [accountDefinition, newFee], 
-                            cacheKey: accountDefinition.name, 
-                            force: forceNewClient})                                         
+                        const activeTransactions = getActiveTransactions(accountDefinition)
+                        const forceNewClient = feeDiff && CAN_TRADE && accountDefinition.canTrade && rateInRange
+                        let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
+                            params: [accountDefinition, newFee],
+                            cacheKey: accountDefinition.name,
+                            force: forceNewClient || activeTransactions > 0
+                        })
                         await snipePrices(accountDefinition,
                             TRADE_SIZE,
                             MINUS_THRESHOLD,
@@ -341,7 +354,7 @@ async function main(): Promise<void> {
             }
 
             const accountDetails = db.getItems([DB_KEYS.ACCOUNT_DETAILS])
-            await updateGoogleSheet(googleSheets, accountDetails,feeEstimate)
+            await updateGoogleSheet(googleSheets, accountDetails, feeEstimate)
 
             const solDiff = db.getItems([DB_KEYS.ACCOUNT_DETAILS])
                 .filter((f: AccountDetail) =>

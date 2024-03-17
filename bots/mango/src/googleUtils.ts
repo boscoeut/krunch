@@ -48,7 +48,7 @@ export async function updateGoogleSheet(googleSheets: any,
         const accountValues = accountDetails.map((accountDetail) => {
             return [
                 accountDetail.name,
-                accountDetail.fundingAmount,
+                accountDetail.historicalFunding,
                 accountDetail.borrow,
                 accountDetail.equity,
                 accountDetail.health / 100,
@@ -61,7 +61,7 @@ export async function updateGoogleSheet(googleSheets: any,
                 accountDetail.walletSol,
                 accountDetail.walletUsdc,
                 accountDetail.usdcBalance,
-                accountDetail.historicalFunding
+                accountDetail.fundingAmount
             ]
         });
      
