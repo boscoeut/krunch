@@ -306,7 +306,12 @@ async function main(): Promise<void> {
 
 
             if (checkAccounts || rateInRange) {
-                const newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
+                let newFeeEstimate = DEFAULT_PRIORITY_FEE
+                try{
+                    newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
+                }catch(e:any){
+                    console.error('Error getting fee estimate', e.message)
+                }
                 const newFee = Math.floor(Math.min(newFeeEstimate * FEE_MULTIPLIER, MAX_FEE))
                 const feeDiff = Math.abs(newFee - feeEstimate) > FEE_DIFF_BUFFER
                 console.log(`New Fee: ${newFee} New Fee Estimate:${newFeeEstimate} FeeDiff: ${feeDiff} OldFee=${feeEstimate}, FeeMultiplier=${FEE_MULTIPLIER}`)

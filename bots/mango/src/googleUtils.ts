@@ -65,8 +65,8 @@ export async function updateGoogleSheet(googleSheets: any,
             ]
         });
      
-        const bestBid = accountDetails[0].bestBid
-        const bestAsk = accountDetails[0].bestAsk
+        const bestBid = accountDetails[0]?.bestBid || 0
+        const bestAsk = accountDetails[0]?.bestAsk || 0
 
         const transactionValues: any = []
         openTransactions.sort((a:PendingTransaction, b:PendingTransaction) => a.accountName.localeCompare(b.accountName));

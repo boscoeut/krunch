@@ -64,8 +64,6 @@ export const FUNDING_HOURLY = 'https://api.mngo.cloud/data/v4/one-hour-funding-r
 export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
 export const SOL_GROUP_PK = '78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
 export const COMMITTMENT = 'processed'
-// export const CONNECTION_URL = "http://0.0.0.0:8890"
-// export const CONNECTION_URL = "https://api.mainnet-beta.solana.com"
 // export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy robo
 export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/TwEGOh2Jxfb6fiqCCsZ9k3urgbjOtRSH'; // alchemy boscoe
 
@@ -75,7 +73,7 @@ export const LITE_RPC_URL = "https://api.mngo.cloud/lite-rpc/v1/"
 export const LAVA_CONNECTION_URL = 'https://g.w.lavanet.xyz:443/gateway/solana/rpc-http/bbc072e803a9a135fe62f7b3ad32d971'; // lava
 export const GROUP_PK = process.env.GROUP_PK || SOL_GROUP_PK; // SOL GROUP
 export const CLUSTER: Cluster = (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
-export const CLUSTER_URL = CONNECTION_URL;
+export const CLUSTER_URL = LAVA_CONNECTION_URL;
 export const FEE_CONNECTION_URL = LAVA_CONNECTION_URL
 export const MAX_PRIORITY_FEE_KEYS = 128
 export const GROUP_ADDRESS_LOOKUP_TABLE_KEY = new PublicKey("AgCBUZ6UMWqPLftTxeAqpQxtrfiCyL2HgRfmmM6QTfCj")
