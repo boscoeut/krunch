@@ -146,13 +146,18 @@ export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient
 }
 
 export async function getFundingRate() {
-    const fundingRate = await axios.get(FUNDING_RATE_API)
-    const data: any = fundingRate.data
-    if (data?.find) {
-        const hourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
-        return Number((hourlyRate * 100 * 24 * 365).toFixed(3))
-    } else {
-        return 0
+    try {
+        const fundingRate = await axios.get(FUNDING_RATE_API, {timeout: 3000})
+        const data: any = fundingRate.data
+        if (data?.find) {
+            const hourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
+            return Number((hourlyRate * 100 * 24 * 365).toFixed(3))
+        } else {
+            return 0
+        }
+    } catch (x) {
+        console.log('Failed to fetch funding rate', x)
+        return 0    
     }
 }
 
@@ -268,7 +273,7 @@ export const getClient = async (user: Keypair, prioritizationFee: number): Promi
     options.skipPreflight = false
     const connection = new Connection(CLUSTER_URL!, {
         commitment: COMMITTMENT,
-        wsEndpoint: ALCHEMY_WS_URL
+        // wsEndpoint: ALCHEMY_WS_URL
     });
     const backupConnections = [
         new Connection(LITE_RPC_URL),

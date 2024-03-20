@@ -2,8 +2,8 @@ import { PerpOrderType } from '@blockworks-foundation/mango-v4';
 import { Cluster, PublicKey } from '@solana/web3.js';
 
 // THRESHOLDS
-export const MAX_SPOT_TRADE_SIZE = 10
-export const MAX_PERP_TRADE_SIZE = 10
+export const MAX_SPOT_TRADE_SIZE = 4
+export const MAX_PERP_TRADE_SIZE = 4
 export const EXTRA_USDC_AMOUNT = 0.02
 export const MIN_DIFF_SIZE = 0.1
 export const MIN_SPOT_USDC_DIFF = 0.15
@@ -14,16 +14,16 @@ export const MIN_SOL_WALLET_BALANCE = 0.02
 export const MIN_USDC_WALLET_AMOUNT = 10
 
 // TRADING TRIGGERS
-export const MINUS_THRESHOLD = -125
-export const PLUS_THRESHOLD = 125
-export const MAX_SHORT_PERP = -35
-export const MAX_LONG_PERP = 35
+export const MINUS_THRESHOLD = -100
+export const PLUS_THRESHOLD = 100
+export const MAX_SHORT_PERP = -25
+export const MAX_LONG_PERP = 25
 
 // TRADING PARAMS
 export const CAN_TRADE = true
 export const MIN_SIZE = 0.1
 export const QUOTE_BUFFER = 0.12
-export const TRADE_SIZE = 5
+export const TRADE_SIZE = 3
 export const ORDER_TYPE = PerpOrderType.limit
 export const ENFORCE_BEST_PRICE = false
 export const USDC_BUFFER = 1
@@ -31,6 +31,8 @@ export const SOL_BUFFER = 0.005
 export const SWAP_ONLY_DIRECT_ROUTES = true
 export const JUP_ONLY_DIRECT_ROUTES = true
 export const CHECK_OPEN_ORDERS = false
+export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.5
+export const JUPITER_SPOT_SLIPPAGE = 25
 
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
@@ -40,7 +42,7 @@ export const FILTER_TO_ACCOUNTS: Array<String> = []
 
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 2 * 60
-export const TRANSACTION_EXPIRATION = 1.33 * 60 * 1000
+export const TRANSACTION_EXPIRATION = 1.5 * 60 * 1000
 export const FUNDING_RATE_CACHE_EXPIRATION = 1
 export const INTEREST_CACHE_EXPIRATION = 5
 export const FUNDING_CACHE_EXPIRATION = 5
@@ -73,7 +75,7 @@ export const LITE_RPC_URL = "https://api.mngo.cloud/lite-rpc/v1/"
 export const LAVA_CONNECTION_URL = 'https://g.w.lavanet.xyz:443/gateway/solana/rpc-http/bbc072e803a9a135fe62f7b3ad32d971'; // lava
 export const GROUP_PK = process.env.GROUP_PK || SOL_GROUP_PK; // SOL GROUP
 export const CLUSTER: Cluster = (process.env.CLUSTER_OVERRIDE as Cluster) || 'mainnet-beta';
-export const CLUSTER_URL = LAVA_CONNECTION_URL;
+export const CLUSTER_URL = CONNECTION_URL;
 export const FEE_CONNECTION_URL = LAVA_CONNECTION_URL
 export const MAX_PRIORITY_FEE_KEYS = 128
 export const GROUP_ADDRESS_LOOKUP_TABLE_KEY = new PublicKey("AgCBUZ6UMWqPLftTxeAqpQxtrfiCyL2HgRfmmM6QTfCj")
@@ -82,10 +84,10 @@ export const QUICKNODE_CONNECTION_URL = 'https://side-indulgent-research.solana-
 // export const CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
 
 export const USE_PRIORITY_FEE=true
-export const MAX_FEE = 25_000
-export const FEE_DIFF_BUFFER = 50_000
+export const MAX_FEE = 100_000
+export const FEE_DIFF_BUFFER = 15_000
 export const DEFAULT_PRIORITY_FEE = 50_000
-export const FEE_MULTIPLIER = 1.5
+export const FEE_MULTIPLIER = 1
 
 // JUP
 export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL"

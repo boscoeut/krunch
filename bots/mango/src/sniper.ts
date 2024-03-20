@@ -200,11 +200,15 @@ async function snipePrices(
                         accountDetails.walletUsdc,
                         spotUnbalanced ? 0 : accountDetails.walletSol,
                     ))
-                } else if (spotUnbalanced && spotVsPerpDiff > 0) {
+                } 
+                else if ((spotUnbalanced && spotVsPerpDiff > 0)) {
                     console.log('SELL SOL', tradeSize, spotVsPerpDiff)
-                    const amount = Math.min(MAX_SPOT_TRADE_SIZE, Number(Math.abs(spotVsPerpDiff).toFixed(2)))
+                    let amount = Math.min(MAX_SPOT_TRADE_SIZE, Number(Math.abs(spotVsPerpDiff).toFixed(2)))
+                    if (!spotUnbalanced){
+                        amount = tradeSize
+                    }
                     if (accountDefinition.useMangoSpotTrades) {
-                        promises.push(spotTrade(amount, solBank, usdcBank, client.client, client.mangoAccount, client.user, client.group, 'SELL', accountDefinition))
+                        promises.push(spotTrade(amount, solBank, usdcBank, client.client, client.mangoAccount, client.user, client.group, 'SELL', accountDefinition, solPrice))
                     } else {
                         promises.push(doJupiterTrade(accountDefinition,
                             client, solBank.mint.toString(),
@@ -228,6 +232,8 @@ async function snipePrices(
                         promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.bid, accountDefinition, false))
                     }
                 }
+                
+               
                 console.log('BUY PERP:', accountDefinition.name, promises.length, 'new transaction(s)', `Increase Exposure: ${increaseExposure}`)
             }
             else if (action === 'SELL') {
@@ -238,12 +244,17 @@ async function snipePrices(
                         spotUnbalanced ? 0 : accountDetails.walletUsdc,
                         accountDetails.walletSol,
                     ))
-                } else if (spotUnbalanced && spotVsPerpDiff < 0) {
+                }                
+                else if ((spotUnbalanced && spotVsPerpDiff < 0)) {
                     console.log('BUY SOL', spotVsPerpDiff)
                     const buySize = Math.min(MAX_SPOT_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-                    const amount = Number((buySize * solPrice + EXTRA_USDC_AMOUNT).toFixed(2))
+                    let amount = Number((buySize * solPrice + EXTRA_USDC_AMOUNT).toFixed(2))
+                    if (!spotUnbalanced){
+                        amount = Number((tradeSize * solPrice + EXTRA_USDC_AMOUNT).toFixed(2))
+                    }
+
                     if (accountDefinition.useMangoSpotTrades) {
-                        promises.push(spotTrade(amount, usdcBank, solBank, client.client, client.mangoAccount, client.user, client.group, 'BUY', accountDefinition))
+                        promises.push(spotTrade(amount, usdcBank, solBank, client.client, client.mangoAccount, client.user, client.group, 'BUY', accountDefinition, solPrice))
                     } else {
                         promises.push(doJupiterTrade(accountDefinition,
                             client, usdcBank.mint.toString(), solBank.mint.toString(),
@@ -264,7 +275,8 @@ async function snipePrices(
                         console.log('**** SNIPING SELL', midPrice, "Oracle", solPrice, 'Trade Size', `${tradeSize}`)
                         promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false))
                     }
-                }
+                } 
+               
                 console.log('SELL PERP', accountDefinition.name, promises.length, 'new transaction(s)', `Increase Exposure: ${increaseExposure}.  TradeSize=${tradeSize}`)
             }
         }

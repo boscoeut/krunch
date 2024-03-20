@@ -10,6 +10,7 @@ import {
 } from '@solana/web3.js';
 import axios from 'axios';
 import {
+    JUPITER_SPOT_SLIPPAGE,
     JUPITER_V6_QUOTE_API_MAINNET,
     JUP_ONLY_DIRECT_ROUTES,
     MIN_SOL_BORROW,
@@ -46,14 +47,13 @@ export const performJupiterSwap = async (
         inDecimals,
     );
     const onlyDirectRoutes = JUP_ONLY_DIRECT_ROUTES
-    const slippage = 100
     const maxAccounts = 64
     const swapMode = 'ExactIn'
     const paramObj: any = {
         inputMint,
         outputMint,
         amount: amountBn.toString(),
-        slippageBps: Math.ceil(slippage * 100).toString(),
+        slippageBps: JUPITER_SPOT_SLIPPAGE.toString(),
         swapMode,
         onlyDirectRoutes: `${onlyDirectRoutes}`,
         maxAccounts: `${maxAccounts}`,
@@ -74,7 +74,6 @@ export const performJupiterSwap = async (
                 quoteResponse: selectedRoute,
                 // user public key to be used for the swap
                 userPublicKey: user,
-                slippageBps: Math.ceil(slippage * 100),
                 wrapAndUnwrapSol: true,
                 // dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000
                 // prioritizationFeeLamports: 'auto' // custom priority fee

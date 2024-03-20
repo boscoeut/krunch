@@ -17,7 +17,9 @@ import {
 import axios from 'axios';
 import {
     JUPITER_V6_QUOTE_API_MAINNET,
-    SWAP_ONLY_DIRECT_ROUTES
+    SOL_PRICE_SPOT_DIFF_SLIPPAGE,
+    SWAP_ONLY_DIRECT_ROUTES,
+    JUPITER_SPOT_SLIPPAGE
 } from './constants';
 import {
     AccountDefinition, 
@@ -58,7 +60,6 @@ export const fetchJupiterTransaction = async (
     connection: Connection,
     selectedRoute: any,
     userPublicKey: PublicKey,
-    slippage: number,
     inputMint: PublicKey,
     outputMint: PublicKey,
 ): Promise<[TransactionInstruction[], AddressLookupTableAccount[]]> => {
@@ -74,7 +75,6 @@ export const fetchJupiterTransaction = async (
                 quoteResponse: selectedRoute,
                 // user public key to be used for the swap
                 userPublicKey,
-                slippageBps: Math.ceil(slippage * 100),
                 wrapAndUnwrapSol: false, 
                 // dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000                
                 // prioritizationFeeLamports: 'auto' // custom priority fee
@@ -120,7 +120,8 @@ export const spotTrade = async (
     user: Keypair,
     group: Group,
     side: 'BUY' | 'SELL',
-    accountDefinition: AccountDefinition) => {
+    accountDefinition: AccountDefinition,
+    solPrice:number) => {
 
         const swap: PendingTransaction = {
             type: side === 'BUY' ? 'SPOT-BUY' : 'SPOT-SELL',
@@ -141,14 +142,14 @@ export const spotTrade = async (
         );
         console.log('finding best route for amount = ' + amount);
         const onlyDirectRoutes = SWAP_ONLY_DIRECT_ROUTES
-        const slippage = 100
+        const slippage = JUPITER_SPOT_SLIPPAGE
         const maxAccounts = 64
         const swapMode = 'ExactIn'
         const paramObj: any = {
             inputMint: inBank.mint.toString(),
             outputMint: outBank.mint.toString(),
             amount: amountBn.toString(),
-            slippageBps: Math.ceil(slippage * 100).toString(),
+            slippageBps: JUPITER_SPOT_SLIPPAGE.toString(),
             swapMode,
             onlyDirectRoutes: `${onlyDirectRoutes}`,
             maxAccounts: `${maxAccounts}`,
@@ -162,7 +163,6 @@ export const spotTrade = async (
             client.connection,
             bestRoute,
             user.publicKey,
-            0,
             inBank.mint,
             outBank.mint
         );
@@ -170,7 +170,17 @@ export const spotTrade = async (
         if (side === 'BUY') {
             price = (bestRoute.inAmount / 10 ** inBank.mintDecimals) / (bestRoute.outAmount / 10 ** outBank.mintDecimals)
         }
-        console.log(`*** ${accountDefinition.name} MARGIN ${side}: `, amount, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
+
+        let priceDiff = price-solPrice
+        if (side === 'SELL') {
+            priceDiff = solPrice-price
+        }
+        console.log(`Price Diff: ${priceDiff}`)
+        if (priceDiff > SOL_PRICE_SPOT_DIFF_SLIPPAGE) {
+            throw new Error(`Price diff too high: ${priceDiff}.  Oracle=${solPrice}  Swap=${price}  SwapPrice=${amount}  Side=${side}  Account=${accountDefinition.name}  `)
+        }
+
+        console.log(`*** ${accountDefinition.name} MARGIN ${side}: `, amount,"Oracle: ",solPrice, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
         swap.price = price
         const sig = await client.marginTrade({
             group: group,
@@ -189,8 +199,8 @@ export const spotTrade = async (
         return sig.signature
     } catch (e:any) {
         swap.status = 'FAILED'
+        console.error(`Error in spotTrade: ${e.message} Account=${accountDefinition.name}  Type=${swap.type}  Amount=${amount}  Oracle=${solPrice}  Price=${swap.price}  Side=${side}  `)
         db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
         db.incrementItem(db.DB_KEYS.NUM_TRADES_FAIL, { cacheKey : swap.type+'-FAIL' })
-        console.error('Error in spotTrade: ', e.message)
     }
 }
