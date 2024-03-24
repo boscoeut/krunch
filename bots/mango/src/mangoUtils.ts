@@ -136,18 +136,20 @@ export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient
         ]);
         const item = {
             bestBid: bids.best()?.uiPrice || 0,
-            bestAsk: asks.best()?.uiPrice || 0
+            bestBidSize: bids.best()?.uiSize || 0,
+            bestAsk: asks.best()?.uiPrice || 0,
+            bestAskSize: asks.best()?.uiSize || 0
         }
         return item
     } catch (e) {
         console.log('Failed to fetch bids and asks', e)
-        return { bestBid: 0, bestAsk: 0 }
+        return { bestBid: 0, bestAsk: 0, bestBidSize: 0, bestAskSize: 0 }
     }
 }
 
 export async function getFundingRate() {
     try {
-        const fundingRate = await axios.get(FUNDING_RATE_API, {timeout: 3000})
+        const fundingRate = await axios.get(FUNDING_RATE_API, { timeout: 3000 })
         const data: any = fundingRate.data
         if (data?.find) {
             const hourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
@@ -157,7 +159,7 @@ export async function getFundingRate() {
         }
     } catch (x) {
         console.log('Failed to fetch funding rate', x)
-        return 0    
+        return 0
     }
 }
 

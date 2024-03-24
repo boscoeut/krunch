@@ -1,16 +1,19 @@
 import {
-    PerpOrderSide, toNative
+    PerpOrderSide
 } from '@blockworks-foundation/mango-v4';
 import fs from 'fs';
 import {
-    Connection, Keypair, PublicKey
-} from '@solana/web3.js';
-import {
+    PERP_PRICE_BUFFER,
     CAN_TRADE,
-    SOL_MINT,
+    CHECK_OPEN_ORDERS,
+    MIN_PERP_SPOT_PROFIT,
+    DEFAULT_PRIORITY_FEE,
     ENFORCE_BEST_PRICE,
     EXTRA_USDC_AMOUNT,
+    FEE_DIFF_BUFFER,
+    FEE_MULTIPLIER,
     FILTER_TO_ACCOUNTS,
+    MAX_FEE,
     MAX_LONG_PERP,
     MAX_PERP_TRADE_SIZE,
     MAX_SHORT_PERP,
@@ -18,35 +21,32 @@ import {
     MINUS_THRESHOLD,
     MIN_DIFF_SIZE,
     MIN_SIZE,
-    DEFAULT_PRIORITY_FEE,
-    FEE_MULTIPLIER,
     MIN_SOL_WALLET_AMOUNT,
     MIN_SOL_WALLET_BALANCE,
     MIN_USDC_WALLET_AMOUNT,
     NO_TRADE_TIMEOUT,
     PLUS_THRESHOLD,
     QUOTE_BUFFER,
-    SLEEP_MAIN_LOOP,
+    SLEEP_MAIN_LOOP_IN_MINUTES,
     SOL_RESERVE,
     TRADE_SIZE,
-    CHECK_OPEN_ORDERS,
-    TRANSACTION_EXPIRATION,
-    MAX_FEE,
-    FEE_DIFF_BUFFER
+    TRANSACTION_EXPIRATION
 } from './constants';
 import * as db from './db';
 import { DB_KEYS } from './db';
 import { authorize, updateGoogleSheet } from './googleUtils';
 import {
     doDeposit,
-    doSolWithdrawal,
-    doJupiterTrade
+    doJupiterTrade,
+    doSolWithdrawal
 } from './jupiterUtils';
 import {
+    getTradePossibilities,
+    spotAndPerpSwap,
     spotTrade
 } from './mangoSpotUtils';
 import {
-    perpTrade, sleep, toFixedFloor
+    perpTrade, sleep
 } from './mangoUtils';
 import {
     AccountDefinition,
@@ -57,6 +57,7 @@ import {
 } from './types';
 
 const { google } = require('googleapis');
+type TradeStrategy = "BUY_PERP_SELL_SPOT" | "SELL_PERP_BUY_SPOT" | "NONE"
 
 function roundToNearestHalf(num: number) {
     return Math.floor(num * 2) / 2;
@@ -99,10 +100,10 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: 'BU
     let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0
     maxSize = roundToNearestHalf(maxSize)
 
-    if (action === 'BUY' && solAmount < maxPerp) {
+    if (action === 'BUY') {
         maxSize = Math.min(maxSize, maxPerp - solAmount)
     }
-    if (action === 'SELL' && solAmount > minPerp) {
+    if (action === 'SELL') {
         maxSize = Math.min(maxSize, Math.abs(minPerp) + solAmount)
     }
 
@@ -124,6 +125,154 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: 'BU
     return tradeSize
 
 }
+
+async function determineBuyVsSell(client: Client, spotAmount: number, solPrice: number, usdcBank: any, solBank: any) {
+    let strategy: TradeStrategy = "NONE"
+
+    const possibilities = await getTradePossibilities(client.client, client.group, solPrice, spotAmount, usdcBank, solBank);
+    if (possibilities.buyPerpSellSpot > MIN_PERP_SPOT_PROFIT && possibilities.buyPerpSellSpot > possibilities.sellPerpBuySpot) {
+        strategy = "BUY_PERP_SELL_SPOT"
+    } else if (possibilities.sellPerpBuySpot > MIN_PERP_SPOT_PROFIT && possibilities.sellPerpBuySpot > possibilities.buyPerpSellSpot) {
+        strategy = "SELL_PERP_BUY_SPOT"
+    }
+    return {
+        strategy,
+        possibilities,
+    }
+}
+
+async function performSpap(client: Client,
+    accountDefinition: AccountDefinition,
+    accountDetails: AccountDetail,
+    tradeSize: number) {
+
+    const hourlyRateAPR = await db.get<number>(DB_KEYS.FUNDING_RATE)
+    console.log('----- ')
+    console.log("FUNDING RATE: ", hourlyRateAPR)
+
+    const walletSol = accountDetails.walletSol - SOL_RESERVE
+    const { solBalance, solAmount, solBank, usdcBank, solPrice } = accountDetails
+
+    const INCLUDE_WALLET = false
+    const MIN_DIFF_SIZE = 0.01
+
+    const spotVsPerpDiff = solBalance + solAmount + (INCLUDE_WALLET ? walletSol : 0)
+    const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
+
+    let balanceStrategy: TradeStrategy = "SELL_PERP_BUY_SPOT"
+    if (hourlyRateAPR < 0) {
+        balanceStrategy = "BUY_PERP_SELL_SPOT"
+    }
+
+    const newTradeSize = getTradeSize(
+        tradeSize, solAmount,
+        balanceStrategy === "BUY_PERP_SELL_SPOT" ? "BUY" : "SELL", accountDetails.borrow,
+        accountDefinition, solPrice, MAX_SHORT_PERP, MAX_LONG_PERP)
+    console.log("New Trade Size", newTradeSize)
+
+    let spotAmount = newTradeSize
+    let perpAmount = newTradeSize
+
+    if (spotUnbalanced) {
+        if (balanceStrategy === "SELL_PERP_BUY_SPOT") {
+            if (spotVsPerpDiff > 0) {
+                spotAmount = 0
+                perpAmount = Math.abs(spotVsPerpDiff)
+            } else {
+                spotAmount = Math.abs(spotVsPerpDiff)
+                perpAmount = 0
+            }
+        } else {
+            if (spotVsPerpDiff < 0) {
+                spotAmount = 0
+                perpAmount = Math.abs(spotVsPerpDiff)
+            } else {
+                spotAmount = Math.abs(spotVsPerpDiff)
+                perpAmount = 0
+            }
+        }
+        balanceStrategy
+    }
+
+    if (perpAmount > 0 || spotAmount > 0) {
+        const { strategy, possibilities }: any = await determineBuyVsSell(
+            client, newTradeSize, solPrice, usdcBank, solBank)
+        // let tradeStrategy = spotUnbalanced ? balanceStrategy : strategy
+        let tradeStrategy = strategy
+
+        if (tradeStrategy === "BUY_PERP_SELL_SPOT") {
+            // buy Perp and sell Spot
+            console.log(`BUY_PERP_SELL_SPOT: ${possibilities.buyPerpSellSpot}`)
+            const perpPrice = solPrice - PERP_PRICE_BUFFER
+            await spotAndPerpSwap(
+                spotAmount,
+                solBank,
+                usdcBank,
+                client.client,
+                client.mangoAccount!,
+                client.user,
+                client.group,
+                "SELL",
+                accountDefinition,
+                solPrice,
+                perpAmount,
+                perpPrice,
+                PerpOrderSide.bid,
+                possibilities.bestSellRoute,
+                possibilities.sellSpotPrice,
+                possibilities.bestAsk)
+        } else if (tradeStrategy === "SELL_PERP_BUY_SPOT") {
+            // sell Perp and buy Spot
+            console.log(`SELL_PERP_BUY_SPOT: ${possibilities.sellPerpBuySpot}`)
+            const perpPrice = solPrice + PERP_PRICE_BUFFER
+            await spotAndPerpSwap(
+                spotAmount * solPrice,
+                usdcBank,
+                solBank,
+                client.client,
+                client.mangoAccount!,
+                client.user,
+                client.group,
+                "BUY",
+                accountDefinition,
+                solPrice,
+                perpAmount,
+                perpPrice,
+                PerpOrderSide.ask,
+                possibilities.bestBuyRoute,
+                possibilities.sellSpotPrice,
+                possibilities.bestBid)
+        }
+    } else {
+        console.log(`${accountDefinition.name}: SKIPPING TRADE DUE TO TRADE SIZE = 0`)
+    }
+}
+
+async function syncPrices(
+    client: Client,
+    accountDefinition: AccountDefinition,
+    tradeSize: number
+) {
+    try {
+        if (!client.mangoAccount) {
+            throw new Error('Mango account not found: ' + accountDefinition.name)
+        }
+
+        const accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
+            cacheKey: accountDefinition.name, params: [
+                accountDefinition,
+                client.client,
+                client.group,
+                client.mangoAccount,
+                client.user]
+        })
+        await performSpap(client, accountDefinition, accountDetails, tradeSize)
+        return accountDetails
+    } catch (e: any) {
+        console.error(e.message)
+    }
+}
+
 async function snipePrices(
     accountDefinition: AccountDefinition,
     requestedTradeSize: number,
@@ -143,7 +292,6 @@ async function snipePrices(
         }
         // remove reload because it doesn't seem to work
         // db.get<void>(DB_KEYS.RELOAD_CLIENT, { params: [client], cacheKey: accountDefinition.name, force: canTrade })
-
         accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
             cacheKey: accountDefinition.name, params: [
                 accountDefinition,
@@ -200,11 +348,24 @@ async function snipePrices(
                         accountDetails.walletUsdc,
                         spotUnbalanced ? 0 : accountDetails.walletSol,
                     ))
-                } 
-                else if ((spotUnbalanced && spotVsPerpDiff > 0)) {
+                }
+                else if ((spotVsPerpDiff < 0 && spotUnbalanced)) {
+                    console.log('BUY BACK PERP', hourlyRateAPR, aprMinThreshold)
+                    const bestAsk = solPrice - QUOTE_BUFFER
+                    tradeSize = spotUnbalanced ? Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff)) : tradeSize
+                    const midPrice = (bestAsk + solPrice) / 2
+
+                    if (ENFORCE_BEST_PRICE && midPrice < accountDetails.bestAsk) {
+                        console.log('**** SNIPING BUY NOT EXECUTED', `(midPrice)=${midPrice} (bestAsk=${accountDetails.bestAsk}) (Oracle=${solPrice})`)
+                    } else {
+                        console.log(`**** SNIPING BUY (midPrice)=${midPrice} (bestAsk=${accountDetails.bestAsk}) (Oracle=${solPrice}) (Trade Size=${tradeSize})`)
+                        promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.bid, accountDefinition, false))
+                    }
+                }
+                else if (increaseExposure || (spotUnbalanced && spotVsPerpDiff > 0)) {
                     console.log('SELL SOL', tradeSize, spotVsPerpDiff)
                     let amount = Math.min(MAX_SPOT_TRADE_SIZE, Number(Math.abs(spotVsPerpDiff).toFixed(2)))
-                    if (!spotUnbalanced){
+                    if (!spotUnbalanced) {
                         amount = tradeSize
                     }
                     if (accountDefinition.useMangoSpotTrades) {
@@ -219,21 +380,9 @@ async function snipePrices(
                             solPrice))
                     }
                 }
-                else if (increaseExposure || (spotVsPerpDiff < 0 && spotUnbalanced)) {
-                    console.log('BUY BACK PERP', hourlyRateAPR, aprMinThreshold)
-                    const bestAsk = solPrice - QUOTE_BUFFER
-                    tradeSize = spotUnbalanced ? Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff)) : tradeSize
-                    const midPrice = (bestAsk + solPrice) / 2
 
-                    if (ENFORCE_BEST_PRICE && midPrice < accountDetails.bestAsk) {
-                        console.log('**** SNIPING BUY NOT EXECUTED', `(midPrice)=${midPrice} (bestAsk=${accountDetails.bestAsk}) (Oracle=${solPrice})`)
-                    } else {
-                        console.log(`**** SNIPING BUY (midPrice)=${midPrice} (bestAsk=${accountDetails.bestAsk}) (Oracle=${solPrice}) (Trade Size=${tradeSize})`)
-                        promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.bid, accountDefinition, false))
-                    }
-                }
-                
-               
+
+
                 console.log('BUY PERP:', accountDefinition.name, promises.length, 'new transaction(s)', `Increase Exposure: ${increaseExposure}`)
             }
             else if (action === 'SELL') {
@@ -244,12 +393,24 @@ async function snipePrices(
                         spotUnbalanced ? 0 : accountDetails.walletUsdc,
                         accountDetails.walletSol,
                     ))
-                }                
-                else if ((spotUnbalanced && spotVsPerpDiff < 0)) {
+                }
+                else if ((spotVsPerpDiff > 0 && spotUnbalanced)) {
+                    console.log('SELL PERP', hourlyRateAPR, aprMaxThreshold)
+                    const bestBid = solPrice + QUOTE_BUFFER
+                    tradeSize = spotUnbalanced ? Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff)) : tradeSize
+                    const midPrice = (bestBid + solPrice) / 2
+                    if (ENFORCE_BEST_PRICE && midPrice > accountDetails.bestBid) {
+                        console.log('**** SNIPING SELL NOT EXECUTED', `(midPrice)=${midPrice} (bestBid=${accountDetails.bestBid}) (Oracle=${solPrice})`)
+                    } else {
+                        console.log('**** SNIPING SELL', midPrice, "Oracle", solPrice, 'Trade Size', `${tradeSize}`)
+                        promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false))
+                    }
+                }
+                else if (increaseExposure || (spotUnbalanced && spotVsPerpDiff < 0)) {
                     console.log('BUY SOL', spotVsPerpDiff)
                     const buySize = Math.min(MAX_SPOT_TRADE_SIZE, Math.abs(spotVsPerpDiff))
                     let amount = Number((buySize * solPrice + EXTRA_USDC_AMOUNT).toFixed(2))
-                    if (!spotUnbalanced){
+                    if (!spotUnbalanced) {
                         amount = Number((tradeSize * solPrice + EXTRA_USDC_AMOUNT).toFixed(2))
                     }
 
@@ -264,19 +425,8 @@ async function snipePrices(
                             solPrice))
                     }
                 }
-                else if (increaseExposure || (spotVsPerpDiff > 0 && spotUnbalanced)) {
-                    console.log('SELL PERP', hourlyRateAPR, aprMaxThreshold)
-                    const bestBid = solPrice + QUOTE_BUFFER
-                    tradeSize = spotUnbalanced ? Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff)) : tradeSize
-                    const midPrice = (bestBid + solPrice) / 2
-                    if (ENFORCE_BEST_PRICE && midPrice > accountDetails.bestBid) {
-                        console.log('**** SNIPING SELL NOT EXECUTED', `(midPrice)=${midPrice} (bestBid=${accountDetails.bestBid}) (Oracle=${solPrice})`)
-                    } else {
-                        console.log('**** SNIPING SELL', midPrice, "Oracle", solPrice, 'Trade Size', `${tradeSize}`)
-                        promises.push(perpTrade(client.client, client.group, client.mangoAccount, perpMarket, midPrice, tradeSize, PerpOrderSide.ask, accountDefinition, false))
-                    }
-                } 
-               
+
+
                 console.log('SELL PERP', accountDefinition.name, promises.length, 'new transaction(s)', `Increase Exposure: ${increaseExposure}.  TradeSize=${tradeSize}`)
             }
         }
@@ -298,7 +448,79 @@ function getActiveTransactions(accountDefinition: AccountDefinition) {
     return numOpenTransactions
 }
 
-async function main(): Promise<void> {
+async function doubleSwapLoop() {
+    let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
+    const googleClient: any = await authorize();
+    const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
+    const googleUpdateInterval = 60 * 1000
+    const accountDetailList: AccountDetail[] = []
+    let lastGoogleUpdate = Date.now()
+
+    while (true) {
+        accountDetailList.length = 0
+        let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
+
+        let newFeeEstimate = DEFAULT_PRIORITY_FEE
+        try {
+            newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
+        } catch (e: any) {
+            console.error('Error getting fee estimate', e.message)
+        }
+
+        for (const accountDefinition of accountDefinitions) {
+            let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
+                params: [accountDefinition, DEFAULT_PRIORITY_FEE],
+                cacheKey: accountDefinition.name,
+                force: true
+            })
+
+            if (accountDefinition.name === 'BIRD') {
+                // CAN TRADE
+                const tradeSize = 1
+                const accountDetails: any = await syncPrices(client, accountDefinition, tradeSize)
+                accountDetailList.push(accountDetails)
+            } else {
+                // CAN NOT TRADE - JUST GET GOOGLE DETAILS
+                const accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
+                    cacheKey: accountDefinition.name, params: [
+                        accountDefinition,
+                        client.client,
+                        client.group,
+                        client.mangoAccount,
+                        client.user]
+                })
+                accountDetailList.push(accountDetails)
+            }
+
+        }
+
+        const now = Date.now()
+        if (now - lastGoogleUpdate > googleUpdateInterval &&
+            accountDetailList.length === accountDefinitions.length) {
+            // update google sheet
+            const openTransactions: PendingTransaction[] = db.getItems([DB_KEYS.SWAP])
+            let numOpenTransactions = 0
+            for (const transaction of openTransactions) {
+                const expiresON = Date.now() - TRANSACTION_EXPIRATION
+                if (transaction.timestamp < expiresON && transaction.status === 'PENDING') {
+                    transaction.status = 'EXPIRED'
+                    db.incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey: transaction.type + '-EXPIRED' })
+                }
+                if (transaction.status === 'PENDING' || transaction.status === 'ORDERED') {
+                    numOpenTransactions++
+                }
+            }
+
+            await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate)
+            // end google sheet update
+            lastGoogleUpdate = now
+        }
+        console.log(`Sleeping for ${SLEEP_MAIN_LOOP_IN_MINUTES} minutes`)
+        await sleep(SLEEP_MAIN_LOOP_IN_MINUTES * 1000 * 60)
+    }
+}
+
+async function snipePriceLoop(): Promise<void> {
     let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     if (FILTER_TO_ACCOUNTS.length > 0) {
         accountDefinitions = accountDefinitions.filter((f: any) => FILTER_TO_ACCOUNTS.includes(f.name))
@@ -319,9 +541,9 @@ async function main(): Promise<void> {
 
             if (checkAccounts || rateInRange) {
                 let newFeeEstimate = DEFAULT_PRIORITY_FEE
-                try{
+                try {
                     newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
-                }catch(e:any){
+                } catch (e: any) {
                     console.error('Error getting fee estimate', e.message)
                 }
                 const newFee = Math.floor(Math.min(newFeeEstimate * FEE_MULTIPLIER, MAX_FEE))
@@ -389,7 +611,7 @@ async function main(): Promise<void> {
                 }, NO_TRADE_TIMEOUT * 1000 * 60)
             }
 
-            let sleepAmount = SLEEP_MAIN_LOOP
+            let sleepAmount = SLEEP_MAIN_LOOP_IN_MINUTES
             console.log('Sleeping for', sleepAmount > 1 ? sleepAmount : sleepAmount * 60, sleepAmount > 1 ? 'minutes' : 'seconds')
             await sleep(sleepAmount * 1000 * 60)
         } catch (e: any) {
@@ -402,7 +624,8 @@ async function main(): Promise<void> {
 }
 
 try {
-    main();
+    // snipePriceLoop();
+    doubleSwapLoop();
 } catch (error) {
     console.log(error);
 }

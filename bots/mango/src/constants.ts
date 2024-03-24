@@ -16,11 +16,11 @@ export const MIN_USDC_WALLET_AMOUNT = 10
 // TRADING TRIGGERS
 export const MINUS_THRESHOLD = -100
 export const PLUS_THRESHOLD = 100
-export const MAX_SHORT_PERP = -25
-export const MAX_LONG_PERP = 25
+export const MAX_SHORT_PERP = -27.5
+export const MAX_LONG_PERP = 27.5
 
 // TRADING PARAMS
-export const CAN_TRADE = true
+export const CAN_TRADE = false
 export const MIN_SIZE = 0.1
 export const QUOTE_BUFFER = 0.12
 export const TRADE_SIZE = 3
@@ -28,20 +28,22 @@ export const ORDER_TYPE = PerpOrderType.limit
 export const ENFORCE_BEST_PRICE = false
 export const USDC_BUFFER = 1
 export const SOL_BUFFER = 0.005
-export const SWAP_ONLY_DIRECT_ROUTES = true
-export const JUP_ONLY_DIRECT_ROUTES = true
+export const SWAP_ONLY_DIRECT_ROUTES = false
+export const JUP_ONLY_DIRECT_ROUTES = false
 export const CHECK_OPEN_ORDERS = false
-export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.5
+export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.10
 export const JUPITER_SPOT_SLIPPAGE = 25
+export const PERP_PRICE_BUFFER = 0.05
+export const MIN_PERP_SPOT_PROFIT = 0.25
 
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
-export const SLEEP_MAIN_LOOP = 0.25
+export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.25
 export const FILTER_TO_ACCOUNTS: Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
 
 // CACHE EXPIRATIONS
-export const ORDER_EXPIRATION = 2 * 60
+export const ORDER_EXPIRATION = 1 * 60
 export const TRANSACTION_EXPIRATION = 1.5 * 60 * 1000
 export const FUNDING_RATE_CACHE_EXPIRATION = 1
 export const INTEREST_CACHE_EXPIRATION = 5
