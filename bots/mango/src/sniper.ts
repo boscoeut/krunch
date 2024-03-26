@@ -209,7 +209,7 @@ async function performSpap(client: Client,
             // buy Perp and sell Spot
             console.log(`BUY_PERP_SELL_SPOT: ${possibilities.buyPerpSellSpot}`)
             const perpPrice = possibilities.sellSpotPrice - PERP_PRICE_BUFFER
-            if (possibilities.maxBuySize < perpAmount) {
+            if (possibilities.maxBuySize < perpAmount && spotAmount > 0) {
                 const diff = perpAmount - possibilities.maxBuySize
                 perpAmount = possibilities.maxBuySize
                 spotAmount = Math.max(spotAmount - diff, 0)
@@ -235,7 +235,7 @@ async function performSpap(client: Client,
             // sell Perp and buy Spot
             console.log(`SELL_PERP_BUY_SPOT: ${possibilities.sellPerpBuySpot}`)
             const perpPrice = possibilities.buySpotPrice + PERP_PRICE_BUFFER
-            if (possibilities.maxSellSize < perpAmount) {
+            if (possibilities.maxSellSize < perpAmount && spotAmount > 0) {
                 const diff = perpAmount - possibilities.maxSellSize
                 perpAmount = possibilities.maxSellSize
                 spotAmount = Math.max(spotAmount - diff, 0)
@@ -473,6 +473,8 @@ async function doubleSwapLoop() {
     let lastGoogleUpdate = Date.now()
     const UPDATE_GOOGLE_SHEET = false
 
+    const CAN_TRADE_NOW = true
+
     while (true) {
         accountDetailList.length = 0
         let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
@@ -481,18 +483,16 @@ async function doubleSwapLoop() {
         if (fundingRate === 0) {
             console.log('FUNDING RATE IS 0, SLEEPING FOR 5 SECONDS')
             await sleep(5 * 1000)
-
         } else {
-
             const tradeSize = 5;
-            const newItems = accountDefinitions.filter(a=>a.name==="SEVEN").map(async (accountDefinition) => {
+            const newItems = accountDefinitions.map(async (accountDefinition) => {
                 let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
                     params: [accountDefinition, DEFAULT_PRIORITY_FEE],
                     cacheKey: accountDefinition.name,
                     force: true
                 })
 
-                if (accountDefinition.canTrade) {
+                if (accountDefinition.canTrade && CAN_TRADE_NOW) {
                     const accountDetails: any = await syncPrices(client, accountDefinition, tradeSize, fundingRate)
                     return accountDetails
                 } else {
@@ -531,7 +531,11 @@ async function doubleSwapLoop() {
                 lastGoogleUpdate = now
             }
             console.log(`Sleeping for ${SLEEP_MAIN_LOOP_IN_MINUTES} minutes`)
-            await sleep(SLEEP_MAIN_LOOP_IN_MINUTES * 1000 * 60)
+            if (CAN_TRADE_NOW){
+                await sleep(SLEEP_MAIN_LOOP_IN_MINUTES * 1000 * 60)
+            }else{
+                await sleep(1 * 1000 * 60)
+            }
         }
     }
 }

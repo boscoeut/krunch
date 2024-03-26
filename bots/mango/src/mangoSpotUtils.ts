@@ -601,8 +601,8 @@ export const spotAndPerpSwap = async (
             console.log(`*** ${accountDefinition.name} ${spotSide} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
             console.log(`sig = ${sig.signature}`)
             if(doPerp) {
-                // sleep for 30 seconds to allow perp trade to settle
-                await new Promise(resolve => setTimeout(resolve, 30000));
+                // sleep for 45 seconds to allow perp trade to settle
+                await new Promise(resolve => setTimeout(resolve, 45*1000));
             }
             
         }
