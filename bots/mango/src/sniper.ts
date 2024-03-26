@@ -125,10 +125,10 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: 'BU
 
 }
 
-async function determineBuyVsSell(client: Client, spotAmount: number, solPrice: number, usdcBank: any, solBank: any, fundingRate: number) {
+async function determineBuyVsSell(name:string,client: Client, spotAmount: number, solPrice: number, usdcBank: any, solBank: any, fundingRate: number) {
     let strategy: TradeStrategy = "NONE"
 
-    const possibilities = await getTradePossibilities(client.client, client.group, solPrice, spotAmount, usdcBank, solBank);
+    const possibilities = await getTradePossibilities(name,client.client, client.group, solPrice, spotAmount, usdcBank, solBank);
     if (possibilities.buyPerpSellSpot > 0 && fundingRate < 0) {
         strategy = "BUY_PERP_SELL_SPOT"
     } else if (possibilities.sellPerpBuySpot > 0 && fundingRate > 0) {
@@ -198,6 +198,7 @@ async function performSpap(client: Client,
 
     if (perpAmount > 0 || spotAmount > 0) {
         const { strategy, possibilities }: any = await determineBuyVsSell(
+            accountDefinition.name,
             client, newTradeSize, solPrice, usdcBank, solBank, fundingRate)
 
         let tradeStrategy = strategy
@@ -262,32 +263,6 @@ async function performSpap(client: Client,
         }
     } else {
         console.log(`${accountDefinition.name}: SKIPPING TRADE DUE TO TRADE SIZE = 0`)
-    }
-}
-
-async function syncPrices(
-    client: Client,
-    accountDefinition: AccountDefinition,
-    tradeSize: number,
-    fundingRate: number
-) {
-    try {
-        if (!client.mangoAccount) {
-            throw new Error('Mango account not found: ' + accountDefinition.name)
-        }
-
-        const accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
-            cacheKey: accountDefinition.name, params: [
-                accountDefinition,
-                client.client,
-                client.group,
-                client.mangoAccount,
-                client.user]
-        })
-        await performSpap(client, accountDefinition, accountDetails, tradeSize, fundingRate)
-        return accountDetails
-    } catch (e: any) {
-        console.error(e.message)
     }
 }
 
@@ -472,22 +447,23 @@ async function doubleSwapLoop() {
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
     const googleUpdateInterval = 60 * 1000
     const accountDetailList: AccountDetail[] = []
-    let lastGoogleUpdate = Date.now()
-    const UPDATE_GOOGLE_SHEET = false
-
-    const CAN_TRADE_NOW = false
+    let lastGoogleUpdate = 0
+    const UPDATE_GOOGLE_SHEET = true
+    const TRADE_SIZE_NOW = 2;
+    const CAN_TRADE_NOW = true
 
     while (true) {
         try {
             accountDetailList.length = 0
+            db.clearOpenTransactions()
             let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
 
             const fundingRate = await db.get<number>(DB_KEYS.FUNDING_RATE)
             if (fundingRate === 0) {
                 console.log('FUNDING RATE IS 0, SLEEPING FOR 5 SECONDS')
                 await sleep(5 * 1000)
-            } else {
-                const tradeSize = 2;
+            } else {                
+                // const newItems = accountDefinitions.filter(a=>a.name==="BIRD").map(async (accountDefinition) => {
                 const newItems = accountDefinitions.map(async (accountDefinition) => {
                     let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
                         params: [accountDefinition, DEFAULT_PRIORITY_FEE],
@@ -495,19 +471,19 @@ async function doubleSwapLoop() {
                         force: true
                     })
 
-                    if (accountDefinition.canTrade && CAN_TRADE_NOW && accountDefinition.name === "DRIFT") {
-                        const accountDetails: any = await syncPrices(client, accountDefinition, tradeSize, fundingRate)
-                        return accountDetails
-                    } else {
-                        return db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
-                            cacheKey: accountDefinition.name, params: [
-                                accountDefinition,
-                                client.client,
-                                client.group,
-                                client.mangoAccount,
-                                client.user]
-                        })
-                    }
+                    const accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
+                        cacheKey: accountDefinition.name, params: [
+                            accountDefinition,
+                            client.client,
+                            client.group,
+                            client.mangoAccount,
+                            client.user]
+                    })
+                    if (accountDefinition.canTrade && CAN_TRADE_NOW) {
+                        await performSpap(client, accountDefinition, 
+                            accountDetails, TRADE_SIZE_NOW, fundingRate)                        
+                    } 
+                    return accountDetails
                 });
                 accountDetailList.push(...await Promise.all(newItems))
 
@@ -531,13 +507,13 @@ async function doubleSwapLoop() {
 
                     await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate)
                     // end google sheet update
+                    console.log('Google Sheet Updated', new Date().toTimeString())
                     lastGoogleUpdate = now
                 }
-                console.log(`Sleeping for ${SLEEP_MAIN_LOOP_IN_MINUTES} minutes`)
-                if (CAN_TRADE_NOW) {
+                if (CAN_TRADE_NOW && (db.getOpenTransactions() > 0 || Math.abs(fundingRate) > 50)) {
                     await sleep(SLEEP_MAIN_LOOP_IN_MINUTES * 1000 * 60)
                 } else {
-                    await sleep(1 * 1000 * 60)
+                    await sleep(0.5 * 1000 * 60)
                 }
             }
         } catch (e: any) {

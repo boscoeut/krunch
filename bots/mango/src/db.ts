@@ -11,6 +11,18 @@ import {
 } from './mangoUtils';
 import { CacheItem } from "./types";
 
+
+let openTransactions = 0
+export function incrementOpenTransactions() {
+    openTransactions++
+}
+export function clearOpenTransactions() {
+    openTransactions = 0
+}   
+export function getOpenTransactions() {
+    return openTransactions
+}   
+
 export enum DB_KEYS {
     NUM_TRADES = "NUM_TRADES",
     FUNDING_RATE = "FUNDING_RATE",

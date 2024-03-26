@@ -428,7 +428,9 @@ export const getBestPrice = async (side: "BUY" | "SELL", spotAmount: number, inB
     };
 }
 
-export const getTradePossibilities = async (client: MangoClient,
+export const getTradePossibilities = async (
+    name:string,
+    client: MangoClient,
     group: Group,
     oraclePrice: number,
     tradeSize: number,
@@ -452,21 +454,22 @@ export const getTradePossibilities = async (client: MangoClient,
     // buy scenario
     const perpBuy = orderBook.bestAsk;
     const spotSell = sellSpotPrice;
-    const buyPerpSellSpot = spotSell - perpBuy + PERP_PRICE_BUFFER;
+    const buyPerpSellSpot = spotSell - perpBuy - PERP_PRICE_BUFFER;
     // sell scenario
     const perpSell = orderBook.bestBid;
     const spotBuy = buySpotPrice;
     const sellPerpBuySpot = perpSell - spotBuy - PERP_PRICE_BUFFER;
 
+    console.log('*** '+name+' ***')
     console.log('Best Bid: ', orderBook.bestBid, orderBook.bestBid > oraclePrice ? '***' : '')
     console.log('Oracle Price: ', oraclePrice)
     console.log('Best Ask: ', orderBook.bestAsk, orderBook.bestAsk < oraclePrice ? '***' : '')
     console.log('Max Sell Size: ', orderBook.bestBidSize)
     console.log('Max Buy Size: ', orderBook.bestAskSize)
-    console.log('Buy Scenario: ', buyPerpSellSpot)
+    console.log(name+' Buy Scenario: ', buyPerpSellSpot)
     console.log('   spotSell', spotSell, sellSpotDiscount)
     console.log('   perpBuy', perpBuy, buyPerpDiscount)
-    console.log('Sell Scenario: ', sellPerpBuySpot)
+    console.log(name+' Sell Scenario: ', sellPerpBuySpot)
     console.log('   perpSell', perpSell, sellPerpDiscount)
     console.log('   spotBuy', spotBuy, buySpotDiscount)
 
@@ -605,6 +608,7 @@ export const spotAndPerpSwap = async (
         }
 
         if (tradeInstructions.length > 0) {
+            db.incrementOpenTransactions()
             const sig = await client.sendAndConfirmTransactionForGroup(
                 group,
                 tradeInstructions,
@@ -613,8 +617,8 @@ export const spotAndPerpSwap = async (
             console.log(`*** ${accountDefinition.name} ${spotSide} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
             console.log(`sig = ${sig.signature}`)
 
-            // sleep for 45 seconds to allow perp trade to settle
-            await new Promise(resolve => setTimeout(resolve, 45 * 1000));
+            // sleep for 30 seconds to allow perp trade to settle
+            await new Promise(resolve => setTimeout(resolve, 30 * 1000));
         }
     } catch (e: any) {
         console.error(`Error in comp trade: ${e.message} Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `)
@@ -624,7 +628,7 @@ export const spotAndPerpSwap = async (
                 console.log('Custom InstructionError.  Trying again in 30 seconds')
                 await sleep(30*1000)
             }else if (eValue.value.err.InstructionError[1].Custom === 6001){
-                console.log('Slippage Error')
+                console.log('Slippage exceeded for Spot Price:', spotPrice)
              
             }
         }catch(ex:any){

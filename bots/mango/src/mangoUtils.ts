@@ -369,7 +369,9 @@ export async function getAccountData(
         .perpActive()
         .find((pp: any) => pp.marketIndex === perpMarket.perpMarketIndex);
 
-    const fundingAmount = perpPosition!.getCumulativeFundingUi(perpMarket);
+    const fund1 = perpPosition?.getCumulativeFunding(perpMarket)
+    const fundingAmount = ((fund1?.cumulativeShortFunding || 0)  - (fund1!.cumulativeLongFunding || 0))/10**6
+    
     let historicalFunding = 0;
     let interestAmount = 0;
     let solAmount = perpPosition!.basePositionLots.toNumber() / 100
@@ -453,5 +455,6 @@ export const setupClient = async (accountDefinition: AccountDefinition, prioriti
 }
 
 export function sleep(ms: number) {
+    console.log(`Sleeping for ${(ms / 1000 / 60).toFixed(2)} minutes`)
     return new Promise(resolve => setTimeout(resolve, ms));
 }
