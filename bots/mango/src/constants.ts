@@ -33,7 +33,7 @@ export const JUP_ONLY_DIRECT_ROUTES = false
 export const CHECK_OPEN_ORDERS = false
 export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.10
 export const JUPITER_SPOT_SLIPPAGE = 10
-export const PERP_PRICE_BUFFER = 0.45
+export const PERP_PRICE_BUFFER = 0.50
 
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5

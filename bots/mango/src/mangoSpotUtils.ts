@@ -5,11 +5,9 @@ import {
     Group,
     MangoAccount,
     MangoClient,
-    MangoSignatureStatus,
     PerpOrderSide,
     PerpOrderType,
     PerpSelfTradeBehavior,
-    SendTransactionOpts,
     createAssociatedTokenAccountIdempotentInstruction,
     getAssociatedTokenAddress,
     toNative
@@ -31,16 +29,19 @@ import axios from 'axios';
 import {
     JUPITER_SPOT_SLIPPAGE,
     JUPITER_V6_QUOTE_API_MAINNET,
+    MIN_SOL_WALLET_BALANCE,
+    PERP_PRICE_BUFFER,
+    SOL_MINT,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
-    SWAP_ONLY_DIRECT_ROUTES,
-    PERP_PRICE_BUFFER
+    SOL_RESERVE,
+    SWAP_ONLY_DIRECT_ROUTES
 } from './constants';
 import * as db from './db';
+import { getBidsAndAsks, sleep, toFixedFloor } from './mangoUtils';
 import {
     AccountDefinition,
     PendingTransaction
 } from './types';
-import { getBidsAndAsks, toFixedFloor } from './mangoUtils';
 
 
 export const deserializeJupiterIxAndAlt = async (
@@ -451,11 +452,11 @@ export const getTradePossibilities = async (client: MangoClient,
     // buy scenario
     const perpBuy = orderBook.bestAsk;
     const spotSell = sellSpotPrice;
-    const buyPerpSellSpot = spotSell - perpBuy +PERP_PRICE_BUFFER ;
+    const buyPerpSellSpot = spotSell - perpBuy + PERP_PRICE_BUFFER;
     // sell scenario
     const perpSell = orderBook.bestBid;
     const spotBuy = buySpotPrice;
-    const sellPerpBuySpot = perpSell - spotBuy -PERP_PRICE_BUFFER;
+    const sellPerpBuySpot = perpSell - spotBuy - PERP_PRICE_BUFFER;
 
     console.log('Best Bid: ', orderBook.bestBid, orderBook.bestBid > oraclePrice ? '***' : '')
     console.log('Oracle Price: ', oraclePrice)
@@ -519,7 +520,8 @@ export const spotAndPerpSwap = async (
     perpSide: PerpOrderSide,
     bestRoute: any,
     spotPrice: any,
-    perpBestPrice: any) => {
+    perpBestPrice: any,
+    walletSol: number) => {
 
     try {
         let doPerp = perpSize > 0
@@ -527,86 +529,106 @@ export const spotAndPerpSwap = async (
         let tradeInstructions: any = []
         let addressLookupTables: any = []
 
-        console.log(`***** ${accountDefinition.name} spotAndPerpSwap *****`)   
-        // SPOT TRADE
-        if (doSpot) {
-            checkPrice(solPrice, spotPrice, spotSide)
-            const [ixs, alts] = await fetchJupiterTransaction(
-                client.connection,
-                bestRoute,
-                user.publicKey,
-                inBank.mint,
-                outBank.mint
-            );
+        console.log(`***** ${accountDefinition.name} spotAndPerpSwap *****`)
 
-            const amountIn = bestRoute.inAmount / 10 ** inBank.mintDecimals
-            const marginInstructions = await getMarginTradeIx(
-                {
-                    client: client,
-                    group: group,
-                    mangoAccount: mangoAccount,
-                    inputMintPk: inBank.mint,
-                    amountIn,
-                    outputMintPk: outBank.mint,
-                    userDefinedInstructions: ixs,
-                    flashLoanType: FlashLoanType.swap
-                }
-            )
-            addressLookupTables.push(...alts)
-            tradeInstructions.push(...marginInstructions)
-            console.log(`${accountDefinition.name} SPOT ${spotSide}`)
-            console.log(`  Price=`, spotPrice)
-            console.log(`  Amount=`, spotAmount)
-            console.log(`  Oracle=`, solPrice)
-        }
+        // CHECK WALLET
+        if (walletSol < MIN_SOL_WALLET_BALANCE) {
+            const borrowAmount = SOL_RESERVE - walletSol
+            const mintPk = new PublicKey(SOL_MINT)
+            const borrowAmountBN = toNative(borrowAmount, group.getMintDecimals(mintPk));
+            const ix = await client.tokenWithdrawNativeIx(group, mangoAccount, mintPk, borrowAmountBN, true)
+            tradeInstructions.push(...ix)
+        } else {
+            // SPOT TRADE
+            if (doSpot) {
+                checkPrice(solPrice, spotPrice, spotSide)
+                const [ixs, alts] = await fetchJupiterTransaction(
+                    client.connection,
+                    bestRoute,
+                    user.publicKey,
+                    inBank.mint,
+                    outBank.mint
+                );
 
-        // PERP TRADE
-        if (doPerp) {
-            checkPrice(solPrice, perpPrice, perpSide === PerpOrderSide.bid ? 'BUY' : 'SELL')
-            // determine perp amount
-            const values = group.perpMarketsMapByMarketIndex.values()
-            const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+                const amountIn = bestRoute.inAmount / 10 ** inBank.mintDecimals
+                const marginInstructions = await getMarginTradeIx(
+                    {
+                        client: client,
+                        group: group,
+                        mangoAccount: mangoAccount,
+                        inputMintPk: inBank.mint,
+                        amountIn,
+                        outputMintPk: outBank.mint,
+                        userDefinedInstructions: ixs,
+                        flashLoanType: FlashLoanType.swap
+                    }
+                )
+                addressLookupTables.push(...alts)
+                tradeInstructions.push(...marginInstructions)
+                console.log(`${accountDefinition.name} SPOT ${spotSide}`)
+                console.log(`  Price=`, spotPrice)
+                console.log(`  Amount=`, spotAmount)
+                console.log(`  Oracle=`, solPrice)
+            }
 
-            const cancelInstructions = await client.perpCancelAllOrdersIx(group, mangoAccount, perpMarket.perpMarketIndex, 5);
-            tradeInstructions.push(cancelInstructions)
+            // PERP TRADE
+            if (doPerp) {
+                checkPrice(solPrice, perpPrice, perpSide === PerpOrderSide.bid ? 'BUY' : 'SELL')
+                // determine perp amount
+                const values = group.perpMarketsMapByMarketIndex.values()
+                const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
 
-            const instructions = await client.perpPlaceOrderV2Ix(group,
-                mangoAccount,
-                perpMarket.perpMarketIndex, //perpMarketIndex
-                perpSide,
-                toFixedFloor(perpPrice),//price
-                toFixedFloor(perpSize),//quantity
-                undefined,//maxQuoteQuantity
-                Date.now(),//clientOrderId
-                PerpOrderType.limit,
-                PerpSelfTradeBehavior.cancelProvide,
-                false,//reduceOnly
-                undefined,//expiryTimestamp
-                undefined,//limit
-            )
-            tradeInstructions.push(instructions)
-            console.log(`${accountDefinition.name} PERP ${perpSide === PerpOrderSide.bid ? "BUY" : "SELL"}`)
-            console.log(`   Price=`, perpPrice)
-            console.log(`   BestPrice=`, perpBestPrice)
-            console.log(`   Amount=`, perpSize)
-            console.log(`   Oracle=`, solPrice)
+                const cancelInstructions = await client.perpCancelAllOrdersIx(group, mangoAccount, perpMarket.perpMarketIndex, 5);
+                tradeInstructions.push(cancelInstructions)
+
+                const instructions = await client.perpPlaceOrderV2Ix(group,
+                    mangoAccount,
+                    perpMarket.perpMarketIndex, //perpMarketIndex
+                    perpSide,
+                    toFixedFloor(perpPrice),//price
+                    toFixedFloor(perpSize),//quantity
+                    undefined,//maxQuoteQuantity
+                    Date.now(),//clientOrderId
+                    PerpOrderType.limit,
+                    PerpSelfTradeBehavior.cancelProvide,
+                    false,//reduceOnly
+                    undefined,//expiryTimestamp
+                    undefined,//limit
+                )
+                tradeInstructions.push(instructions)
+                console.log(`${accountDefinition.name} PERP ${perpSide === PerpOrderSide.bid ? "BUY" : "SELL"}`)
+                console.log(`   Price=`, perpPrice)
+                console.log(`   BestPrice=`, perpBestPrice)
+                console.log(`   Amount=`, perpSize)
+                console.log(`   Oracle=`, solPrice)
+            }
         }
 
         if (tradeInstructions.length > 0) {
-            const sig = await client.    sendAndConfirmTransactionForGroup(
+            const sig = await client.sendAndConfirmTransactionForGroup(
                 group,
                 tradeInstructions,
                 { alts: [...group.addressLookupTablesList, ...addressLookupTables] },
             );
             console.log(`*** ${accountDefinition.name} ${spotSide} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
             console.log(`sig = ${sig.signature}`)
-            if(doPerp) {
-                // sleep for 45 seconds to allow perp trade to settle
-                await new Promise(resolve => setTimeout(resolve, 45*1000));
-            }
-            
+
+            // sleep for 45 seconds to allow perp trade to settle
+            await new Promise(resolve => setTimeout(resolve, 45 * 1000));
         }
     } catch (e: any) {
-        console.error(`Error in spotTrade: ${e.message} Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `)
+        console.error(`Error in comp trade: ${e.message} Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `)
+        try{
+            const eValue = JSON.parse(e.message)
+            if (eValue.value.err.InstructionError[1].Custom === 1){
+                console.log('Custom InstructionError.  Trying again in 30 seconds')
+                await sleep(30*1000)
+            }else if (eValue.value.err.InstructionError[1].Custom === 6001){
+                console.log('Slippage Error')
+             
+            }
+        }catch(ex:any){
+            console.error(`Error in comp trade: ${ex.message} Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `)
+        }
     }
 }

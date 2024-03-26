@@ -3,7 +3,6 @@ import {
 } from '@blockworks-foundation/mango-v4';
 import fs from 'fs';
 import {
-    PERP_PRICE_BUFFER,
     CAN_TRADE,
     CHECK_OPEN_ORDERS,
     DEFAULT_PRIORITY_FEE,
@@ -24,6 +23,7 @@ import {
     MIN_SOL_WALLET_BALANCE,
     MIN_USDC_WALLET_AMOUNT,
     NO_TRADE_TIMEOUT,
+    PERP_PRICE_BUFFER,
     PLUS_THRESHOLD,
     QUOTE_BUFFER,
     SLEEP_MAIN_LOOP_IN_MINUTES,
@@ -37,7 +37,7 @@ import { authorize, updateGoogleSheet } from './googleUtils';
 import {
     doDeposit,
     doJupiterTrade,
-    doSolWithdrawal
+    doSolWithdrawal,
 } from './jupiterUtils';
 import {
     getTradePossibilities,
@@ -45,7 +45,7 @@ import {
     spotTrade
 } from './mangoSpotUtils';
 import {
-    perpTrade, sleep
+    perpTrade, sleep, toFixedFloor
 } from './mangoUtils';
 import {
     AccountDefinition,
@@ -230,7 +230,8 @@ async function performSpap(client: Client,
                 PerpOrderSide.bid,
                 possibilities.bestSellRoute,
                 possibilities.sellSpotPrice,
-                possibilities.bestAsk)
+                possibilities.bestAsk,
+                accountDetails.walletSol)
         } else if (tradeStrategy === "SELL_PERP_BUY_SPOT") {
             // sell Perp and buy Spot
             console.log(`SELL_PERP_BUY_SPOT: ${possibilities.sellPerpBuySpot}`)
@@ -241,7 +242,7 @@ async function performSpap(client: Client,
                 spotAmount = Math.max(spotAmount - diff, 0)
             }
             await spotAndPerpSwap(
-                spotAmount * solPrice,
+                toFixedFloor(spotAmount * solPrice),
                 usdcBank,
                 solBank,
                 client.client,
@@ -256,7 +257,8 @@ async function performSpap(client: Client,
                 PerpOrderSide.ask,
                 possibilities.bestBuyRoute,
                 possibilities.buySpotPrice,
-                possibilities.bestBid)
+                possibilities.bestBid,
+                accountDetails.walletSol)
         }
     } else {
         console.log(`${accountDefinition.name}: SKIPPING TRADE DUE TO TRADE SIZE = 0`)
@@ -473,69 +475,75 @@ async function doubleSwapLoop() {
     let lastGoogleUpdate = Date.now()
     const UPDATE_GOOGLE_SHEET = false
 
-    const CAN_TRADE_NOW = true
+    const CAN_TRADE_NOW = false
 
     while (true) {
-        accountDetailList.length = 0
-        let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
+        try {
+            accountDetailList.length = 0
+            let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
 
-        const fundingRate = await db.get<number>(DB_KEYS.FUNDING_RATE)
-        if (fundingRate === 0) {
-            console.log('FUNDING RATE IS 0, SLEEPING FOR 5 SECONDS')
-            await sleep(5 * 1000)
-        } else {
-            const tradeSize = 5;
-            const newItems = accountDefinitions.map(async (accountDefinition) => {
-                let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
-                    params: [accountDefinition, DEFAULT_PRIORITY_FEE],
-                    cacheKey: accountDefinition.name,
-                    force: true
-                })
-
-                if (accountDefinition.canTrade && CAN_TRADE_NOW) {
-                    const accountDetails: any = await syncPrices(client, accountDefinition, tradeSize, fundingRate)
-                    return accountDetails
-                } else {
-                    return db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
-                        cacheKey: accountDefinition.name, params: [
-                            accountDefinition,
-                            client.client,
-                            client.group,
-                            client.mangoAccount,
-                            client.user]
+            const fundingRate = await db.get<number>(DB_KEYS.FUNDING_RATE)
+            if (fundingRate === 0) {
+                console.log('FUNDING RATE IS 0, SLEEPING FOR 5 SECONDS')
+                await sleep(5 * 1000)
+            } else {
+                const tradeSize = 2;
+                const newItems = accountDefinitions.map(async (accountDefinition) => {
+                    let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
+                        params: [accountDefinition, DEFAULT_PRIORITY_FEE],
+                        cacheKey: accountDefinition.name,
+                        force: true
                     })
-                }
-            });
-            accountDetailList.push(...await Promise.all(newItems))
 
-            const now = Date.now()
-            if (UPDATE_GOOGLE_SHEET &&
-                (now - lastGoogleUpdate > googleUpdateInterval) &&
-                accountDetailList.length === accountDefinitions.length) {
-                // update google sheet
-                const openTransactions: PendingTransaction[] = db.getItems([DB_KEYS.SWAP])
-                let numOpenTransactions = 0
-                for (const transaction of openTransactions) {
-                    const expiresON = Date.now() - TRANSACTION_EXPIRATION
-                    if (transaction.timestamp < expiresON && transaction.status === 'PENDING') {
-                        transaction.status = 'EXPIRED'
-                        db.incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey: transaction.type + '-EXPIRED' })
+                    if (accountDefinition.canTrade && CAN_TRADE_NOW && accountDefinition.name === "DRIFT") {
+                        const accountDetails: any = await syncPrices(client, accountDefinition, tradeSize, fundingRate)
+                        return accountDetails
+                    } else {
+                        return db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
+                            cacheKey: accountDefinition.name, params: [
+                                accountDefinition,
+                                client.client,
+                                client.group,
+                                client.mangoAccount,
+                                client.user]
+                        })
                     }
-                    if (transaction.status === 'PENDING' || transaction.status === 'ORDERED') {
-                        numOpenTransactions++
-                    }
-                }
+                });
+                accountDetailList.push(...await Promise.all(newItems))
 
-                await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate)
-                // end google sheet update
-                lastGoogleUpdate = now
+                const now = Date.now()
+                if (UPDATE_GOOGLE_SHEET &&
+                    (now - lastGoogleUpdate > googleUpdateInterval) &&
+                    accountDetailList.length === accountDefinitions.length) {
+                    // update google sheet
+                    const openTransactions: PendingTransaction[] = db.getItems([DB_KEYS.SWAP])
+                    let numOpenTransactions = 0
+                    for (const transaction of openTransactions) {
+                        const expiresON = Date.now() - TRANSACTION_EXPIRATION
+                        if (transaction.timestamp < expiresON && transaction.status === 'PENDING') {
+                            transaction.status = 'EXPIRED'
+                            db.incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey: transaction.type + '-EXPIRED' })
+                        }
+                        if (transaction.status === 'PENDING' || transaction.status === 'ORDERED') {
+                            numOpenTransactions++
+                        }
+                    }
+
+                    await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate)
+                    // end google sheet update
+                    lastGoogleUpdate = now
+                }
+                console.log(`Sleeping for ${SLEEP_MAIN_LOOP_IN_MINUTES} minutes`)
+                if (CAN_TRADE_NOW) {
+                    await sleep(SLEEP_MAIN_LOOP_IN_MINUTES * 1000 * 60)
+                } else {
+                    await sleep(1 * 1000 * 60)
+                }
             }
-            console.log(`Sleeping for ${SLEEP_MAIN_LOOP_IN_MINUTES} minutes`)
-            if (CAN_TRADE_NOW){
-                await sleep(SLEEP_MAIN_LOOP_IN_MINUTES * 1000 * 60)
-            }else{
-                await sleep(1 * 1000 * 60)
-            }
+        } catch (e: any) {
+            console.error(`Error in main loop: ${e.message}`)
+            // sleep for 5 seconds  
+            await sleep(5000)
         }
     }
 }
