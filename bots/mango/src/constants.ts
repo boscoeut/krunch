@@ -32,13 +32,12 @@ export const SWAP_ONLY_DIRECT_ROUTES = false
 export const JUP_ONLY_DIRECT_ROUTES = false
 export const CHECK_OPEN_ORDERS = false
 export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.10
-export const JUPITER_SPOT_SLIPPAGE = 25
-export const PERP_PRICE_BUFFER = 0.05
-export const MIN_PERP_SPOT_PROFIT = 0.25
+export const JUPITER_SPOT_SLIPPAGE = 10
+export const PERP_PRICE_BUFFER = 0.45
 
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
-export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.25
+export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.05
 export const FILTER_TO_ACCOUNTS: Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
 
@@ -68,10 +67,9 @@ export const FUNDING_HOURLY = 'https://api.mngo.cloud/data/v4/one-hour-funding-r
 export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
 export const SOL_GROUP_PK = '78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
 export const COMMITTMENT = 'processed'
-// export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy robo
-export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/TwEGOh2Jxfb6fiqCCsZ9k3urgbjOtRSH'; // alchemy boscoe
+export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy robo
+// export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/TwEGOh2Jxfb6fiqCCsZ9k3urgbjOtRSH'; // alchemy boscoe
 
-// export const CONNECTION_URL = "https://solana-mainnet.core.chainstack.com/2fd6c27a358f211ccd140996c7374eec" // chainstack
 export const ALCHEMY_WS_URL = "wss://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0"
 export const LITE_RPC_URL = "https://api.mngo.cloud/lite-rpc/v1/"
 export const LAVA_CONNECTION_URL = 'https://g.w.lavanet.xyz:443/gateway/solana/rpc-http/bbc072e803a9a135fe62f7b3ad32d971'; // lava

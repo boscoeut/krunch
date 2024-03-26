@@ -6,7 +6,6 @@ import {
     PERP_PRICE_BUFFER,
     CAN_TRADE,
     CHECK_OPEN_ORDERS,
-    MIN_PERP_SPOT_PROFIT,
     DEFAULT_PRIORITY_FEE,
     ENFORCE_BEST_PRICE,
     EXTRA_USDC_AMOUNT,
@@ -126,13 +125,13 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: 'BU
 
 }
 
-async function determineBuyVsSell(client: Client, spotAmount: number, solPrice: number, usdcBank: any, solBank: any) {
+async function determineBuyVsSell(client: Client, spotAmount: number, solPrice: number, usdcBank: any, solBank: any, fundingRate: number) {
     let strategy: TradeStrategy = "NONE"
 
     const possibilities = await getTradePossibilities(client.client, client.group, solPrice, spotAmount, usdcBank, solBank);
-    if (possibilities.buyPerpSellSpot > MIN_PERP_SPOT_PROFIT && possibilities.buyPerpSellSpot > possibilities.sellPerpBuySpot) {
+    if (possibilities.buyPerpSellSpot > 0 && fundingRate < 0) {
         strategy = "BUY_PERP_SELL_SPOT"
-    } else if (possibilities.sellPerpBuySpot > MIN_PERP_SPOT_PROFIT && possibilities.sellPerpBuySpot > possibilities.buyPerpSellSpot) {
+    } else if (possibilities.sellPerpBuySpot > 0 && fundingRate > 0) {
         strategy = "SELL_PERP_BUY_SPOT"
     }
     return {
@@ -144,11 +143,12 @@ async function determineBuyVsSell(client: Client, spotAmount: number, solPrice: 
 async function performSpap(client: Client,
     accountDefinition: AccountDefinition,
     accountDetails: AccountDetail,
-    tradeSize: number) {
+    tradeSize: number,
+    fundingRate: number) {
 
-    const hourlyRateAPR = await db.get<number>(DB_KEYS.FUNDING_RATE)
+
     console.log('----- ')
-    console.log("FUNDING RATE: ", hourlyRateAPR)
+    console.log("FUNDING RATE: ", fundingRate)
 
     const walletSol = accountDetails.walletSol - SOL_RESERVE
     const { solBalance, solAmount, solBank, usdcBank, solPrice } = accountDetails
@@ -160,8 +160,10 @@ async function performSpap(client: Client,
     const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
 
     let balanceStrategy: TradeStrategy = "SELL_PERP_BUY_SPOT"
-    if (hourlyRateAPR < 0) {
+    if (fundingRate < 0) {
         balanceStrategy = "BUY_PERP_SELL_SPOT"
+    } else if (fundingRate === 0) {
+        balanceStrategy = "NONE"
     }
 
     const newTradeSize = getTradeSize(
@@ -196,14 +198,22 @@ async function performSpap(client: Client,
 
     if (perpAmount > 0 || spotAmount > 0) {
         const { strategy, possibilities }: any = await determineBuyVsSell(
-            client, newTradeSize, solPrice, usdcBank, solBank)
-        // let tradeStrategy = spotUnbalanced ? balanceStrategy : strategy
+            client, newTradeSize, solPrice, usdcBank, solBank, fundingRate)
+
         let tradeStrategy = strategy
+        if (spotUnbalanced && tradeStrategy === "NONE") {
+            tradeStrategy = balanceStrategy
+        }
 
         if (tradeStrategy === "BUY_PERP_SELL_SPOT") {
             // buy Perp and sell Spot
             console.log(`BUY_PERP_SELL_SPOT: ${possibilities.buyPerpSellSpot}`)
-            const perpPrice = solPrice - PERP_PRICE_BUFFER
+            const perpPrice = possibilities.sellSpotPrice - PERP_PRICE_BUFFER
+            if (possibilities.maxBuySize < perpAmount) {
+                const diff = perpAmount - possibilities.maxBuySize
+                perpAmount = possibilities.maxBuySize
+                spotAmount = Math.max(spotAmount - diff, 0)
+            }
             await spotAndPerpSwap(
                 spotAmount,
                 solBank,
@@ -224,7 +234,12 @@ async function performSpap(client: Client,
         } else if (tradeStrategy === "SELL_PERP_BUY_SPOT") {
             // sell Perp and buy Spot
             console.log(`SELL_PERP_BUY_SPOT: ${possibilities.sellPerpBuySpot}`)
-            const perpPrice = solPrice + PERP_PRICE_BUFFER
+            const perpPrice = possibilities.buySpotPrice + PERP_PRICE_BUFFER
+            if (possibilities.maxSellSize < perpAmount) {
+                const diff = perpAmount - possibilities.maxSellSize
+                perpAmount = possibilities.maxSellSize
+                spotAmount = Math.max(spotAmount - diff, 0)
+            }
             await spotAndPerpSwap(
                 spotAmount * solPrice,
                 usdcBank,
@@ -240,7 +255,7 @@ async function performSpap(client: Client,
                 perpPrice,
                 PerpOrderSide.ask,
                 possibilities.bestBuyRoute,
-                possibilities.sellSpotPrice,
+                possibilities.buySpotPrice,
                 possibilities.bestBid)
         }
     } else {
@@ -251,7 +266,8 @@ async function performSpap(client: Client,
 async function syncPrices(
     client: Client,
     accountDefinition: AccountDefinition,
-    tradeSize: number
+    tradeSize: number,
+    fundingRate: number
 ) {
     try {
         if (!client.mangoAccount) {
@@ -266,7 +282,7 @@ async function syncPrices(
                 client.mangoAccount,
                 client.user]
         })
-        await performSpap(client, accountDefinition, accountDetails, tradeSize)
+        await performSpap(client, accountDefinition, accountDetails, tradeSize, fundingRate)
         return accountDetails
     } catch (e: any) {
         console.error(e.message)
@@ -455,68 +471,68 @@ async function doubleSwapLoop() {
     const googleUpdateInterval = 60 * 1000
     const accountDetailList: AccountDetail[] = []
     let lastGoogleUpdate = Date.now()
+    const UPDATE_GOOGLE_SHEET = false
 
     while (true) {
         accountDetailList.length = 0
         let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
 
-        let newFeeEstimate = DEFAULT_PRIORITY_FEE
-        try {
-            newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
-        } catch (e: any) {
-            console.error('Error getting fee estimate', e.message)
-        }
+        const fundingRate = await db.get<number>(DB_KEYS.FUNDING_RATE)
+        if (fundingRate === 0) {
+            console.log('FUNDING RATE IS 0, SLEEPING FOR 5 SECONDS')
+            await sleep(5 * 1000)
 
-        for (const accountDefinition of accountDefinitions) {
-            let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
-                params: [accountDefinition, DEFAULT_PRIORITY_FEE],
-                cacheKey: accountDefinition.name,
-                force: true
-            })
+        } else {
 
-            if (accountDefinition.name === 'BIRD') {
-                // CAN TRADE
-                const tradeSize = 1
-                const accountDetails: any = await syncPrices(client, accountDefinition, tradeSize)
-                accountDetailList.push(accountDetails)
-            } else {
-                // CAN NOT TRADE - JUST GET GOOGLE DETAILS
-                const accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
-                    cacheKey: accountDefinition.name, params: [
-                        accountDefinition,
-                        client.client,
-                        client.group,
-                        client.mangoAccount,
-                        client.user]
+            const tradeSize = 5;
+            const newItems = accountDefinitions.filter(a=>a.name==="SEVEN").map(async (accountDefinition) => {
+                let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
+                    params: [accountDefinition, DEFAULT_PRIORITY_FEE],
+                    cacheKey: accountDefinition.name,
+                    force: true
                 })
-                accountDetailList.push(accountDetails)
-            }
 
-        }
-
-        const now = Date.now()
-        if (now - lastGoogleUpdate > googleUpdateInterval &&
-            accountDetailList.length === accountDefinitions.length) {
-            // update google sheet
-            const openTransactions: PendingTransaction[] = db.getItems([DB_KEYS.SWAP])
-            let numOpenTransactions = 0
-            for (const transaction of openTransactions) {
-                const expiresON = Date.now() - TRANSACTION_EXPIRATION
-                if (transaction.timestamp < expiresON && transaction.status === 'PENDING') {
-                    transaction.status = 'EXPIRED'
-                    db.incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey: transaction.type + '-EXPIRED' })
+                if (accountDefinition.canTrade) {
+                    const accountDetails: any = await syncPrices(client, accountDefinition, tradeSize, fundingRate)
+                    return accountDetails
+                } else {
+                    return db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
+                        cacheKey: accountDefinition.name, params: [
+                            accountDefinition,
+                            client.client,
+                            client.group,
+                            client.mangoAccount,
+                            client.user]
+                    })
                 }
-                if (transaction.status === 'PENDING' || transaction.status === 'ORDERED') {
-                    numOpenTransactions++
-                }
-            }
+            });
+            accountDetailList.push(...await Promise.all(newItems))
 
-            await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate)
-            // end google sheet update
-            lastGoogleUpdate = now
+            const now = Date.now()
+            if (UPDATE_GOOGLE_SHEET &&
+                (now - lastGoogleUpdate > googleUpdateInterval) &&
+                accountDetailList.length === accountDefinitions.length) {
+                // update google sheet
+                const openTransactions: PendingTransaction[] = db.getItems([DB_KEYS.SWAP])
+                let numOpenTransactions = 0
+                for (const transaction of openTransactions) {
+                    const expiresON = Date.now() - TRANSACTION_EXPIRATION
+                    if (transaction.timestamp < expiresON && transaction.status === 'PENDING') {
+                        transaction.status = 'EXPIRED'
+                        db.incrementItem(DB_KEYS.NUM_TRADES_FAIL, { cacheKey: transaction.type + '-EXPIRED' })
+                    }
+                    if (transaction.status === 'PENDING' || transaction.status === 'ORDERED') {
+                        numOpenTransactions++
+                    }
+                }
+
+                await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate)
+                // end google sheet update
+                lastGoogleUpdate = now
+            }
+            console.log(`Sleeping for ${SLEEP_MAIN_LOOP_IN_MINUTES} minutes`)
+            await sleep(SLEEP_MAIN_LOOP_IN_MINUTES * 1000 * 60)
         }
-        console.log(`Sleeping for ${SLEEP_MAIN_LOOP_IN_MINUTES} minutes`)
-        await sleep(SLEEP_MAIN_LOOP_IN_MINUTES * 1000 * 60)
     }
 }
 

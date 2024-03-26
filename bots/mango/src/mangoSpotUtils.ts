@@ -33,6 +33,7 @@ import {
     JUPITER_V6_QUOTE_API_MAINNET,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
     SWAP_ONLY_DIRECT_ROUTES,
+    PERP_PRICE_BUFFER
 } from './constants';
 import * as db from './db';
 import {
@@ -450,11 +451,11 @@ export const getTradePossibilities = async (client: MangoClient,
     // buy scenario
     const perpBuy = orderBook.bestAsk;
     const spotSell = sellSpotPrice;
-    const buyPerpSellSpot = spotSell - perpBuy;
+    const buyPerpSellSpot = spotSell - perpBuy +PERP_PRICE_BUFFER ;
     // sell scenario
     const perpSell = orderBook.bestBid;
     const spotBuy = buySpotPrice;
-    const sellPerpBuySpot = perpSell - spotBuy;
+    const sellPerpBuySpot = perpSell - spotBuy -PERP_PRICE_BUFFER;
 
     console.log('Best Bid: ', orderBook.bestBid, orderBook.bestBid > oraclePrice ? '***' : '')
     console.log('Oracle Price: ', oraclePrice)
@@ -526,6 +527,7 @@ export const spotAndPerpSwap = async (
         let tradeInstructions: any = []
         let addressLookupTables: any = []
 
+        console.log(`***** ${accountDefinition.name} spotAndPerpSwap *****`)   
         // SPOT TRADE
         if (doSpot) {
             checkPrice(solPrice, spotPrice, spotSide)
@@ -537,13 +539,14 @@ export const spotAndPerpSwap = async (
                 outBank.mint
             );
 
+            const amountIn = bestRoute.inAmount / 10 ** inBank.mintDecimals
             const marginInstructions = await getMarginTradeIx(
                 {
                     client: client,
                     group: group,
                     mangoAccount: mangoAccount,
                     inputMintPk: inBank.mint,
-                    amountIn: toFixedFloor(spotAmount),
+                    amountIn,
                     outputMintPk: outBank.mint,
                     userDefinedInstructions: ixs,
                     flashLoanType: FlashLoanType.swap
@@ -551,7 +554,7 @@ export const spotAndPerpSwap = async (
             )
             addressLookupTables.push(...alts)
             tradeInstructions.push(...marginInstructions)
-            console.log(`SPOT ${spotSide}`)
+            console.log(`${accountDefinition.name} SPOT ${spotSide}`)
             console.log(`  Price=`, spotPrice)
             console.log(`  Amount=`, spotAmount)
             console.log(`  Oracle=`, solPrice)
@@ -582,7 +585,7 @@ export const spotAndPerpSwap = async (
                 undefined,//limit
             )
             tradeInstructions.push(instructions)
-            console.log(`PERP ${perpSide === PerpOrderSide.bid ? "BUY" : "SELL"}`)
+            console.log(`${accountDefinition.name} PERP ${perpSide === PerpOrderSide.bid ? "BUY" : "SELL"}`)
             console.log(`   Price=`, perpPrice)
             console.log(`   BestPrice=`, perpBestPrice)
             console.log(`   Amount=`, perpSize)
@@ -590,13 +593,18 @@ export const spotAndPerpSwap = async (
         }
 
         if (tradeInstructions.length > 0) {
-            const sig = await client.sendAndConfirmTransactionForGroup(
+            const sig = await client.    sendAndConfirmTransactionForGroup(
                 group,
                 tradeInstructions,
                 { alts: [...group.addressLookupTablesList, ...addressLookupTables] },
             );
             console.log(`*** ${accountDefinition.name} ${spotSide} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
             console.log(`sig = ${sig.signature}`)
+            if(doPerp) {
+                // sleep for 30 seconds to allow perp trade to settle
+                await new Promise(resolve => setTimeout(resolve, 30000));
+            }
+            
         }
     } catch (e: any) {
         console.error(`Error in spotTrade: ${e.message} Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `)

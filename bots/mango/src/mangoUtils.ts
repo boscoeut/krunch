@@ -19,32 +19,28 @@ import {
 import axios from 'axios';
 import * as bs58 from 'bs58';
 import fs from 'fs';
+import { groupBy, mapValues, maxBy, sampleSize } from 'lodash';
 import {
     CLUSTER,
-    GROUP_ADDRESS_LOOKUP_TABLE_KEY,
     CLUSTER_URL,
     COMMITTMENT,
-    ALCHEMY_WS_URL,
     DEFAULT_PRIORITY_FEE,
+    FEE_CONNECTION_URL,
     FUNDING_RATE_API,
+    GROUP_ADDRESS_LOOKUP_TABLE_KEY,
     GROUP_PK,
     JUP_PRICE_URL,
+    LITE_RPC_URL,
     MANGO_DATA_API_URL,
+    MAX_PRIORITY_FEE_KEYS,
     ORDER_EXPIRATION,
     ORDER_TYPE,
     SOL_MINT,
     SOL_RESERVE,
-    MAX_PRIORITY_FEE_KEYS,
     USDC_MINT,
-    FEE_CONNECTION_URL,
-    QUICKNODE_CONNECTION_URL,
-    LAVA_CONNECTION_URL,
-    LITE_RPC_URL,
-    USE_PRIORITY_FEE,
-    CONNECTION_URL
+    USE_PRIORITY_FEE
 } from './constants';
 import * as db from './db';
-import { groupBy, mapValues, maxBy, sampleSize } from 'lodash'
 import {
     AccountDefinition,
     AccountDetail,
