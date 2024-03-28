@@ -30,7 +30,8 @@ import {
     JUPITER_SPOT_SLIPPAGE,
     JUPITER_V6_QUOTE_API_MAINNET,
     MIN_SOL_WALLET_BALANCE,
-    PERP_PRICE_BUFFER,
+    PERP_BUY_PRICE_BUFFER,
+    PERP_SELL_PRICE_BUFFER ,
     SOL_MINT,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
     SOL_RESERVE,
@@ -454,11 +455,11 @@ export const getTradePossibilities = async (
     // buy scenario
     const perpBuy = orderBook.bestAsk;
     const spotSell = sellSpotPrice;
-    const buyPerpSellSpot = spotSell - perpBuy - PERP_PRICE_BUFFER;
+    const buyPerpSellSpot = spotSell - perpBuy - PERP_BUY_PRICE_BUFFER;
     // sell scenario
     const perpSell = orderBook.bestBid;
     const spotBuy = buySpotPrice;
-    const sellPerpBuySpot = perpSell - spotBuy - PERP_PRICE_BUFFER;
+    const sellPerpBuySpot = perpSell - spotBuy - PERP_SELL_PRICE_BUFFER;
 
     console.log('*** '+name+' ***')
     console.log('Best Bid: ', orderBook.bestBid, orderBook.bestBid > oraclePrice ? '***' : '')
@@ -466,10 +467,10 @@ export const getTradePossibilities = async (
     console.log('Best Ask: ', orderBook.bestAsk, orderBook.bestAsk < oraclePrice ? '***' : '')
     console.log('Max Sell Size: ', orderBook.bestBidSize)
     console.log('Max Buy Size: ', orderBook.bestAskSize)
-    console.log(name+' Buy Scenario: ', buyPerpSellSpot)
+    console.log(name+' Buy Perp Scenario: ', buyPerpSellSpot)
     console.log('   spotSell', spotSell, sellSpotDiscount)
     console.log('   perpBuy', perpBuy, buyPerpDiscount)
-    console.log(name+' Sell Scenario: ', sellPerpBuySpot)
+    console.log(name+' Sell Perp Scenario: ', sellPerpBuySpot)
     console.log('   perpSell', perpSell, sellPerpDiscount)
     console.log('   spotBuy', spotBuy, buySpotDiscount)
 
@@ -614,7 +615,7 @@ export const spotAndPerpSwap = async (
                 tradeInstructions,
                 { alts: [...group.addressLookupTablesList, ...addressLookupTables] },
             );
-            console.log(`*** ${accountDefinition.name} ${spotSide} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
+            console.log(`*** ${accountDefinition.name} SPOT ${spotSide} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
             console.log(`sig = ${sig.signature}`)
 
             // sleep for 30 seconds to allow perp trade to settle
@@ -630,6 +631,8 @@ export const spotAndPerpSwap = async (
             }else if (eValue.value.err.InstructionError[1].Custom === 6001){
                 console.log('Slippage exceeded for Spot Price:', spotPrice)
              
+            }else if (eValue.value.err.InstructionError[1].Custom === 6023){
+                console.log('InvalidTickArraySequence. Error Number: 6023. Error Message: Invalid tick array sequence provided for instruction..:', perpPrice)
             }
         }catch(ex:any){
             console.error(`Error in comp trade: ${ex.message} Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `)
