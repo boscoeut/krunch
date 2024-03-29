@@ -41,7 +41,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: 'BU
     borrow: number, accountDefinition: AccountDefinition, solPrice: number, minPerp: number, maxPerp: number
 ) {
     const freeCash = borrow - accountDefinition.healthThreshold
-    let maxSize =   freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0
+    let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0
     maxSize = roundToNearestHalf(maxSize)
 
     if (action === 'BUY') {
@@ -77,11 +77,11 @@ async function determineBuyVsSell(name: string, client: Client, spotAmount: numb
     if (possibilities.buyPerpSellSpot > 0) { //&& fundingRate < MINUS_THRESHOLD
         strategy = "BUY_PERP_SELL_SPOT"
         postToSlackAlert(name, "BUY", possibilities.buyPerpSellSpot,
-        possibilities.buySpotPrice,possibilities.bestAsk, solPrice   )
+            possibilities.buySpotPrice, possibilities.bestAsk, solPrice)
     } else if (possibilities.sellPerpBuySpot > 0) { //&& fundingRate > PLUS_THRESHOLD
         strategy = "SELL_PERP_BUY_SPOT"
-        postToSlackAlert(name, "SELL", possibilities.sellPerpBuySpot, 
-        possibilities.sellSpotPrice,possibilities.bestBid, solPrice  )        
+        postToSlackAlert(name, "SELL", possibilities.sellPerpBuySpot,
+            possibilities.sellSpotPrice, possibilities.bestBid, solPrice)
     }
     return {
         strategy,
@@ -182,7 +182,8 @@ async function performSpap(client: Client,
                 possibilities.bestSellRoute,
                 possibilities.sellSpotPrice,
                 possibilities.bestAsk,
-                accountDetails.walletSol)
+                accountDetails.walletSol,
+                possibilities.buyPerpSellSpot + PERP_BUY_PRICE_BUFFER)
         } else if (tradeStrategy === "SELL_PERP_BUY_SPOT") {
             // sell Perp and buy Spot
             console.log(`SELL_PERP_BUY_SPOT: ${possibilities.sellPerpBuySpot}`)
@@ -205,7 +206,8 @@ async function performSpap(client: Client,
                 possibilities.bestBuyRoute,
                 possibilities.buySpotPrice,
                 possibilities.bestBid,
-                accountDetails.walletSol)
+                accountDetails.walletSol,
+                possibilities.sellPerpBuySpot+ PERP_SELL_PRICE_BUFFER)
         }
     } else {
         console.log(`${accountDefinition.name}: SKIPPING TRADE DUE TO TRADE SIZE = 0`)
@@ -223,15 +225,27 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: num
     let lastGoogleUpdate = 0
     let lastFundingRate = 0
     const FUNDING_DIFF = 50
+    const CHECK_FEES = true
 
     while (true) {
         try {
             accountDetailList.length = 0
+
+            if (CHECK_FEES) {
+                let newFeeEstimate = DEFAULT_PRIORITY_FEE
+                try {
+                    newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
+                } catch (e: any) {
+                    console.error('Error getting fee estimate', e.message)
+                }
+                console.log('FEE ESTIMATE: ', newFeeEstimate)
+            }
+
             db.clearOpenTransactions()
             let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
 
             const fundingRate = await db.get<number>(DB_KEYS.FUNDING_RATE)
-            
+
             if (Math.abs(fundingRate - lastFundingRate) > FUNDING_DIFF) {
                 postToSlackFunding(fundingRate)
                 lastFundingRate = fundingRate
@@ -307,8 +321,8 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: num
 }
 
 
-try {    
-    
+try {
+
     doubleSwapLoop(true, 1, true);
 } catch (error) {
     console.log(error);

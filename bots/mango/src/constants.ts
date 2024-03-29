@@ -31,10 +31,10 @@ export const SOL_BUFFER = 0.005
 export const SWAP_ONLY_DIRECT_ROUTES = false
 export const JUP_ONLY_DIRECT_ROUTES = false
 export const CHECK_OPEN_ORDERS = false
-export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.10
+export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.2
 export const JUPITER_SPOT_SLIPPAGE = 10
-export const PERP_BUY_PRICE_BUFFER = 0.55
-export const PERP_SELL_PRICE_BUFFER = 0.55
+export const PERP_BUY_PRICE_BUFFER = 0.75
+export const PERP_SELL_PRICE_BUFFER = 0.75
 
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5

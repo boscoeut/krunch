@@ -35,6 +35,53 @@ export const postToSlackFunding = async (fundingRate: number) => {
     }
     await postToSlack(data)
 }
+export const postToSlackTradeError = async (
+    account: string,
+    perpSize: number,
+    perpPrice: number,
+    perpSide: "BUY" | "SELL",
+    spotSide: 'BUY' | 'SELL',
+    spotPrice: any,
+    spotSize:number,
+    error:string) => {
+
+    
+    const data = {
+        "channel": FUNDING_CHANNEL_ID,
+        text: `${account} ${spotSide} Spot: ${spotPrice.toFixed(3)} Perp: ${perpSize} ${perpSide} ${perpPrice.toFixed(3)}`,
+        blocks: [
+
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `ERROR: ${account} ${spotSide} Spot: ${spotSize} ${spotPrice.toFixed(3)} Perp: ${perpSize} ${perpSide} ${perpPrice.toFixed(3)}`,
+                },
+            },
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `ERROR: ${error}`,
+                },
+            },
+
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `${new Date().toLocaleTimeString()}`,
+                },
+            },
+            {
+                "type": "divider"
+            }, {
+                "type": "divider"
+            }
+        ]
+    }
+    await postToSlack(data)
+}
 export const postToSlackTrade = async (
     account: string,
     solPrice: number,
@@ -43,7 +90,8 @@ export const postToSlackTrade = async (
     perpSide: "BUY" | "SELL",
     spotSide: 'BUY' | 'SELL',
     spotPrice: any,
-    spotSize:number) => {
+    spotSize:number,
+    diffAmount:number) => {
 
     let tradeBlocks:any = []
     if (perpSize > 0) {
@@ -73,11 +121,17 @@ export const postToSlackTrade = async (
                 type: "section",
                 text: {
                     type: "mrkdwn",
-                    text: `*${account} ${solPrice.toFixed(3)}%*`,
+                    text: `*${account} ${solPrice.toFixed(3)}*`,
                 },
             },
             ...tradeBlocks,
-
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `Diff Amount $${diffAmount.toFixed(3)}`,   
+                },
+            },
             {
                 type: "section",
                 text: {
@@ -156,6 +210,7 @@ export const postToSlackAlert = async (account: string, side: "BUY" | "SELL",
 }
 
 export const postToSlack = async (data: any) => {
+    console.log('Posting to slack')
     const token = process.env.SLACK_TOKEN
     const url = "https://slack.com/api/chat.postMessage"
     const headers = {
