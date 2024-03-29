@@ -29,7 +29,7 @@ import {
     AccountDetail,
     Client
 } from './types';
-import { postToSlack } from './slackUtils';
+import { postToSlackFunding, postToSlackAlert } from './slackUtils';
 
 const { google } = require('googleapis');
 type TradeStrategy = "BUY_PERP_SELL_SPOT" | "SELL_PERP_BUY_SPOT" | "NONE"
@@ -76,11 +76,11 @@ async function determineBuyVsSell(name: string, client: Client, spotAmount: numb
     const possibilities = await getTradePossibilities(name, client.client, client.group, solPrice, spotAmount, usdcBank, solBank);
     if (possibilities.buyPerpSellSpot > 0) { //&& fundingRate < MINUS_THRESHOLD
         strategy = "BUY_PERP_SELL_SPOT"
-        postToSlack(name, "BUY", possibilities.buyPerpSellSpot,
+        postToSlackAlert(name, "BUY", possibilities.buyPerpSellSpot,
         possibilities.buySpotPrice,possibilities.bestAsk, solPrice   )
     } else if (possibilities.sellPerpBuySpot > 0) { //&& fundingRate > PLUS_THRESHOLD
         strategy = "SELL_PERP_BUY_SPOT"
-        postToSlack(name, "SELL", possibilities.sellPerpBuySpot, 
+        postToSlackAlert(name, "SELL", possibilities.sellPerpBuySpot, 
         possibilities.sellSpotPrice,possibilities.bestBid, solPrice  )        
     }
     return {
@@ -214,13 +214,15 @@ async function performSpap(client: Client,
 
 
 async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: number = 2, UPDATE_GOOGLE_SHEET: boolean = true) {
-    // await postToSlack('Mango Bot', 'BUY', 0, 0, 0, 0)
+    //  await postToSlack('Mango Bot', 'BUY', 0, 0, 0, 0)
     let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
     const googleUpdateInterval = 60 * 1000
     const accountDetailList: AccountDetail[] = []
     let lastGoogleUpdate = 0
+    let lastFundingRate = 0
+    const FUNDING_DIFF = 50
 
     while (true) {
         try {
@@ -229,6 +231,11 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: num
             let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
 
             const fundingRate = await db.get<number>(DB_KEYS.FUNDING_RATE)
+            
+            if (Math.abs(fundingRate - lastFundingRate) > FUNDING_DIFF) {
+                postToSlackFunding(fundingRate)
+                lastFundingRate = fundingRate
+            }
             if (fundingRate === 0) {
                 console.log('FUNDING RATE IS 0, SLEEPING FOR 5 SECONDS')
                 await sleep(5 * 1000)
@@ -302,7 +309,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: num
 
 try {    
     
-    doubleSwapLoop(true, 4, true);
+    doubleSwapLoop(true, 1, true);
 } catch (error) {
     console.log(error);
 }

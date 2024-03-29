@@ -21,3 +21,6 @@ contracts/config/
 .DS_Store
 contracts/.DS_Store
 contracts/.DS_Store
+
+.vscode/
+.vscode/launch.json

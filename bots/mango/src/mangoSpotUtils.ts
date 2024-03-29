@@ -43,6 +43,7 @@ import {
     AccountDefinition,
     PendingTransaction
 } from './types';
+import { postToSlackTrade } from './slackUtils';
 
 
 export const deserializeJupiterIxAndAlt = async (
@@ -611,8 +612,11 @@ export const spotAndPerpSwap = async (
         }
 
         // REMOVE
-        const SHOULD_TRADE = false
+        const SHOULD_TRADE = true
         if (tradeInstructions.length > 0 && SHOULD_TRADE) {
+            postToSlackTrade(accountDefinition.name,solPrice, perpSize,
+                perpPrice, perpSide === PerpOrderSide.ask ? "SELL":"BUY",
+                spotSide,  spotPrice, spotAmount)
             db.incrementOpenTransactions()
             const sig = await client.sendAndConfirmTransactionForGroup(
                 group,
