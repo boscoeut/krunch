@@ -16,8 +16,8 @@ export const MIN_USDC_WALLET_AMOUNT = 10
 // TRADING TRIGGERS
 export const MINUS_THRESHOLD = -75
 export const PLUS_THRESHOLD = 75
-export const MAX_SHORT_PERP = -32.5
-export const MAX_LONG_PERP = 32.5
+export const MAX_SHORT_PERP = -37
+export const MAX_LONG_PERP = 37
 
 // TRADING PARAMS
 export const CAN_TRADE = false
@@ -33,12 +33,12 @@ export const JUP_ONLY_DIRECT_ROUTES = false
 export const CHECK_OPEN_ORDERS = false
 export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.10
 export const JUPITER_SPOT_SLIPPAGE = 10
-export const PERP_BUY_PRICE_BUFFER = 0.50
-export const PERP_SELL_PRICE_BUFFER = 0.50
+export const PERP_BUY_PRICE_BUFFER = 0.55
+export const PERP_SELL_PRICE_BUFFER = 0.55
 
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
-export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.05
+export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.25
 export const FILTER_TO_ACCOUNTS: Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
 

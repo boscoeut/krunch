@@ -469,9 +469,11 @@ export const getTradePossibilities = async (
     console.log('Max Buy Size: ', orderBook.bestAskSize)
     console.log(name+' Buy Perp Scenario: ', buyPerpSellSpot)
     console.log('   spotSell', spotSell, sellSpotDiscount)
+    console.log('   oracle', oraclePrice)
     console.log('   perpBuy', perpBuy, buyPerpDiscount)
     console.log(name+' Sell Perp Scenario: ', sellPerpBuySpot)
     console.log('   perpSell', perpSell, sellPerpDiscount)
+    console.log('   oracle', oraclePrice)
     console.log('   spotBuy', spotBuy, buySpotDiscount)
 
 
@@ -608,7 +610,9 @@ export const spotAndPerpSwap = async (
             }
         }
 
-        if (tradeInstructions.length > 0) {
+        // REMOVE
+        const SHOULD_TRADE = false
+        if (tradeInstructions.length > 0 && SHOULD_TRADE) {
             db.incrementOpenTransactions()
             const sig = await client.sendAndConfirmTransactionForGroup(
                 group,
