@@ -207,7 +207,7 @@ async function performSpap(client: Client,
                 possibilities.buySpotPrice,
                 possibilities.bestBid,
                 accountDetails.walletSol,
-                possibilities.sellPerpBuySpot+ PERP_SELL_PRICE_BUFFER)
+                possibilities.sellPerpBuySpot + PERP_SELL_PRICE_BUFFER)
         }
     } else {
         console.log(`${accountDefinition.name}: SKIPPING TRADE DUE TO TRADE SIZE = 0`)
@@ -225,7 +225,9 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: num
     let lastGoogleUpdate = 0
     let lastFundingRate = 0
     const FUNDING_DIFF = 50
-    const CHECK_FEES = true
+    const CHECK_FEES = false
+    // let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
+    let feeEstimate = 0
 
     while (true) {
         try {
@@ -242,7 +244,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: num
             }
 
             db.clearOpenTransactions()
-            let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
+
 
             const fundingRate = await db.get<number>(DB_KEYS.FUNDING_RATE)
 
