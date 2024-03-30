@@ -16,8 +16,8 @@ export const MIN_USDC_WALLET_AMOUNT = 10
 // TRADING TRIGGERS
 export const MINUS_THRESHOLD = -75
 export const PLUS_THRESHOLD = 75
-export const MAX_SHORT_PERP = -37
-export const MAX_LONG_PERP = 37
+export const MAX_SHORT_PERP = -40
+export const MAX_LONG_PERP = 40
 
 // TRADING PARAMS
 export const CAN_TRADE = false
@@ -32,13 +32,14 @@ export const SWAP_ONLY_DIRECT_ROUTES = false
 export const JUP_ONLY_DIRECT_ROUTES = false
 export const CHECK_OPEN_ORDERS = false
 export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.2
-export const JUPITER_SPOT_SLIPPAGE = 10
-export const PERP_BUY_PRICE_BUFFER = 0.75
+export const JUPITER_SPOT_SLIPPAGE = 25
+export const PERP_BUY_PRICE_BUFFER = 0.55
 export const PERP_SELL_PRICE_BUFFER = 0.75
+export const FUNDING_RATE_PRICE_RATIO = 600
 
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
-export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.25
+export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
 export const FILTER_TO_ACCOUNTS: Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
 
@@ -87,7 +88,7 @@ export const QUICKNODE_CONNECTION_URL = 'https://side-indulgent-research.solana-
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 100_000
 export const FEE_DIFF_BUFFER = 15_000
-export const DEFAULT_PRIORITY_FEE = 50_000
+export const DEFAULT_PRIORITY_FEE = 100_000
 export const FEE_MULTIPLIER = 1
 
 // JUP

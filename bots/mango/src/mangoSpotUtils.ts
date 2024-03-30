@@ -31,7 +31,8 @@ import {
     JUPITER_V6_QUOTE_API_MAINNET,
     MIN_SOL_WALLET_BALANCE,
     PERP_BUY_PRICE_BUFFER,
-    PERP_SELL_PRICE_BUFFER,
+    PERP_SELL_PRICE_BUFFER, 
+    FUNDING_RATE_PRICE_RATIO,
     SOL_MINT,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
     SOL_RESERVE,
@@ -430,6 +431,18 @@ export const getBestPrice = async (side: "BUY" | "SELL", spotAmount: number, inB
     };
 }
 
+export const getPriceBuffer = async (side: "BUY" | "SELL") => {
+    const fundingRate = await db.get<number>(db.DB_KEYS.FUNDING_RATE)
+    const adjustment = fundingRate / FUNDING_RATE_PRICE_RATIO
+    if (side === 'BUY') {
+        let adjustedBuffer = PERP_BUY_PRICE_BUFFER + adjustment
+        return Math.max(0, adjustedBuffer)
+    } else {
+        let adjustedBuffer = PERP_SELL_PRICE_BUFFER - adjustment
+        return Math.max(adjustedBuffer, 0)
+    }
+}
+
 export const getTradePossibilities = async (
     name: string,
     client: MangoClient,
@@ -456,11 +469,13 @@ export const getTradePossibilities = async (
     // buy scenario
     const perpBuy = orderBook.bestAsk;
     const spotSell = sellSpotPrice;
-    const buyPerpSellSpot = spotSell - perpBuy - PERP_BUY_PRICE_BUFFER;
+    const buyPriceBuffer = await getPriceBuffer('BUY')
+    const buyPerpSellSpot = spotSell - perpBuy - buyPriceBuffer;
     // sell scenario
     const perpSell = orderBook.bestBid;
     const spotBuy = buySpotPrice;
-    const sellPerpBuySpot = perpSell - spotBuy - PERP_SELL_PRICE_BUFFER;
+    const sellPriceBuffer = await getPriceBuffer('SELL')
+    const sellPerpBuySpot = perpSell - spotBuy - sellPriceBuffer;
 
     console.log('*** ' + name + ' ***')
     console.log('Best Bid: ', orderBook.bestBid, orderBook.bestBid > oraclePrice ? '***' : '')
@@ -472,10 +487,12 @@ export const getTradePossibilities = async (
     console.log('   spotSell', spotSell, sellSpotDiscount)
     console.log('   oracle', oraclePrice)
     console.log('   perpBuy', perpBuy, buyPerpDiscount)
+    console.log('   priceBuffer', buyPriceBuffer)
     console.log(name + ' Sell Perp Scenario: ', sellPerpBuySpot)
     console.log('   perpSell', perpSell, sellPerpDiscount)
     console.log('   oracle', oraclePrice)
     console.log('   spotBuy', spotBuy, buySpotDiscount)
+    console.log('   sellPriceBuffer', sellPriceBuffer)
 
 
     return {
@@ -494,7 +511,9 @@ export const getTradePossibilities = async (
         buySpotPrice,
         sellSpotPrice,
         bestAsk: orderBook.bestAsk,
-        bestBid: orderBook.bestBid
+        bestBid: orderBook.bestBid,
+        sellPriceBuffer,
+        buyPriceBuffer
     }
 }
 
@@ -529,7 +548,8 @@ export const spotAndPerpSwap = async (
     spotPrice: any,
     perpBestPrice: any,
     walletSol: number,
-    diffAmount:number) => {
+    diffAmount: number,
+    SHOULD_TRADE: boolean) => {
 
     try {
         let doPerp = perpSize > 0
@@ -612,50 +632,58 @@ export const spotAndPerpSwap = async (
             }
         }
 
-        // REMOVE
-        const SHOULD_TRADE = true
         if (tradeInstructions.length > 0 && SHOULD_TRADE) {
-            postToSlackTrade(accountDefinition.name, solPrice, perpSize,
+            postToSlackTrade(accountDefinition.name + ' START', solPrice, perpSize,
                 perpPrice, perpSide === PerpOrderSide.ask ? "SELL" : "BUY",
                 spotSide, spotPrice, spotAmount, diffAmount)
             db.incrementOpenTransactions()
-            const sig = await client.sendAndConfirmTransactionForGroup(
+            const request = client.sendAndConfirmTransactionForGroup(
                 group,
                 tradeInstructions,
                 { alts: [...group.addressLookupTablesList, ...addressLookupTables] },
             );
+
+            const timeout = new Promise((resolve, reject) => {
+                const id = setTimeout(() => {
+                    clearTimeout(id);
+                    reject(new Error('Timed out'));
+                }, 30 * 1000); // 30 seconds timeout
+            });
+            const sig: any = await Promise.race([timeout, request])
             console.log(`*** ${accountDefinition.name} SPOT ${spotSide} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
             console.log(`sig = ${sig.signature}`)
+
+            postToSlackTrade(accountDefinition.name + ' COMPLETE', solPrice, perpSize,
+                perpPrice, perpSide === PerpOrderSide.ask ? "SELL" : "BUY",
+                spotSide, spotPrice, spotAmount, diffAmount)
 
             // sleep for 30 seconds to allow perp trade to settle
             await new Promise(resolve => setTimeout(resolve, 30 * 1000));
         }
     } catch (e: any) {
-        let errorMessage = e.message
-        console.error(`Error in comp trade: ${e.message} Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `)
+        let errorMessage = `Error *${e.message}* in comp trade:  Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `
+        let delay = 0;
         try {
             const eValue = JSON.parse(e.message)
             if (eValue.value.err.InstructionError[1].Custom === 1) {
                 errorMessage = 'Custom InstructionError.  Trying again in 30 seconds'
-                console.log(errorMessage)
-                await sleep(30 * 1000)
+                delay = 30
             } else if (eValue.value.err.InstructionError[1].Custom === 6001) {
                 errorMessage = 'Slippage exceeded for Spot Price:' + spotPrice
-                console.log(errorMessage, spotPrice)
-
             } else if (eValue.value.err.InstructionError[1].Custom === 6023) {
                 errorMessage = '6023 Spot Error Message: Invalid tick array sequence'
-                console.log(errorMessage, perpPrice)
-            }else if (eValue.value.err.InstructionError[1].Custom === 3005) {
+            } else if (eValue.value.err.InstructionError[1].Custom === 3005) {
                 errorMessage = '3005 Spot Error Number: Error Message: Not enough account keys given to the instruction'
-                console.log(errorMessage, perpPrice)
             } else if (eValue.value.err.InstructionError[1].Custom === 6028) {
                 errorMessage = '6028 Spot Error Message: Invaild first tick array account'
-                console.log(errorMessage, perpPrice)
             }
         } catch (ex: any) {
-            errorMessage = `Error *${e.message}* in comp trade: ${ex.message} Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `
-            console.error(`Error in comp trade: ${ex.message} Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `)
+            // error parsing message
+        } finally {
+            console.error(errorMessage)
+        }
+        if (delay > 0) {
+            await sleep(delay * 1000)
         }
 
         postToSlackTradeError(

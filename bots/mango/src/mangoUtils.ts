@@ -101,7 +101,7 @@ export const fetchJupPrice = async () => {
 export const fetchFundingData = async (mangoAccountPk: string) => {
     try {
         const url = `${MANGO_DATA_API_URL}/stats/funding-account-total?mango-account=${mangoAccountPk}`
-        const response = await axios.get(url)
+        const response = await axios.get(url, { timeout: 2000 })
         const res: any = response.data
         if (res) {
             const entries: [string, Omit<TotalAccountFundingItem, 'market'>][] =
@@ -118,8 +118,8 @@ export const fetchFundingData = async (mangoAccountPk: string) => {
                 .filter((x) => x)
             return stats
         } else return []
-    } catch (e) {
-        console.log('Failed to fetch account funding', e)
+    } catch (e:any) {
+        console.log('Failed to fetch account funding', e.message)
         return []
     }
 }
@@ -153,8 +153,8 @@ export async function getFundingRate() {
         } else {
             return 0
         }
-    } catch (x) {
-        console.log('Failed to fetch funding rate', x)
+    } catch (x:any) {
+        console.log('Failed to fetch funding rate', x.message)
         return 0
     }
 }

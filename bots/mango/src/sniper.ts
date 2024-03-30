@@ -93,7 +93,8 @@ async function performSpap(client: Client,
     accountDefinition: AccountDefinition,
     accountDetails: AccountDetail,
     tradeSize: number,
-    fundingRate: number) {
+    fundingRate: number,
+    simulateTrades: boolean = false) {
 
 
     console.log('----- ')
@@ -183,11 +184,12 @@ async function performSpap(client: Client,
                 possibilities.sellSpotPrice,
                 possibilities.bestAsk,
                 accountDetails.walletSol,
-                possibilities.buyPerpSellSpot + PERP_BUY_PRICE_BUFFER)
+                possibilities.buyPerpSellSpot + possibilities.buyPriceBuffer,
+                !simulateTrades)
         } else if (tradeStrategy === "SELL_PERP_BUY_SPOT") {
             // sell Perp and buy Spot
             console.log(`SELL_PERP_BUY_SPOT: ${possibilities.sellPerpBuySpot}`)
-            const perpPrice = spotUnbalanced ? solPrice : possibilities.buySpotPrice + PERP_SELL_PRICE_BUFFER
+            const perpPrice = spotUnbalanced ? solPrice : possibilities.buySpotPrice + possibilities.sellPriceBuffer
 
             await spotAndPerpSwap(
                 toFixedFloor(spotAmount * solPrice),
@@ -207,7 +209,8 @@ async function performSpap(client: Client,
                 possibilities.buySpotPrice,
                 possibilities.bestBid,
                 accountDetails.walletSol,
-                possibilities.sellPerpBuySpot + PERP_SELL_PRICE_BUFFER)
+                possibilities.sellPerpBuySpot + possibilities.sellPriceBuffer    ,
+                !simulateTrades)
         }
     } else {
         console.log(`${accountDefinition.name}: SKIPPING TRADE DUE TO TRADE SIZE = 0`)
@@ -215,7 +218,7 @@ async function performSpap(client: Client,
 }
 
 
-async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: number = 2, UPDATE_GOOGLE_SHEET: boolean = true) {
+async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: number = 2, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false  ) {
     //  await postToSlack('Mango Bot', 'BUY', 0, 0, 0, 0)
     let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     const googleClient: any = await authorize();
@@ -226,8 +229,8 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: num
     let lastFundingRate = 0
     const FUNDING_DIFF = 50
     const CHECK_FEES = false
-    // let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
-    let feeEstimate = 0
+    let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
+    //let feeEstimate = 0
 
     while (true) {
         try {
@@ -274,7 +277,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: num
                                 client.user]
                         })
                         await performSpap(client, accountDefinition,
-                            accountDetails, TRADE_SIZE_NOW, fundingRate)
+                            accountDetails, TRADE_SIZE_NOW, fundingRate, SIMULATE_TRADES)
                         return accountDetails
                     } else {
                         console.log('CANNOT TRADE NOW: ', accountDefinition.name)
@@ -325,7 +328,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: num
 
 try {
 
-    doubleSwapLoop(true, 1, true);
+    doubleSwapLoop(true, 3, true, true);
 } catch (error) {
     console.log(error);
 }
