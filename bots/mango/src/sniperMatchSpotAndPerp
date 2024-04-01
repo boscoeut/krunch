@@ -1,6 +1,7 @@
 import {
     PerpOrderSide, PerpSelfTradeBehavior, PerpOrderType
 } from '@blockworks-foundation/mango-v4';
+import { PublicKey } from '@solana/web3.js';
 import fs from 'fs';
 import {
     DEFAULT_PRIORITY_FEE,
@@ -9,6 +10,8 @@ import {
     MAX_SHORT_PERP,
     MAX_PERP_TRADE_SIZE,
     PERP_BUY_PRICE_BUFFER,
+    SOL_MINT,
+    PERP_SELL_PRICE_BUFFER,
     MAX_SPOT_TRADE_SIZE,
     SLEEP_MAIN_LOOP_IN_MINUTES,
     SOL_RESERVE
@@ -18,7 +21,7 @@ import { DB_KEYS } from './db';
 import { authorize, updateGoogleSheet } from './googleUtils';
 import {
     getTradePossibilities,
-    spotAndPerpSwap2
+    spotAndPerpSwap
 } from './mangoSpotUtils';
 import {
     sleep, toFixedFloor
@@ -73,12 +76,14 @@ async function determineBuyVsSell(name: string, client: Client, spotAmount: numb
     let strategy: TradeStrategy = "NONE"
 
     const possibilities = await getTradePossibilities(name, client.client, client.group, solPrice, spotAmount, usdcBank, solBank);
-    if (possibilities.buyPerpSellSpot > 0) {
+    if (possibilities.buyPerpSellSpot > 0) { //&& fundingRate < MINUS_THRESHOLD
         strategy = "BUY_PERP_SELL_SPOT"
-        // postToSlackAlert(name, "BUY", possibilities.buyPerpSellSpot,possibilities.buySpotPrice, possibilities.bestAsk, solPrice)
-    } else if (possibilities.sellPerpBuySpot > 0) {
+        postToSlackAlert(name, "BUY", possibilities.buyPerpSellSpot,
+            possibilities.buySpotPrice, possibilities.bestAsk, solPrice)
+    } else if (possibilities.sellPerpBuySpot > 0) { //&& fundingRate > PLUS_THRESHOLD
         strategy = "SELL_PERP_BUY_SPOT"
-        // postToSlackAlert(name, "SELL", possibilities.sellPerpBuySpot, possibilities.sellSpotPrice, possibilities.bestBid, solPrice)
+        postToSlackAlert(name, "SELL", possibilities.sellPerpBuySpot,
+            possibilities.sellSpotPrice, possibilities.bestBid, solPrice)
     }
     return {
         strategy,
@@ -86,14 +91,54 @@ async function determineBuyVsSell(name: string, client: Client, spotAmount: numb
     }
 }
 
-
 async function performSpap(client: Client,
     accountDefinition: AccountDefinition,
     accountDetails: AccountDetail,
     tradeSize: number,
     fundingRate: number,
     simulateTrades: boolean = false) {
+    const values = client.group.perpMarketsMapByMarketIndex.values()
 
+    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+
+    const PLACE_PEGGED = true
+    if (PLACE_PEGGED) {
+        const orders = await client.mangoAccount!.loadPerpOpenOrdersForMarket(
+            client.client,
+            client.group,
+            accountDetails.perpMarket.perpMarketIndex,
+            true
+        )
+        const numOpenOrders = orders.filter(order => !order.isExpired).length
+
+
+        const tradeInstructions: any = []
+        const cancelInstructions = await client.client.perpCancelAllOrdersIx(client.group,
+            client.mangoAccount!, perpMarket.perpMarketIndex, 5);
+        tradeInstructions.push(cancelInstructions)
+        const ixs = await client.client.perpPlaceOrderPeggedV2Ix(
+            client.group,
+            client.mangoAccount!,
+            perpMarket.perpMarketIndex,
+            PerpOrderSide.bid,
+            -0.01,// price Offset
+            0.01,// size
+            undefined, //piglimit
+            undefined,//maxQuoteQuantity,
+            100,//clientOrderId,
+            PerpOrderType.limit,
+            PerpSelfTradeBehavior.cancelProvide,
+            false,
+            undefined, //expiryTimestamp,
+            undefined // limit
+        )
+        tradeInstructions.push(ixs)
+        await client.client.sendAndConfirmTransactionForGroup(
+            client.group,
+            tradeInstructions,
+            { alts: [...client.group.addressLookupTablesList] },
+        );
+    }
     console.log('----- ')
     console.log(accountDefinition.name + " FUNDING RATE: ", fundingRate)
 
@@ -106,41 +151,50 @@ async function performSpap(client: Client,
     const spotVsPerpDiff = solBalance + solAmount + (INCLUDE_WALLET ? walletSol : 0)
     const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
 
-    let balanceStrategy: TradeStrategy = "NONE"
+    let balanceStrategy: TradeStrategy = "SELL_PERP_BUY_SPOT"
+    if (solAmount < MAX_SHORT_PERP) {
+        balanceStrategy = "BUY_PERP_SELL_SPOT"
+    } else if (solAmount > MAX_LONG_PERP) {
+        balanceStrategy = "BUY_PERP_SELL_SPOT"
+    } else if (fundingRate < 0) {
+        balanceStrategy = "BUY_PERP_SELL_SPOT"
+    } else if (fundingRate === 0) {
+        balanceStrategy = "NONE"
+    }
 
     const newTradeSize = getTradeSize(
         tradeSize, solAmount,
-        fundingRate <= 0 ? "BUY" : "SELL", accountDetails.borrow,
+        balanceStrategy === "BUY_PERP_SELL_SPOT" ? "BUY" : "SELL", accountDetails.borrow,
         accountDefinition, solPrice, MAX_SHORT_PERP, MAX_LONG_PERP)
     console.log("New Trade Size", newTradeSize)
 
-    let spotAmount = 0
+    let spotAmount = newTradeSize
     let perpAmount = newTradeSize
 
     if (spotUnbalanced) {
-        perpAmount = 0
-        spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-        if (spotVsPerpDiff > 0) {
-            balanceStrategy = "BUY_PERP_SELL_SPOT"
+        if (solAmount > MAX_SHORT_PERP && spotVsPerpDiff > 0) {
+        }
+        if (balanceStrategy === "SELL_PERP_BUY_SPOT") {
+            if (spotVsPerpDiff > 0) {
+                spotAmount = 0
+                perpAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+            } else {
+                spotAmount = Math.min(MAX_SPOT_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+                perpAmount = 0
+            }
         } else {
-            balanceStrategy = "SELL_PERP_BUY_SPOT"
+            if (spotVsPerpDiff < 0) {
+                spotAmount = 0
+                perpAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+            } else {
+                spotAmount = Math.min(MAX_SPOT_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+                perpAmount = 0
+            }
         }
     }
 
     if (perpAmount > 0 || spotAmount > 0) {
-        const strategy = fundingRate > 0 ? "SELL_PERP_BUY_SPOT" : "BUY_PERP_SELL_SPOT"
-
-        const orders = await client.mangoAccount!.loadPerpOpenOrdersForMarket(
-            client.client,
-            client.group,
-            accountDetails.perpMarket.perpMarketIndex,
-            true
-        )
-        if (orders.length === 2) {
-            perpAmount = 0
-        }
-
-        const { possibilities }: any = await determineBuyVsSell(
+        const { strategy, possibilities }: any = await determineBuyVsSell(
             accountDefinition.name,
             client, spotAmount, solPrice, usdcBank, solBank)
 
@@ -154,7 +208,7 @@ async function performSpap(client: Client,
             console.log(`BUY_PERP_SELL_SPOT: ${possibilities.buyPerpSellSpot}`)
             const perpPrice = spotUnbalanced ? solPrice : possibilities.sellSpotPrice - PERP_BUY_PRICE_BUFFER
 
-            await spotAndPerpSwap2(
+            await spotAndPerpSwap(
                 spotAmount,
                 solBank,
                 usdcBank,
@@ -179,7 +233,7 @@ async function performSpap(client: Client,
             console.log(`SELL_PERP_BUY_SPOT: ${possibilities.sellPerpBuySpot}`)
             const perpPrice = spotUnbalanced ? solPrice : possibilities.buySpotPrice + possibilities.sellPriceBuffer
 
-            await spotAndPerpSwap2(
+            await spotAndPerpSwap(
                 toFixedFloor(spotAmount * solPrice),
                 usdcBank,
                 solBank,
@@ -206,12 +260,12 @@ async function performSpap(client: Client,
 }
 
 
-async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
+async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, TRADE_SIZE_NOW: number = 2, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
     //  await postToSlack('Mango Bot', 'BUY', 0, 0, 0, 0)
     let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
-    const googleUpdateInterval = 30 * 1000
+    const googleUpdateInterval = 60 * 1000
     const accountDetailList: AccountDetail[] = []
     let lastGoogleUpdate = 0
     let lastFundingRate = 0
@@ -260,7 +314,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                                 client.user]
                         })
                         await performSpap(client, accountDefinition,
-                            accountDetails, accountDefinition.tradeSize, fundingRate, SIMULATE_TRADES)
+                            accountDetails, TRADE_SIZE_NOW, fundingRate, SIMULATE_TRADES)
                         return accountDetails
                     } else {
                         console.log('CANNOT TRADE NOW: ', accountDefinition.name)
@@ -311,7 +365,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 
 try {
 
-    doubleSwapLoop(true, true, false);
+    doubleSwapLoop(true, 1, true, true);
 } catch (error) {
     console.log(error);
 }

@@ -30,6 +30,8 @@ import {
     GROUP_ADDRESS_LOOKUP_TABLE_KEY,
     GROUP_PK,
     JUP_PRICE_URL,
+    LAVA_CONNECTION_URL,
+    QUICKNODE_CONNECTION_URL,
     LITE_RPC_URL,
     MANGO_DATA_API_URL,
     MAX_PRIORITY_FEE_KEYS,
@@ -38,6 +40,7 @@ import {
     SOL_MINT,
     SOL_RESERVE,
     USDC_MINT,
+    GET_BLOCK_CONNECTION_URL,
     USE_PRIORITY_FEE
 } from './constants';
 import * as db from './db';
@@ -275,8 +278,9 @@ export const getClient = async (user: Keypair, prioritizationFee: number): Promi
     });
     const backupConnections = [
         new Connection(LITE_RPC_URL),
-        // new Connection(LAVA_CONNECTION_URL),
-        // new Connection(QUICKNODE_CONNECTION_URL),
+        new Connection(LAVA_CONNECTION_URL),
+        new Connection(QUICKNODE_CONNECTION_URL),
+        new Connection(GET_BLOCK_CONNECTION_URL),
     ];
 
     const wallet = new Wallet(user);
@@ -286,7 +290,7 @@ export const getClient = async (user: Keypair, prioritizationFee: number): Promi
         prioritizationFee: USE_PRIORITY_FEE ? prioritizationFee : undefined,
         multipleConnections: backupConnections,
         postSendTxCallback: (txCallbackOptions: any) => {
-            console.log('<<<<>>>> Transaction txCallbackOptions', txCallbackOptions)
+            console.log('<<<<>>>> Transaction txCallbackOptions', `https://explorer.solana.com/tx/${txCallbackOptions.txid}`)
         }
     });
     const group = await client.getGroup(new PublicKey(GROUP_PK));

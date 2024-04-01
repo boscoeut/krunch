@@ -36,6 +36,7 @@ export const JUPITER_SPOT_SLIPPAGE = 25
 export const PERP_BUY_PRICE_BUFFER = 0.55
 export const PERP_SELL_PRICE_BUFFER = 0.75
 export const FUNDING_RATE_PRICE_RATIO = 600
+export const POST_TRADE_TIMEOUT = 40
 
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
@@ -83,12 +84,12 @@ export const MAX_PRIORITY_FEE_KEYS = 128
 export const GROUP_ADDRESS_LOOKUP_TABLE_KEY = new PublicKey("AgCBUZ6UMWqPLftTxeAqpQxtrfiCyL2HgRfmmM6QTfCj")
 export const QUICKNODE_CONNECTION_URL = 'https://side-indulgent-research.solana-mainnet.quiknode.pro/75ae6800554082022fe1a77e3f3b56e70067fdce';  //quicknode
 // export const CONNECTION_URL = 'https://ssc-dao.genesysgo.net';  //genesysgo
-// export const CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
+export const GET_BLOCK_CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
 
 export const USE_PRIORITY_FEE=true
-export const MAX_FEE = 100_000
+export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000
-export const DEFAULT_PRIORITY_FEE = 100_000
+export const DEFAULT_PRIORITY_FEE = 50_000
 export const FEE_MULTIPLIER = 1
 
 // JUP

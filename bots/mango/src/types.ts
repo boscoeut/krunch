@@ -54,6 +54,8 @@ export type AccountDefinition = {
     healthThreshold: number;
     canTrade:boolean,
     useMangoSpotTrades:boolean,
+    priceBuffer: number,  
+    tradeSize:number
 };
 export type PendingTransaction = {
     type: 'PERP-BUY'|'PERP-SELL' | 'SPOT-BUY'|'SPOT-SELL' 
