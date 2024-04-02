@@ -633,10 +633,14 @@ export const spotAndPerpSwap = async (
             }
         }
 
+
+        if (!SHOULD_TRADE && tradeInstructions.length > 0){
+            postToSlackTrade(accountDefinition.name + ' SIMULATION', solPrice, perpSize,
+            perpPrice, perpSide === PerpOrderSide.ask ? "SELL" : "BUY",
+            spotSide, spotPrice, spotAmount, diffAmount)
+        }
         if (tradeInstructions.length > 0 && SHOULD_TRADE) {
-            postToSlackTrade(accountDefinition.name + ' START', solPrice, perpSize,
-                perpPrice, perpSide === PerpOrderSide.ask ? "SELL" : "BUY",
-                spotSide, spotPrice, spotAmount, diffAmount)
+            
             db.incrementOpenTransactions()
             const request = client.sendAndConfirmTransactionForGroup(
                 group,

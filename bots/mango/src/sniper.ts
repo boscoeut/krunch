@@ -311,7 +311,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 
 try {
 
-    doubleSwapLoop(true, true, false);
+    doubleSwapLoop(false, true, false);
 } catch (error) {
     console.log(error);
 }
