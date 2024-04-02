@@ -17,6 +17,7 @@ import * as db from './db';
 import { DB_KEYS } from './db';
 import { authorize, updateGoogleSheet } from './googleUtils';
 import {
+    cancelOpenOrders,
     getTradePossibilities,
     spotAndPerpSwap2
 } from './mangoSpotUtils';
@@ -278,6 +279,10 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                                 client.mangoAccount,
                                 client.user]
                         })
+                        
+                        await cancelOpenOrders(client.client, client.mangoAccount!, client.group, 
+                            accountDetails.perpMarket.perpMarketIndex, accountDefinition.name)
+
                         return accountDetails
                     }
 

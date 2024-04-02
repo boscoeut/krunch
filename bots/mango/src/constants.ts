@@ -89,7 +89,7 @@ export const GET_BLOCK_CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000
-export const DEFAULT_PRIORITY_FEE = 50_000
+export const DEFAULT_PRIORITY_FEE = 40_000
 export const FEE_MULTIPLIER = 1
 
 // JUP

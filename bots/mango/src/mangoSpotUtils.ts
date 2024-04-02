@@ -530,7 +530,19 @@ export const checkPrice = (oraclePrice: number, spotPrice: number, side: 'BUY' |
     }
 
 }
-
+export const cancelOpenOrders = async (client: MangoClient, mangoAccount: MangoAccount,
+    group: Group, perpMarketIndex: number, account:string) => {
+    const orders = await mangoAccount.loadPerpOpenOrdersForMarket(
+        client,
+        group,
+        perpMarketIndex,
+        true
+    )
+    if (orders.length > 0) {
+        console.log(`Cancelling ${orders.length} orders for ${account}`)
+        await client.perpCancelAllOrders(group, mangoAccount, perpMarketIndex, 10)
+    }
+}
 export const spotAndPerpSwap = async (
     spotAmount: number,
     inBank: Bank,
@@ -634,13 +646,13 @@ export const spotAndPerpSwap = async (
         }
 
 
-        if (!SHOULD_TRADE && tradeInstructions.length > 0){
+        if (!SHOULD_TRADE && tradeInstructions.length > 0) {
             postToSlackTrade(accountDefinition.name + ' SIMULATION', solPrice, perpSize,
-            perpPrice, perpSide === PerpOrderSide.ask ? "SELL" : "BUY",
-            spotSide, spotPrice, spotAmount, diffAmount)
+                perpPrice, perpSide === PerpOrderSide.ask ? "SELL" : "BUY",
+                spotSide, spotPrice, spotAmount, diffAmount)
         }
         if (tradeInstructions.length > 0 && SHOULD_TRADE) {
-            
+
             db.incrementOpenTransactions()
             const request = client.sendAndConfirmTransactionForGroup(
                 group,
@@ -734,7 +746,7 @@ export const spotAndPerpSwap2 = async (
         console.log(`***** ${accountDefinition.name} spotAndPerpSwap *****`)
         const values = group.perpMarketsMapByMarketIndex.values()
         const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
-       
+
 
         // CHECK WALLET
         if (walletSol < MIN_SOL_WALLET_BALANCE) {
@@ -800,7 +812,7 @@ export const spotAndPerpSwap2 = async (
                     undefined, //expiryTimestamp,
                     undefined // limit
                 ))
-              
+
                 tradeInstructions.push(await client.perpPlaceOrderPeggedV2Ix(
                     group,
                     mangoAccount!,
@@ -816,7 +828,7 @@ export const spotAndPerpSwap2 = async (
                     false, //reduceOnly
                     undefined, //expiryTimestamp,
                     undefined // limit
-                ))               
+                ))
 
                 console.log(`${accountDefinition.name} PERP ${perpSide === PerpOrderSide.bid ? "BUY" : "SELL"}`)
                 console.log(`   Price=`, perpPrice)
@@ -852,7 +864,7 @@ export const spotAndPerpSwap2 = async (
                 spotSide, spotPrice, spotAmount, diffAmount)
 
             // sleep to allow perp trade to settle
-            if (doSpot){
+            if (doSpot) {
                 await new Promise(resolve => setTimeout(resolve, POST_TRADE_TIMEOUT * 1000));
             }
         }
