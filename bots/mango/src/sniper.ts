@@ -1,15 +1,14 @@
 import {
-    PerpOrderSide, PerpSelfTradeBehavior, PerpOrderType
+    PerpOrderSide
 } from '@blockworks-foundation/mango-v4';
 import fs from 'fs';
 import {
     DEFAULT_PRIORITY_FEE,
     MAX_FEE,
     MAX_LONG_PERP,
-    MAX_SHORT_PERP,
     MAX_PERP_TRADE_SIZE,
+    MAX_SHORT_PERP,
     PERP_BUY_PRICE_BUFFER,
-    MAX_SPOT_TRADE_SIZE,
     SLEEP_MAIN_LOOP_IN_MINUTES,
     SOL_RESERVE
 } from './constants';
@@ -24,12 +23,12 @@ import {
 import {
     sleep, toFixedFloor
 } from './mangoUtils';
+import { postToSlackFunding } from './slackUtils';
 import {
     AccountDefinition,
     AccountDetail,
     Client
 } from './types';
-import { postToSlackFunding, postToSlackAlert } from './slackUtils';
 
 const { google } = require('googleapis');
 type TradeStrategy = "BUY_PERP_SELL_SPOT" | "SELL_PERP_BUY_SPOT" | "NONE"
@@ -66,7 +65,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: 'BU
         tradeSize = Math.min(requestedTradeSize, amt)
     }
 
-    return tradeSize
+    return Math.max(tradeSize, 0)
 
 }
 
@@ -109,26 +108,46 @@ async function performSpap(client: Client,
 
     let balanceStrategy: TradeStrategy = "NONE"
 
-    const newTradeSize = getTradeSize(
+    let buyTradeSize = getTradeSize(
         tradeSize, solAmount,
-        fundingRate <= 0 ? "BUY" : "SELL", accountDetails.borrow,
+        "BUY", accountDetails.borrow,
         accountDefinition, solPrice, MAX_SHORT_PERP, MAX_LONG_PERP)
-    console.log("New Trade Size", newTradeSize)
+    let sellTradeSize = getTradeSize(
+        tradeSize, solAmount,
+        "SELL", accountDetails.borrow,
+        accountDefinition, solPrice, MAX_SHORT_PERP, MAX_LONG_PERP)
 
     let spotAmount = 0
-    let perpAmount = newTradeSize
 
     if (spotUnbalanced) {
-        perpAmount = 0
-        spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-        if (spotVsPerpDiff > 0) {
-            balanceStrategy = "BUY_PERP_SELL_SPOT"
+          if (spotVsPerpDiff > 0) {
+            if (buyTradeSize <= 0) {
+                balanceStrategy = "SELL_PERP_BUY_SPOT"
+                spotAmount = 0
+                sellTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+                buyTradeSize = 0    
+            } else {
+                buyTradeSize = 0
+                sellTradeSize = 0
+                balanceStrategy = "BUY_PERP_SELL_SPOT"
+                spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+            }
         } else {
-            balanceStrategy = "SELL_PERP_BUY_SPOT"
+            if (sellTradeSize <= 0) {
+                balanceStrategy = "BUY_PERP_SELL_SPOT"
+                spotAmount = 0
+                buyTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+                sellTradeSize = 0
+            } else {
+                buyTradeSize = 0
+                sellTradeSize = 0
+                balanceStrategy = "SELL_PERP_BUY_SPOT"
+                spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+            }
         }
     }
 
-    if (perpAmount > 0 || spotAmount > 0) {
+    if (buyTradeSize > 0 || spotAmount > 0 || sellTradeSize > 0) {
         const strategy = fundingRate > 0 ? "SELL_PERP_BUY_SPOT" : "BUY_PERP_SELL_SPOT"
 
         const orders = await client.mangoAccount!.loadPerpOpenOrdersForMarket(
@@ -137,8 +156,11 @@ async function performSpap(client: Client,
             accountDetails.perpMarket.perpMarketIndex,
             true
         )
-        if (orders.length === 2) {
-            perpAmount = 0
+        if (orders.find(o => o.side === PerpOrderSide.bid)) {
+            buyTradeSize = 0
+        }
+        if (orders.find(o => o.side === PerpOrderSide.ask)) {
+            sellTradeSize = 0
         }
 
         const { possibilities }: any = await determineBuyVsSell(
@@ -154,7 +176,6 @@ async function performSpap(client: Client,
             // buy Perp and sell Spot
             console.log(`BUY_PERP_SELL_SPOT: ${possibilities.buyPerpSellSpot}`)
             const perpPrice = spotUnbalanced ? solPrice : possibilities.sellSpotPrice - PERP_BUY_PRICE_BUFFER
-
             await spotAndPerpSwap2(
                 spotAmount,
                 solBank,
@@ -166,7 +187,6 @@ async function performSpap(client: Client,
                 "SELL",
                 accountDefinition,
                 solPrice,
-                perpAmount,
                 perpPrice,
                 PerpOrderSide.bid,
                 possibilities.bestSellRoute,
@@ -174,7 +194,10 @@ async function performSpap(client: Client,
                 possibilities.bestAsk,
                 accountDetails.walletSol,
                 possibilities.buyPerpSellSpot + possibilities.buyPriceBuffer,
-                !simulateTrades)
+                !simulateTrades,
+                buyTradeSize,
+                sellTradeSize,
+                spotUnbalanced ? 0 : accountDefinition.priceBuffer)
         } else if (tradeStrategy === "SELL_PERP_BUY_SPOT") {
             // sell Perp and buy Spot
             console.log(`SELL_PERP_BUY_SPOT: ${possibilities.sellPerpBuySpot}`)
@@ -191,7 +214,6 @@ async function performSpap(client: Client,
                 "BUY",
                 accountDefinition,
                 solPrice,
-                perpAmount,
                 perpPrice,
                 PerpOrderSide.ask,
                 possibilities.bestBuyRoute,
@@ -199,7 +221,10 @@ async function performSpap(client: Client,
                 possibilities.bestBid,
                 accountDetails.walletSol,
                 possibilities.sellPerpBuySpot + possibilities.sellPriceBuffer,
-                !simulateTrades)
+                !simulateTrades,
+                buyTradeSize,
+                sellTradeSize,
+                spotUnbalanced ? 0 : accountDefinition.priceBuffer)
         }
     } else {
         console.log(`${accountDefinition.name}: SKIPPING TRADE DUE TO TRADE SIZE = 0`)
@@ -279,7 +304,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                                 client.mangoAccount,
                                 client.user]
                         })
-                        
+
                         await cancelOpenOrders(client.client, client.mangoAccount!, client.group, 
                             accountDetails.perpMarket.perpMarketIndex, accountDefinition.name)
 
