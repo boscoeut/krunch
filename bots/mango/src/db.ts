@@ -194,12 +194,20 @@ registerModifier(DB_KEYS.ACCOUNT_DETAILS, {
     expiration: ACCOUNT_REFRESH_EXPIRATION,
     modifier: utilGetAccountData
 })
-
-//// MODIFIERS
+export const getFeeEstimate = async (cacheOnly: boolean = false) => {
+    if (cacheOnly) {
+        return getItem<number>(DB_KEYS.FEE_ESTIMATE)
+    }
+    else {
+        return await get<number>(DB_KEYS.FEE_ESTIMATE)
+    }
+}
 registerModifier(DB_KEYS.FEE_ESTIMATE, {
     expiration: FEE_CACHE_EXPIRATION,
     modifier: handleEstimateFeeWithAddressLookup
 })
+//// MODIFIERS
+
 registerModifier(DB_KEYS.CURR_FUNDING_DATA, {
     expiration: CURRENT_FUNDING_EXPIRATION,
     modifier: getCurrentFunding

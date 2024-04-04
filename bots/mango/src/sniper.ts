@@ -184,7 +184,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
             if (CHECK_FEES) {
                 let newFeeEstimate = DEFAULT_PRIORITY_FEE
                 try {
-                    newFeeEstimate = await db.get<number>(DB_KEYS.FEE_ESTIMATE)
+                    newFeeEstimate = await db.getFeeEstimate()
                 } catch (e: any) {
                     console.error('Error getting fee estimate', e.message)
                 }

@@ -30,7 +30,7 @@ export async function updateGoogleSheet(googleSheets: any,
         console.log('fundingRate', fundingRate)
         const jupPrice = await db.fetchJupPrice()
         const solPrice = getItem<number>(DB_KEYS.SOL_PRICE) || jupPrice.solPrice
-        const feeEstimate = getItem<number>(DB_KEYS.FEE_ESTIMATE) || 0
+        const feeEstimate = db.getFeeEstimate(true)
 
         //  accounts
         let endRow = START_ROW + accountDetails.length
