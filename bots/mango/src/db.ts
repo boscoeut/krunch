@@ -6,7 +6,7 @@ import {
     CURRENT_FUNDING_EXPIRATION
 } from "./constants";
 import {
-    fetchFundingData, fetchInterestData, fetchJupPrice, getAccountData, getCurrentFunding,
+    fetchFundingData, fetchInterestData as utilFetchInterestData, fetchJupPrice, getAccountData, getCurrentFunding,
     handleEstimateFeeWithAddressLookup, getBidsAndAsks, getFundingRate as utilGetFundingRate, setupClient
 } from './mangoUtils';
 import { CacheItem } from "./types";
@@ -30,7 +30,6 @@ export enum DB_KEYS {
     JUP_PRICE = "JUP_PRICE",
     BIDS_AND_ASKS = "BIDS_AND_ASKS",
     GET_CLIENT = "GET_CLIENT",
-    SWAP = "SWAP",
     SOL_PRICE = "SOL_PRICE",
     ACCOUNT_DETAILS = "ACCOUNT_DETAILS",
     FEE_ESTIMATE = "FEE_ESTIMATE",
@@ -140,9 +139,12 @@ registerModifier(DB_KEYS.HISTORICAL_FUNDING_DATA, {
     modifier: fetchFundingData
 })
 
+export const fetchInterestData = async (mangoAccountPk: string, force:boolean=false) => {
+    return await get<any[]>(DB_KEYS.INTEREST_DATA, { cacheKey:mangoAccountPk, force, params: [mangoAccountPk] })
+}
 registerModifier(DB_KEYS.INTEREST_DATA, {
     expiration: INTEREST_CACHE_EXPIRATION,
-    modifier: fetchInterestData
+    modifier: utilFetchInterestData
 })
 registerModifier(DB_KEYS.JUP_PRICE, {
     expiration: JUP_PRICE_EXPIRATION,

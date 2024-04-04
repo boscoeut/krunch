@@ -330,7 +330,7 @@ export async function getAccountData(
         }
     }
 
-    const interestData = await db.get<any[]>(db.DB_KEYS.INTEREST_DATA, { cacheKey: accountDefinition.name, params: [mangoAccount.publicKey.toBase58()] })
+    const interestData = await db.fetchInterestData(mangoAccount.publicKey.toBase58())
     for (const interest of interestData || []) {
         interestAmount += interest.deposit_interest_usd - interest.borrow_interest_usd
     }
