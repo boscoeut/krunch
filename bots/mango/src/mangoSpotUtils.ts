@@ -27,12 +27,9 @@ import {
 } from '@solana/web3.js';
 import axios from 'axios';
 import {
-    FUNDING_RATE_PRICE_RATIO,
     JUPITER_SPOT_SLIPPAGE,
     JUPITER_V6_QUOTE_API_MAINNET,
     MIN_SOL_WALLET_BALANCE,
-    PERP_BUY_PRICE_BUFFER,
-    PERP_SELL_PRICE_BUFFER,
     POST_TRADE_TIMEOUT,
     SOL_MINT,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
@@ -44,7 +41,6 @@ import { getBidsAndAsks, sleep, toFixedFloor } from './mangoUtils';
 import { postToSlackTrade, postToSlackTradeError } from './slackUtils';
 import {
     AccountDefinition,
-    PendingTransaction,
     Side
 } from './types';
 
@@ -131,100 +127,6 @@ export const fetchJupiterTransaction = async (
     return [filtered_jup_ixs, alts]
 }
 
-export const spotTrade = async (
-    amount: number,
-    inBank: Bank,
-    outBank: Bank,
-    client: MangoClient,
-    mangoAccount: MangoAccount,
-    user: Keypair,
-    group: Group,
-    side: Side,
-    accountDefinition: AccountDefinition,
-    solPrice: number) => {
-
-    const swap: PendingTransaction = {
-        type: side === Side.BUY ? 'SPOT-BUY' : 'SPOT-SELL',
-        amount,
-        accountName: accountDefinition.name,
-        price: db.getItem(db.DB_KEYS.SOL_PRICE) || 0,
-        oracle: db.getItem(db.DB_KEYS.SOL_PRICE) || 0,
-        timestamp: Date.now(),
-        status: 'PENDING'
-    }
-    const cacheKey = accountDefinition.name
-    try {
-        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
-
-        const amountBn = toNative(
-            Math.min(amount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
-            inBank.mintDecimals,
-        );
-        console.log('finding best route for amount = ' + amount);
-        const onlyDirectRoutes = SWAP_ONLY_DIRECT_ROUTES
-        const maxAccounts = 64
-        const swapMode = 'ExactIn'
-        const paramObj: any = {
-            inputMint: inBank.mint.toString(),
-            outputMint: outBank.mint.toString(),
-            amount: amountBn.toString(),
-            slippageBps: JUPITER_SPOT_SLIPPAGE.toString(),
-            swapMode,
-            onlyDirectRoutes: `${onlyDirectRoutes}`,
-            maxAccounts: `${maxAccounts}`,
-        }
-        const paramsString = new URLSearchParams(paramObj).toString()
-        const res = await axios.get(
-            `${JUPITER_V6_QUOTE_API_MAINNET}/quote?${paramsString}`,
-        )
-        const bestRoute = res.data
-        const [ixs, alts] = await fetchJupiterTransaction(
-            client.connection,
-            bestRoute,
-            user.publicKey,
-            inBank.mint,
-            outBank.mint
-        );
-        let price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
-        if (side === Side.BUY) {
-            price = (bestRoute.inAmount / 10 ** inBank.mintDecimals) / (bestRoute.outAmount / 10 ** outBank.mintDecimals)
-        }
-
-        let priceDiff = price - solPrice
-        if (side === Side.SELL) {
-            priceDiff = solPrice - price
-        }
-
-        const slippage = (SOL_PRICE_SPOT_DIFF_SLIPPAGE / 100) * solPrice
-        console.log(`Price Diff: ${priceDiff}`)
-        if (priceDiff > slippage) {
-            throw new Error(`Price diff too high: ${priceDiff}.  Oracle=${solPrice}  Swap=${price}  SwapPrice=${amount}  Side=${side}  Account=${accountDefinition.name}  `)
-        }
-
-        console.log(`*** ${accountDefinition.name} MARGIN ${side}: `, amount, "Oracle: ", solPrice, "Price: ", price, "Amount In: ", bestRoute.inAmount, "Amount Out: ", bestRoute.outAmount)
-        swap.price = price
-        const sig = await client.marginTrade({
-            group: group,
-            mangoAccount: mangoAccount,
-            inputMintPk: inBank.mint,
-            amountIn: Number(amount.toFixed(3)),
-            outputMintPk: outBank.mint,
-            userDefinedInstructions: ixs,
-            userDefinedAlts: alts,
-            flashLoanType: FlashLoanType.swap
-        });
-        console.log(`${accountDefinition.name} MARGIN ${side} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
-        swap.status = 'COMPLETE'
-        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
-        db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey: swap.type + '-SUCCESS' })
-        return sig.signature
-    } catch (e: any) {
-        swap.status = 'FAILED'
-        console.error(`Error in spotTrade: ${e.message} Account=${accountDefinition.name}  Type=${swap.type}  Amount=${amount}  Oracle=${solPrice}  Price=${swap.price}  Side=${side}  `)
-        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
-        db.incrementItem(db.DB_KEYS.NUM_TRADES_FAIL, { cacheKey: swap.type + '-FAIL' })
-    }
-}
 
 async function getMarginTradeIx({
     client,
@@ -432,18 +334,6 @@ export const getBestPrice = async (side: Side, spotAmount: number, inBank: Bank,
     };
 }
 
-export const getPriceBuffer = async (side: Side) => {
-    const fundingRate = await db.get<number>(db.DB_KEYS.FUNDING_RATE)
-    const adjustment = fundingRate / FUNDING_RATE_PRICE_RATIO
-    if (side === Side.BUY) {
-        let adjustedBuffer = PERP_BUY_PRICE_BUFFER + adjustment
-        return Math.max(0, adjustedBuffer)
-    } else {
-        let adjustedBuffer = PERP_SELL_PRICE_BUFFER - adjustment
-        return Math.max(adjustedBuffer, 0)
-    }
-}
-
 export const getTradePossibilities = async (
     name: string,
     client: MangoClient,
@@ -470,13 +360,11 @@ export const getTradePossibilities = async (
     // buy scenario
     const perpBuy = orderBook.bestAsk;
     const spotSell = sellSpotPrice;
-    const buyPriceBuffer = await getPriceBuffer(Side.BUY)
-    const buyPerpSellSpot = spotSell - perpBuy - buyPriceBuffer;
+    const buyPerpSellSpot = spotSell - perpBuy;
     // sell scenario
     const perpSell = orderBook.bestBid;
     const spotBuy = buySpotPrice;
-    const sellPriceBuffer = await getPriceBuffer(Side.SELL)
-    const sellPerpBuySpot = perpSell - spotBuy - sellPriceBuffer;
+    const sellPerpBuySpot = perpSell - spotBuy;
 
     console.log('*** ' + name + ' ***')
     console.log('Best Bid: ', orderBook.bestBid, orderBook.bestBid > oraclePrice ? '***' : '')
@@ -488,14 +376,11 @@ export const getTradePossibilities = async (
     console.log('   spotSell', spotSell, sellSpotDiscount)
     console.log('   oracle', oraclePrice)
     console.log('   perpBuy', perpBuy, buyPerpDiscount)
-    console.log('   priceBuffer', buyPriceBuffer)
     console.log(name + ' Sell Perp Scenario: ', sellPerpBuySpot)
     console.log('   perpSell', perpSell, sellPerpDiscount)
     console.log('   oracle', oraclePrice)
     console.log('   spotBuy', spotBuy, buySpotDiscount)
-    console.log('   sellPriceBuffer', sellPriceBuffer)
-
-
+    
     return {
         buyPerpDiscount,
         sellPerpDiscount,
@@ -512,9 +397,7 @@ export const getTradePossibilities = async (
         buySpotPrice,
         sellSpotPrice,
         bestAsk: orderBook.bestAsk,
-        bestBid: orderBook.bestBid,
-        sellPriceBuffer,
-        buyPriceBuffer
+        bestBid: orderBook.bestBid
     }
 }
 
