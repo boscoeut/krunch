@@ -26,7 +26,7 @@ export async function updateGoogleSheet(googleSheets: any,
     accountDetails: AccountDetail[] = [], fee:number
     ) {
     try {
-        const fundingRate = getItem<number>(DB_KEYS.FUNDING_RATE)     
+        const fundingRate = await db.getFundingRate()    
         console.log('fundingRate', fundingRate) 
         const jupPrice = await db.get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)          
         const solPrice = getItem<number>(DB_KEYS.SOL_PRICE) || jupPrice.solPrice

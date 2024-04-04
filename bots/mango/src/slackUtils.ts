@@ -150,7 +150,7 @@ export const postToSlackTrade = async (
 }
 export const postToSlackAlert = async (account: string, side: "BUY" | "SELL",
     diff: number, spotPrice: number, perpPrice: number, oraclePrice: number) => {
-    const fundingRate = await db.get<number>(DB_KEYS.FUNDING_RATE)
+    const fundingRate = await db.getFundingRate()
     const message = `${account} ${side} Perp: ${(diff + PERP_BUY_PRICE_BUFFER).toFixed(3)}`
     const data = {
         "channel": ALERT_CHANNEL_ID,

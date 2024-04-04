@@ -7,7 +7,7 @@ import {
 } from "./constants";
 import {
     fetchFundingData, fetchInterestData, fetchJupPrice, getAccountData, getCurrentFunding,
-    handleEstimateFeeWithAddressLookup, getBidsAndAsks, getFundingRate, reloadClient, setupClient
+    handleEstimateFeeWithAddressLookup, getBidsAndAsks, getFundingRate as utilGetFundingRate, setupClient
 } from './mangoUtils';
 import { CacheItem } from "./types";
 
@@ -31,7 +31,6 @@ export enum DB_KEYS {
     NUM_TRADES_FAIL = "NUM_TRADES_FAIL",
     INTEREST_DATA = "INTEREST_DATA",
     JUP_PRICE = "JUP_PRICE",
-    RELOAD_CLIENT = "RELOAD_CLIENT",
     BIDS_AND_ASKS = "BIDS_AND_ASKS",
     GET_CLIENT = "GET_CLIENT",
     SWAP = "SWAP",
@@ -131,9 +130,12 @@ export function getItems(dbKeys: DB_KEYS[]) {
 }
 
 // REGISTER MODIFIERS
+export const getFundingRate = async (force: boolean=false) :Promise<number>=> {
+    return await get<number>(DB_KEYS.FUNDING_RATE, { force })
+}
 registerModifier(DB_KEYS.FUNDING_RATE, {
     expiration: FUNDING_RATE_CACHE_EXPIRATION,
-    modifier: getFundingRate
+    modifier: utilGetFundingRate
 })
 
 registerModifier(DB_KEYS.HISTORICAL_FUNDING_DATA, {
@@ -148,10 +150,6 @@ registerModifier(DB_KEYS.INTEREST_DATA, {
 registerModifier(DB_KEYS.JUP_PRICE, {
     expiration: JUP_PRICE_EXPIRATION,
     modifier: fetchJupPrice
-})
-registerModifier(DB_KEYS.RELOAD_CLIENT, {
-    expiration: ACCOUNT_REFRESH_EXPIRATION,
-    modifier: reloadClient
 })
 registerModifier(DB_KEYS.BIDS_AND_ASKS, {
     expiration: BID_ASK_CACHE_EXPIRATION,

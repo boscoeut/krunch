@@ -127,7 +127,6 @@ export const fetchJupiterTransaction = async (
     return [filtered_jup_ixs, alts]
 }
 
-
 async function getMarginTradeIx({
     client,
     group,

@@ -35,6 +35,7 @@ const { google } = require('googleapis');
 function roundToNearestHalf(num: number) {
     return Math.floor(num * 2) / 2;
 }
+
 function getTradeSize(requestedTradeSize: number, solAmount: number, action: Side,
     borrow: number, accountDefinition: AccountDefinition, solPrice: number,
     minPerp: number, maxPerp: number, health: number
@@ -165,7 +166,6 @@ async function performSpap(client: Client,
     }
 }
 
-
 async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
     let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     const googleClient: any = await authorize();
@@ -192,11 +192,12 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
             }
             db.clearOpenTransactions()
 
-            const fundingRate = await db.get<number>(DB_KEYS.FUNDING_RATE)
+            const fundingRate = await db.getFundingRate()
             if (Math.abs(fundingRate - lastFundingRate) > FUNDING_DIFF) {
                 postToSlackFunding(fundingRate)
                 lastFundingRate = fundingRate
             }
+            console.log('FUNDING RATE: ', fundingRate)
             if (fundingRate === 0) {
                 console.log('FUNDING RATE IS 0, SLEEPING FOR 5 SECONDS')
                 await sleep(5 * 1000)
@@ -208,7 +209,6 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                             cacheKey: accountDefinition.name,
                             force: true
                         })
-
                         const accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
                             cacheKey: accountDefinition.name, params: [
                                 accountDefinition,
