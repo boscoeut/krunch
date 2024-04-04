@@ -63,16 +63,6 @@ export type AccountDefinition = {
     priceBuffer: number,  
     tradeSize:number
 };
-export type PendingTransaction = {
-    type: 'PERP-BUY'|'PERP-SELL' | 'SPOT-BUY'|'SPOT-SELL' 
-      | 'JUP-BUY'  | 'JUP-SELL' | 'DEPOSIT' | 'BORROW',
-    accountName: string,
-    amount: number,
-    price: number,
-    oracle: number,
-    timestamp:number,
-    status: 'COMPLETE' | 'FAILED' | 'PENDING' | 'EXPIRED' | 'ORDERED',
-}
 
 export class TokenAccount {
     publicKey!: PublicKey

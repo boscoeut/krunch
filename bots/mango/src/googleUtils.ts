@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import * as db from './db';
-import { DB_KEYS, Increment, getItems, getItem } from './db';
-import { AccountDetail, PendingTransaction } from './types';
+import { DB_KEYS, Increment, getItem, getItems } from './db';
+import { AccountDetail } from './types';
 
 import { SPREADSHEET_ID } from './constants';
 const { authenticate } = require('@google-cloud/local-auth');
@@ -10,7 +10,7 @@ const { google } = require('googleapis');
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const TOKEN_PATH = path.join(process.cwd(), 'secrets/token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), 'secrets/google_creds.json');
-const  START_ROW = 10
+const START_ROW = 10
 
 export function loadSavedCredentialsIfExist() {
     try {
@@ -23,23 +23,14 @@ export function loadSavedCredentialsIfExist() {
 }
 
 export async function updateGoogleSheet(googleSheets: any,
-    accountDetails: AccountDetail[] = [], fee:number
-    ) {
+    accountDetails: AccountDetail[] = [], fee: number
+) {
     try {
-        const fundingRate = await db.getFundingRate()    
-        console.log('fundingRate', fundingRate) 
-        const jupPrice = await db.get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)          
+        const fundingRate = await db.getFundingRate()
+        console.log('fundingRate', fundingRate)
+        const jupPrice = await db.get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)
         const solPrice = getItem<number>(DB_KEYS.SOL_PRICE) || jupPrice.solPrice
         const feeEstimate = getItem<number>(DB_KEYS.FEE_ESTIMATE) || 0
-
-        const openTransactions: PendingTransaction[] = getItems([DB_KEYS.SWAP])
-        // clear old transactions
-        const transactionRow = 20
-        const maxTransactionRows = 20
-        const result = await googleSheets.spreadsheets.values.clear({
-            spreadsheetId: SPREADSHEET_ID,
-            range: `SOL!A${transactionRow + openTransactions.length}:G${transactionRow + maxTransactionRows - openTransactions.length}`
-        });
 
         //  accounts
         let endRow = START_ROW + accountDetails.length
@@ -64,30 +55,9 @@ export async function updateGoogleSheet(googleSheets: any,
                 accountDetail.fundingAmount
             ]
         });
-     
+
         const bestBid = accountDetails[0]?.bestBid || 0
         const bestAsk = accountDetails[0]?.bestAsk || 0
-
-        const transactionValues: any = []
-        openTransactions.sort((a:PendingTransaction, b:PendingTransaction) => a.accountName.localeCompare(b.accountName));
-        openTransactions.forEach((pendingTx) => {
-            const amount = pendingTx.amount
-            transactionValues.push([
-                pendingTx.accountName,
-                pendingTx.type,
-                pendingTx.status,
-                pendingTx.price,
-                pendingTx.oracle,
-                amount,
-                toGoogleSheetsDate(new Date(pendingTx.timestamp))
-            ])
-        })
-
-        // update stats
-        const statValues: Increment[] = getItems([DB_KEYS.NUM_TRADES, DB_KEYS.NUM_TRADES_FAIL, DB_KEYS.NUM_TRADES_SUCCESS])
-        statValues.sort((a: Increment, b: Increment) => a.key.localeCompare(b.key));
-        const stats = statValues.map((stat) => [stat.key, stat.item]);
-        
 
         await googleSheets.spreadsheets.values.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,
@@ -95,31 +65,22 @@ export async function updateGoogleSheet(googleSheets: any,
                 valueInputOption: 'USER_ENTERED',
                 data: [
                     {
-                    range: `SOL!J${transactionRow}:K${transactionRow + statValues.length}`,
-                    values: stats,
+                        range: `SOL!B1:C2`,
+                        values: [[solPrice, bestBid],
+                        [fundingRate / 100, bestAsk]],
 
-                }, 
-                {
-                    range: `SOL!A${transactionRow}:G${transactionRow + maxTransactionRows}`,
-                    values: transactionValues,
+                    }, {
+                        range: `SOL!J1:J2`,
+                        values: [[fee], [feeEstimate]],
 
-                }, {
-                    range: `SOL!B1:C2`,
-                    values: [[solPrice, bestBid],
-                    [fundingRate/100, bestAsk]],
+                    }, {
+                        range: ACCOUNT_VALUES_RANGE,
+                        values: accountValues,
 
-                },{
-                    range: `SOL!J1:J2`,
-                    values: [[fee],[feeEstimate]],
-
-                }, {
-                    range: ACCOUNT_VALUES_RANGE,
-                    values: accountValues,
-
-                }, {
-                    range: `SOL!O1:O2`,
-                    values: [[jupPrice.solPrice],[jupPrice.jupPrice]],
-                }]
+                    }, {
+                        range: `SOL!O1:O2`,
+                        values: [[jupPrice.solPrice], [jupPrice.jupPrice]],
+                    }]
             }
         });
     } catch (e) {

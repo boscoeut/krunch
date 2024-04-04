@@ -1,13 +1,11 @@
 import * as bip39 from 'bip39';
 
 import {
-    Group,
     HealthType,
     MANGO_V4_ID,
     MangoAccount,
     MangoClient,
     PerpMarket,
-    PerpOrderSide,
     toUiDecimals,
     toUiDecimalsForQuote
 } from '@blockworks-foundation/mango-v4';
@@ -27,20 +25,18 @@ import {
     DEFAULT_PRIORITY_FEE,
     FEE_CONNECTION_URL,
     FUNDING_RATE_API,
+    GET_BLOCK_CONNECTION_URL,
     GROUP_ADDRESS_LOOKUP_TABLE_KEY,
     GROUP_PK,
     JUP_PRICE_URL,
     LAVA_CONNECTION_URL,
-    QUICKNODE_CONNECTION_URL,
     LITE_RPC_URL,
     MANGO_DATA_API_URL,
     MAX_PRIORITY_FEE_KEYS,
-    ORDER_EXPIRATION,
-    ORDER_TYPE,
+    QUICKNODE_CONNECTION_URL,
     SOL_MINT,
     SOL_RESERVE,
     USDC_MINT,
-    GET_BLOCK_CONNECTION_URL,
     USE_PRIORITY_FEE
 } from './constants';
 import * as db from './db';
@@ -48,7 +44,6 @@ import {
     AccountDefinition,
     AccountDetail,
     Client,
-    PendingTransaction,
     TokenAccount,
     TotalAccountFundingItem,
     TotalInterestDataItem
@@ -121,7 +116,7 @@ export const fetchFundingData = async (mangoAccountPk: string) => {
                 .filter((x) => x)
             return stats
         } else return []
-    } catch (e:any) {
+    } catch (e: any) {
         console.log('Failed to fetch account funding', e.message)
         return []
     }
@@ -156,7 +151,7 @@ export async function getFundingRate() {
         } else {
             return 0
         }
-    } catch (x:any) {
+    } catch (x: any) {
         console.log('Failed to fetch funding rate', x.message)
         return 0
     }
@@ -210,58 +205,6 @@ export async function getTokenAccountsByOwnerWithWrappedSol(
     return [solAccount].concat(tokenAccounts)
 }
 
-export const perpTrade = async (
-    client: MangoClient,
-    group: Group,
-    mangoAccount: MangoAccount,
-    perpMarket: PerpMarket,
-    price: number,
-    size: number,
-    side: PerpOrderSide,
-    accountDefinition: AccountDefinition,
-    reduceOnly: boolean) => {
-    const swap: PendingTransaction = {
-        type: side === PerpOrderSide.bid ? 'PERP-BUY' : 'PERP-SELL',
-        amount: size,
-        accountName: accountDefinition.name,
-        price: price,
-        oracle: price,
-        timestamp: Date.now(),
-        status: 'PENDING'
-    }
-    const cacheKey = accountDefinition.name
-    try {
-        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
-        const expiryTimestamp = Date.now() / 1000 + ORDER_EXPIRATION;
-        console.log(`**** ${accountDefinition.name} PERP ${side === PerpOrderSide.ask ? "SELL" : "BUY"} order for ${size} at ${price}`)
-        const order = await client.perpPlaceOrder(
-            group,
-            mangoAccount,
-            perpMarket.perpMarketIndex,
-            side,
-            price, // ui price 
-            size, // ui base quantity
-            undefined, // max quote quantity
-            Date.now(), // order id
-            ORDER_TYPE,
-            reduceOnly,
-            expiryTimestamp
-        );
-        console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.ask ? "SELL" : "BUY"} https://explorer.solana.com/tx/${order.signature}`);
-        swap.status = 'ORDERED'
-        db.incrementItem(db.DB_KEYS.NUM_TRADES_SUCCESS, { cacheKey: swap.type + '-SUCCESS' })
-        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
-        await sleep(ORDER_EXPIRATION * 1000)
-        swap.status = 'COMPLETE'
-        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
-        return order.signature
-    } catch (e: any) {
-        swap.status = 'FAILED'
-        console.log('Error in perpTrade', e.message)
-        db.setItem(db.DB_KEYS.SWAP, swap, { cacheKey })
-        db.incrementItem(db.DB_KEYS.NUM_TRADES_FAIL, { cacheKey: swap.type + '-FAIL' })
-    }
-}
 
 export function toFixedFloor(num: number, fixed: number = 4): number {
     const power = Math.pow(10, fixed);
@@ -374,8 +317,8 @@ export async function getAccountData(
         .find((pp: any) => pp.marketIndex === perpMarket.perpMarketIndex);
 
     const fund1 = perpPosition?.getCumulativeFunding(perpMarket)
-    const fundingAmount = ((fund1?.cumulativeShortFunding || 0)  - (fund1!.cumulativeLongFunding || 0))/10**6
-    
+    const fundingAmount = ((fund1?.cumulativeShortFunding || 0) - (fund1!.cumulativeLongFunding || 0)) / 10 ** 6
+
     let historicalFunding = 0;
     let interestAmount = 0;
     let solAmount = perpPosition!.basePositionLots.toNumber() / 100
