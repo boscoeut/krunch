@@ -6,7 +6,7 @@ import {
     CURRENT_FUNDING_EXPIRATION
 } from "./constants";
 import {
-    fetchFundingData, fetchInterestData as utilFetchInterestData, fetchJupPrice, getAccountData, getCurrentFunding,
+    fetchFundingData, fetchInterestData as utilFetchInterestData, fetchJupPrice as utilFetchJupPrice, getAccountData, getCurrentFunding,
     handleEstimateFeeWithAddressLookup, getBidsAndAsks, getFundingRate as utilGetFundingRate, setupClient
 } from './mangoUtils';
 import { CacheItem } from "./types";
@@ -146,9 +146,13 @@ registerModifier(DB_KEYS.INTEREST_DATA, {
     expiration: INTEREST_CACHE_EXPIRATION,
     modifier: utilFetchInterestData
 })
+
+export const fetchJupPrice = async () => {
+    return await get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)
+}
 registerModifier(DB_KEYS.JUP_PRICE, {
     expiration: JUP_PRICE_EXPIRATION,
-    modifier: fetchJupPrice
+    modifier: utilFetchJupPrice
 })
 registerModifier(DB_KEYS.BIDS_AND_ASKS, {
     expiration: BID_ASK_CACHE_EXPIRATION,

@@ -82,7 +82,6 @@ export const fetchInterestData = async (mangoAccountPk: string) => {
     }
 }
 
-
 export const fetchJupPrice = async () => {
     try {
         const url = JUP_PRICE_URL
@@ -205,7 +204,6 @@ export async function getTokenAccountsByOwnerWithWrappedSol(
     return [solAccount].concat(tokenAccounts)
 }
 
-
 export function toFixedFloor(num: number, fixed: number = 4): number {
     const power = Math.pow(10, fixed);
     const val = (Math.floor(num * power) / power).toFixed(fixed);
@@ -244,7 +242,6 @@ export const getClient = async (user: Keypair, prioritizationFee: number): Promi
 }
 
 export const handleEstimateFeeWithAddressLookup = async () => {
-
     const addressLookupTable = GROUP_ADDRESS_LOOKUP_TABLE_KEY
     const connection = new Connection(FEE_CONNECTION_URL!, COMMITTMENT);
     const altResponse = await connection.getAddressLookupTable(addressLookupTable)
