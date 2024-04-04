@@ -27,25 +27,26 @@ import {
 } from '@solana/web3.js';
 import axios from 'axios';
 import {
+    FUNDING_RATE_PRICE_RATIO,
     JUPITER_SPOT_SLIPPAGE,
     JUPITER_V6_QUOTE_API_MAINNET,
     MIN_SOL_WALLET_BALANCE,
     PERP_BUY_PRICE_BUFFER,
     PERP_SELL_PRICE_BUFFER,
-    FUNDING_RATE_PRICE_RATIO,
+    POST_TRADE_TIMEOUT,
     SOL_MINT,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
     SOL_RESERVE,
-    POST_TRADE_TIMEOUT,
     SWAP_ONLY_DIRECT_ROUTES
 } from './constants';
 import * as db from './db';
 import { getBidsAndAsks, sleep, toFixedFloor } from './mangoUtils';
+import { postToSlackTrade, postToSlackTradeError } from './slackUtils';
 import {
     AccountDefinition,
-    PendingTransaction
+    PendingTransaction,
+    Side
 } from './types';
-import { postToSlackTrade, postToSlackTradeError } from './slackUtils';
 
 
 export const deserializeJupiterIxAndAlt = async (
@@ -138,12 +139,12 @@ export const spotTrade = async (
     mangoAccount: MangoAccount,
     user: Keypair,
     group: Group,
-    side: 'BUY' | 'SELL',
+    side: Side,
     accountDefinition: AccountDefinition,
     solPrice: number) => {
 
     const swap: PendingTransaction = {
-        type: side === 'BUY' ? 'SPOT-BUY' : 'SPOT-SELL',
+        type: side === Side.BUY ? 'SPOT-BUY' : 'SPOT-SELL',
         amount,
         accountName: accountDefinition.name,
         price: db.getItem(db.DB_KEYS.SOL_PRICE) || 0,
@@ -185,12 +186,12 @@ export const spotTrade = async (
             outBank.mint
         );
         let price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
-        if (side === 'BUY') {
+        if (side === Side.BUY) {
             price = (bestRoute.inAmount / 10 ** inBank.mintDecimals) / (bestRoute.outAmount / 10 ** outBank.mintDecimals)
         }
 
         let priceDiff = price - solPrice
-        if (side === 'SELL') {
+        if (side === Side.SELL) {
             priceDiff = solPrice - price
         }
 
@@ -397,7 +398,7 @@ async function getMarginTradeIx({
     ]
 }
 
-export const getBestPrice = async (side: "BUY" | "SELL", spotAmount: number, inBank: Bank, outBank: Bank) => {
+export const getBestPrice = async (side: Side, spotAmount: number, inBank: Bank, outBank: Bank) => {
     const amountBn = toNative(
         Math.min(spotAmount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
         inBank.mintDecimals,
@@ -421,7 +422,7 @@ export const getBestPrice = async (side: "BUY" | "SELL", spotAmount: number, inB
     const bestRoute = res.data
 
     let price = (bestRoute.outAmount / 10 ** outBank.mintDecimals) / (bestRoute.inAmount / 10 ** inBank.mintDecimals)
-    if (side === 'BUY') {
+    if (side === Side.BUY) {
         price = (bestRoute.inAmount / 10 ** inBank.mintDecimals) / (bestRoute.outAmount / 10 ** outBank.mintDecimals)
     }
 
@@ -431,10 +432,10 @@ export const getBestPrice = async (side: "BUY" | "SELL", spotAmount: number, inB
     };
 }
 
-export const getPriceBuffer = async (side: "BUY" | "SELL") => {
+export const getPriceBuffer = async (side: Side) => {
     const fundingRate = await db.get<number>(db.DB_KEYS.FUNDING_RATE)
     const adjustment = fundingRate / FUNDING_RATE_PRICE_RATIO
-    if (side === 'BUY') {
+    if (side === Side.BUY) {
         let adjustedBuffer = PERP_BUY_PRICE_BUFFER + adjustment
         return Math.max(0, adjustedBuffer)
     } else {
@@ -460,8 +461,8 @@ export const getTradePossibilities = async (
     // specify a minimum quote amount
     const quoteAmount = Math.max(tradeSize, 0.001)
 
-    const { price: buySpotPrice, bestRoute: bestBuyRoute } = await getBestPrice('BUY', quoteAmount * oraclePrice, usdcBank, solBank)
-    const { price: sellSpotPrice, bestRoute: bestSellRoute } = await getBestPrice('SELL', quoteAmount, solBank, usdcBank)
+    const { price: buySpotPrice, bestRoute: bestBuyRoute } = await getBestPrice(Side.BUY, quoteAmount * oraclePrice, usdcBank, solBank)
+    const { price: sellSpotPrice, bestRoute: bestSellRoute } = await getBestPrice(Side.SELL, quoteAmount, solBank, usdcBank)
 
     const buySpotDiscount = sellSpotPrice - oraclePrice;
     const sellSpotDiscount = oraclePrice - sellSpotPrice;
@@ -469,12 +470,12 @@ export const getTradePossibilities = async (
     // buy scenario
     const perpBuy = orderBook.bestAsk;
     const spotSell = sellSpotPrice;
-    const buyPriceBuffer = await getPriceBuffer('BUY')
+    const buyPriceBuffer = await getPriceBuffer(Side.BUY)
     const buyPerpSellSpot = spotSell - perpBuy - buyPriceBuffer;
     // sell scenario
     const perpSell = orderBook.bestBid;
     const spotBuy = buySpotPrice;
-    const sellPriceBuffer = await getPriceBuffer('SELL')
+    const sellPriceBuffer = await getPriceBuffer(Side.SELL)
     const sellPerpBuySpot = perpSell - spotBuy - sellPriceBuffer;
 
     console.log('*** ' + name + ' ***')
@@ -517,9 +518,9 @@ export const getTradePossibilities = async (
     }
 }
 
-export const checkPrice = (oraclePrice: number, spotPrice: number, side: 'BUY' | 'SELL') => {
+export const checkPrice = (oraclePrice: number, spotPrice: number, side: Side) => {
     let priceDiff = spotPrice - oraclePrice
-    if (side === 'SELL') {
+    if (side === Side.SELL) {
         priceDiff = oraclePrice - spotPrice
     }
     const slippage = (SOL_PRICE_SPOT_DIFF_SLIPPAGE / 100) * oraclePrice
@@ -552,7 +553,7 @@ export const spotAndPerpSwap = async (
     mangoAccount: MangoAccount,
     user: Keypair,
     group: Group,
-    spotSide: 'BUY' | 'SELL',
+    spotSide: Side,
     accountDefinition: AccountDefinition,
     solPrice: number,
     bestRoute: any,
@@ -662,7 +663,7 @@ export const spotAndPerpSwap = async (
                     ))
                 }
 
-                console.log(`${accountDefinition.name} PERP ${perpSide === PerpOrderSide.bid ? "BUY" : "SELL"}`)
+                console.log(`${accountDefinition.name} PERP ${perpSide === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
                 console.log(`   sellPerpSize=`, sellPerpSize)
                 console.log(`   buyPerpSize=`, buyPerpSize)
                 console.log(`   Oracle=`, solPrice)
@@ -671,9 +672,9 @@ export const spotAndPerpSwap = async (
 
         if (tradeInstructions.length > 0 && SHOULD_TRADE) {
             postToSlackTrade(accountDefinition.name + ' START', solPrice, perpSide === PerpOrderSide.ask ? sellPerpSize : buyPerpSize,
-                perpPrice, perpSide === PerpOrderSide.ask ? "SELL" : "BUY",
-                spotSide, spotPrice, spotAmount, 
-                perpSide === PerpOrderSide.bid? solPrice - perpPrice:perpPrice-solPrice)
+                perpPrice, perpSide === PerpOrderSide.ask ? Side.SELL : Side.BUY,
+                spotSide, spotPrice, spotAmount,
+                perpSide === PerpOrderSide.bid ? solPrice - perpPrice : perpPrice - solPrice)
             db.incrementOpenTransactions()
             const request = client.sendAndConfirmTransactionForGroup(
                 group,
@@ -692,9 +693,9 @@ export const spotAndPerpSwap = async (
             console.log(`sig = ${sig.signature}`)
 
             postToSlackTrade(accountDefinition.name + ' COMPLETE', solPrice, perpSide === PerpOrderSide.ask ? sellPerpSize : buyPerpSize,
-                perpPrice, perpSide === PerpOrderSide.ask ? "SELL" : "BUY",
-                spotSide, spotPrice, spotAmount, 
-                perpSide === PerpOrderSide.bid? solPrice - perpPrice:perpPrice-solPrice)
+                perpPrice, perpSide === PerpOrderSide.ask ? Side.SELL : Side.BUY,
+                spotSide, spotPrice, spotAmount,
+                perpSide === PerpOrderSide.bid ? solPrice - perpPrice : perpPrice - solPrice)
 
             // sleep to allow perp trade to settle
             if (doSpot) {
@@ -717,6 +718,8 @@ export const spotAndPerpSwap = async (
                 errorMessage = '3005 Spot Error Number: Error Message: Not enough account keys given to the instruction'
             } else if (eValue.value.err.InstructionError[1].Custom === 6028) {
                 errorMessage = '6028 Spot Error Message: Invaild first tick array account'
+            } else if (eValue.value.err.InstructionError[1].Custom === 6024) {
+                errorMessage = '6024. Error Message: an oracle is stale; name: USDC'
             }
         } catch (ex: any) {
             // error parsing message
@@ -731,7 +734,7 @@ export const spotAndPerpSwap = async (
             accountDefinition.name,
             perpSide === PerpOrderSide.ask ? sellPerpSize : buyPerpSize,
             perpPrice,
-            perpSide === PerpOrderSide.ask ? "SELL" : "BUY",
+            perpSide === PerpOrderSide.ask ? Side.SELL : Side.BUY,
             spotSide,
             spotPrice,
             spotAmount,

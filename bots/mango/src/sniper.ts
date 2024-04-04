@@ -26,50 +26,49 @@ import { postToSlackFunding } from './slackUtils';
 import {
     AccountDefinition,
     AccountDetail,
-    Client
+    Client,
+    Side
 } from './types';
 
 const { google } = require('googleapis');
-type TradeStrategy = "BUY_PERP_SELL_SPOT" | "SELL_PERP_BUY_SPOT" | "NONE"
 
 function roundToNearestHalf(num: number) {
     return Math.floor(num * 2) / 2;
 }
-function getTradeSize(requestedTradeSize: number, solAmount: number, action: 'BUY' | 'SELL',
-    borrow: number, accountDefinition: AccountDefinition, solPrice: number, 
-    minPerp: number, maxPerp: number, health:number
+function getTradeSize(requestedTradeSize: number, solAmount: number, action: Side,
+    borrow: number, accountDefinition: AccountDefinition, solPrice: number,
+    minPerp: number, maxPerp: number, health: number
 ) {
     const freeCash = borrow - accountDefinition.healthThreshold
-    let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0
+    let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0 // 2.1 to account for other side of trade
     maxSize = roundToNearestHalf(maxSize)
 
-    if (action === 'BUY') {
+    if (action === Side.BUY) {
         maxSize = Math.min(maxSize, maxPerp - solAmount)
     }
-    if (action === 'SELL') {
+    if (action === Side.SELL) {
         maxSize = Math.min(maxSize, Math.abs(minPerp) + solAmount)
     }
     let tradeSize = requestedTradeSize
-    if (solAmount > 0 && action === "BUY") {
+    if (solAmount > 0 && action === Side.BUY) {
         tradeSize = Math.min(requestedTradeSize, maxSize)
-        if (health < 100){
+        if (health < 100) {
             tradeSize = 0
         }
-    } else if (solAmount < 0 && action === "BUY") {
+    } else if (solAmount < 0 && action === Side.BUY) {
         const amt = Math.max(Math.abs(solAmount), maxSize)
         tradeSize = Math.min(requestedTradeSize, amt)
-    } else if (solAmount < 0 && action === "SELL") {
+    } else if (solAmount < 0 && action === Side.SELL) {
         tradeSize = Math.min(requestedTradeSize, maxSize)
-        if (health < 100){
+        if (health < 100) {
             tradeSize = 0
         }
-    } else if (solAmount > 0 && action === "SELL") {
+    } else if (solAmount > 0 && action === Side.SELL) {
         const amt = Math.max(Math.abs(solAmount), maxSize)
         tradeSize = Math.min(requestedTradeSize, amt)
     }
     return Math.max(tradeSize, 0)
 }
-
 
 async function performSpap(client: Client,
     accountDefinition: AccountDefinition,
@@ -90,38 +89,38 @@ async function performSpap(client: Client,
     const spotVsPerpDiff = solBalance + solAmount + (INCLUDE_WALLET ? walletSol : 0)
     const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
 
-    let spotSide: "BUY" | "SELL" = "BUY"
+    let spotSide: Side = Side.BUY
     let buyPerpTradeSize = getTradeSize(
         tradeSize, solAmount,
-        "BUY", accountDetails.borrow,
+        Side.BUY, accountDetails.borrow,
         accountDefinition, solPrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health)
     let sellPerpTradeSize = getTradeSize(
         tradeSize, solAmount,
-        "SELL", accountDetails.borrow,
+        Side.SELL, accountDetails.borrow,
         accountDefinition, solPrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health)
 
     let spotAmount = 0
     if (spotUnbalanced) {
         if (spotVsPerpDiff > 0) {
             if (buyPerpTradeSize <= 0) {
-                spotSide = "BUY"
+                spotSide = Side.BUY
                 spotAmount = 0
                 buyPerpTradeSize = 0
                 sellPerpTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
             } else {
-                spotSide = "SELL"
+                spotSide = Side.SELL
                 buyPerpTradeSize = 0
                 sellPerpTradeSize = 0
                 spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
             }
         } else {
             if (sellPerpTradeSize <= 0) {
-                spotSide = "SELL"
+                spotSide = Side.SELL
                 spotAmount = 0
                 sellPerpTradeSize = 0
                 buyPerpTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
             } else {
-                spotSide = "BUY"
+                spotSide = Side.BUY
                 buyPerpTradeSize = 0
                 sellPerpTradeSize = 0
                 spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
@@ -142,7 +141,7 @@ async function performSpap(client: Client,
         if (orders.find(o => o.side === PerpOrderSide.ask)) {
             sellPerpTradeSize = 0
         }
-        const possibilities = await getTradePossibilities(accountDefinition.name, client.client, 
+        const possibilities = await getTradePossibilities(accountDefinition.name, client.client,
             client.group, solPrice, spotAmount, usdcBank, solBank);
 
         await spotAndPerpSwap(
@@ -156,14 +155,14 @@ async function performSpap(client: Client,
             spotSide,
             accountDefinition,
             solPrice,
-            spotSide === "SELL" ? possibilities.bestSellRoute : possibilities.bestBuyRoute,
-            spotSide === "SELL" ? possibilities.sellSpotPrice : possibilities.buySpotPrice,
+            spotSide === Side.SELL ? possibilities.bestSellRoute : possibilities.bestBuyRoute,
+            spotSide === Side.SELL ? possibilities.sellSpotPrice : possibilities.buySpotPrice,
             accountDetails.walletSol,
             !simulateTrades,
             buyPerpTradeSize,
             sellPerpTradeSize,
             spotUnbalanced ? 0 : accountDefinition.priceBuffer)
-    }              
+    }
 }
 
 
@@ -270,7 +269,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 }
 
 try {
-    doubleSwapLoop(true, true, false);
+    doubleSwapLoop(false, true, false);
 } catch (error) {
     console.log(error);
 }

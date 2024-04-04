@@ -8,6 +8,12 @@ import {
 import { Wallet } from '@coral-xyz/anchor';
 
 
+// create an enum for BUY and SELL
+export enum Side {
+    BUY = 'BUY',
+    SELL = 'SELL',
+}
+
 export type CacheItem = {
   date: Date,
   item: any
