@@ -1,16 +1,22 @@
-import { MangoClient, PerpMarket } from "@blockworks-foundation/mango-v4";
+import { Group, MangoAccount, MangoClient, PerpMarket } from "@blockworks-foundation/mango-v4";
+import { Keypair } from '@solana/web3.js';
 import {
     ACCOUNT_REFRESH_EXPIRATION, BID_ASK_CACHE_EXPIRATION,
+    CURRENT_FUNDING_EXPIRATION,
     DEFAULT_CACHE_EXPIRATION,
+    FEE_CACHE_EXPIRATION,
     FUNDING_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION,
-    INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION, FEE_CACHE_EXPIRATION,
-    CURRENT_FUNDING_EXPIRATION
+    INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION
 } from "./constants";
 import {
-    fetchFundingData as utilFetchFundingData, fetchInterestData as utilFetchInterestData, fetchJupPrice as utilFetchJupPrice, getAccountData, getCurrentFunding,
-    handleEstimateFeeWithAddressLookup, getBidsAndAsks as utilGetBidsAndAsks, getFundingRate as utilGetFundingRate, setupClient
+    getCurrentFunding,
+    handleEstimateFeeWithAddressLookup,
+    setupClient,
+    fetchFundingData as utilFetchFundingData, fetchInterestData as utilFetchInterestData, fetchJupPrice as utilFetchJupPrice,
+    getAccountData as utilGetAccountData,
+    getBidsAndAsks as utilGetBidsAndAsks, getFundingRate as utilGetFundingRate
 } from './mangoUtils';
-import { CacheItem } from "./types";
+import { AccountDefinition, AccountDetail, CacheItem } from "./types";
 
 
 let openTransactions = 0
@@ -19,10 +25,10 @@ export function incrementOpenTransactions() {
 }
 export function clearOpenTransactions() {
     openTransactions = 0
-}   
+}
 export function getOpenTransactions() {
     return openTransactions
-}   
+}
 
 export enum DB_KEYS {
     FUNDING_RATE = "FUNDING_RATE",
@@ -127,7 +133,7 @@ export function getItems(dbKeys: DB_KEYS[]) {
 }
 
 // REGISTER MODIFIERS
-export const getFundingRate = async (force: boolean=false) :Promise<number>=> {
+export const getFundingRate = async (force: boolean = false): Promise<number> => {
     return await get<number>(DB_KEYS.FUNDING_RATE, { force })
 }
 registerModifier(DB_KEYS.FUNDING_RATE, {
@@ -135,7 +141,7 @@ registerModifier(DB_KEYS.FUNDING_RATE, {
     modifier: utilGetFundingRate
 })
 
-export const fetchHistoricalFundingData = async (mangoAccountPk: string, force:boolean=false) => {
+export const fetchHistoricalFundingData = async (mangoAccountPk: string, force: boolean = false) => {
     const fundingData = await get<any[]>(DB_KEYS.HISTORICAL_FUNDING_DATA, { force, cacheKey: mangoAccountPk, params: [mangoAccountPk] })
     return fundingData
 }
@@ -144,8 +150,8 @@ registerModifier(DB_KEYS.HISTORICAL_FUNDING_DATA, {
     modifier: utilFetchFundingData
 })
 
-export const fetchInterestData = async (mangoAccountPk: string, force:boolean=false) => {
-    return await get<any[]>(DB_KEYS.INTEREST_DATA, { cacheKey:mangoAccountPk, force, params: [mangoAccountPk] })
+export const fetchInterestData = async (mangoAccountPk: string, force: boolean = false) => {
+    return await get<any[]>(DB_KEYS.INTEREST_DATA, { cacheKey: mangoAccountPk, force, params: [mangoAccountPk] })
 }
 registerModifier(DB_KEYS.INTEREST_DATA, {
     expiration: INTEREST_CACHE_EXPIRATION,
@@ -159,21 +165,37 @@ registerModifier(DB_KEYS.JUP_PRICE, {
     expiration: JUP_PRICE_EXPIRATION,
     modifier: utilFetchJupPrice
 })
-export const getBidsAndAsks = async (marketName: string, perpMarket:PerpMarket, client:MangoClient) => {
+export const getBidsAndAsks = async (marketName: string, perpMarket: PerpMarket, client: MangoClient) => {
     return await get<{ bestBid: number, bestAsk: number }>(DB_KEYS.BIDS_AND_ASKS, { cacheKey: marketName, params: [perpMarket, client] })
 }
 registerModifier(DB_KEYS.BIDS_AND_ASKS, {
     expiration: BID_ASK_CACHE_EXPIRATION,
     modifier: utilGetBidsAndAsks
 })
-registerModifier(DB_KEYS.GET_CLIENT, {
-    expiration: ACCOUNT_REFRESH_EXPIRATION,
-    modifier: setupClient
-})
+
+export async function getAccountData(
+    accountDefinition: AccountDefinition,
+    client: MangoClient,
+    group: Group,
+    mangoAccount: MangoAccount,
+    user: Keypair
+): Promise<AccountDetail> {
+    const accountDetails = await get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
+        cacheKey: accountDefinition.name, params: [
+            accountDefinition,
+            client,
+            group,
+            mangoAccount,
+            user]
+    })
+    return accountDetails
+}
 registerModifier(DB_KEYS.ACCOUNT_DETAILS, {
     expiration: ACCOUNT_REFRESH_EXPIRATION,
-    modifier: getAccountData
+    modifier: utilGetAccountData
 })
+
+//// MODIFIERS
 registerModifier(DB_KEYS.FEE_ESTIMATE, {
     expiration: FEE_CACHE_EXPIRATION,
     modifier: handleEstimateFeeWithAddressLookup
@@ -181,4 +203,9 @@ registerModifier(DB_KEYS.FEE_ESTIMATE, {
 registerModifier(DB_KEYS.CURR_FUNDING_DATA, {
     expiration: CURRENT_FUNDING_EXPIRATION,
     modifier: getCurrentFunding
+})
+
+registerModifier(DB_KEYS.GET_CLIENT, {
+    expiration: ACCOUNT_REFRESH_EXPIRATION,
+    modifier: setupClient
 })

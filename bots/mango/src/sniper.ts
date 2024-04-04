@@ -209,14 +209,13 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                             cacheKey: accountDefinition.name,
                             force: true
                         })
-                        const accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
-                            cacheKey: accountDefinition.name, params: [
+                        const accountDetails = await db.getAccountData(
                                 accountDefinition,
                                 client.client,
                                 client.group,
-                                client.mangoAccount,
-                                client.user]
-                        })
+                                client.mangoAccount!,
+                                client.user
+                        )
                         await performSpap(client, accountDefinition,
                             accountDetails, accountDefinition.tradeSize, fundingRate, SIMULATE_TRADES)
                         return accountDetails
@@ -228,14 +227,13 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                             force: false
                         })
 
-                        const accountDetails = await db.get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
-                            cacheKey: accountDefinition.name, params: [
+                        const accountDetails = await db.getAccountData(
                                 accountDefinition,
                                 client.client,
                                 client.group,
-                                client.mangoAccount,
-                                client.user]
-                        })
+                                client.mangoAccount!,
+                                client.user
+                        )
 
                         await cancelOpenOrders(client.client, client.mangoAccount!, client.group,
                             accountDetails.perpMarket.perpMarketIndex, accountDefinition.name)
