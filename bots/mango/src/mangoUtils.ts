@@ -319,8 +319,8 @@ export async function getAccountData(
     let historicalFunding = 0;
     let interestAmount = 0;
     let solAmount = perpPosition!.basePositionLots.toNumber() / 100
-    const { bestBid, bestAsk } = await db.get<{ bestBid: number, bestAsk: number }>(db.DB_KEYS.BIDS_AND_ASKS, { params: [perpMarket, client], cacheKey: accountDefinition.name })
-    const fundingData = await db.get<any[]>(db.DB_KEYS.HISTORICAL_FUNDING_DATA, { cacheKey: accountDefinition.name, params: [mangoAccount.publicKey.toBase58()] })
+    const { bestBid, bestAsk } = await db.getBidsAndAsks(accountDefinition.name, perpMarket, client)
+    const fundingData = await db.fetchHistoricalFundingData(mangoAccount.publicKey.toBase58())
     if (fundingData && fundingData.length > 0) {
         for (const funding of fundingData || []) {
             historicalFunding += funding.long_funding + funding.short_funding

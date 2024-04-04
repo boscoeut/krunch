@@ -1,3 +1,4 @@
+import { MangoClient, PerpMarket } from "@blockworks-foundation/mango-v4";
 import {
     ACCOUNT_REFRESH_EXPIRATION, BID_ASK_CACHE_EXPIRATION,
     DEFAULT_CACHE_EXPIRATION,
@@ -6,8 +7,8 @@ import {
     CURRENT_FUNDING_EXPIRATION
 } from "./constants";
 import {
-    fetchFundingData, fetchInterestData as utilFetchInterestData, fetchJupPrice as utilFetchJupPrice, getAccountData, getCurrentFunding,
-    handleEstimateFeeWithAddressLookup, getBidsAndAsks, getFundingRate as utilGetFundingRate, setupClient
+    fetchFundingData as utilFetchFundingData, fetchInterestData as utilFetchInterestData, fetchJupPrice as utilFetchJupPrice, getAccountData, getCurrentFunding,
+    handleEstimateFeeWithAddressLookup, getBidsAndAsks as utilGetBidsAndAsks, getFundingRate as utilGetFundingRate, setupClient
 } from './mangoUtils';
 import { CacheItem } from "./types";
 
@@ -134,9 +135,13 @@ registerModifier(DB_KEYS.FUNDING_RATE, {
     modifier: utilGetFundingRate
 })
 
+export const fetchHistoricalFundingData = async (mangoAccountPk: string, force:boolean=false) => {
+    const fundingData = await get<any[]>(DB_KEYS.HISTORICAL_FUNDING_DATA, { force, cacheKey: mangoAccountPk, params: [mangoAccountPk] })
+    return fundingData
+}
 registerModifier(DB_KEYS.HISTORICAL_FUNDING_DATA, {
     expiration: FUNDING_CACHE_EXPIRATION,
-    modifier: fetchFundingData
+    modifier: utilFetchFundingData
 })
 
 export const fetchInterestData = async (mangoAccountPk: string, force:boolean=false) => {
@@ -154,9 +159,12 @@ registerModifier(DB_KEYS.JUP_PRICE, {
     expiration: JUP_PRICE_EXPIRATION,
     modifier: utilFetchJupPrice
 })
+export const getBidsAndAsks = async (marketName: string, perpMarket:PerpMarket, client:MangoClient) => {
+    return await get<{ bestBid: number, bestAsk: number }>(DB_KEYS.BIDS_AND_ASKS, { cacheKey: marketName, params: [perpMarket, client] })
+}
 registerModifier(DB_KEYS.BIDS_AND_ASKS, {
     expiration: BID_ASK_CACHE_EXPIRATION,
-    modifier: getBidsAndAsks
+    modifier: utilGetBidsAndAsks
 })
 registerModifier(DB_KEYS.GET_CLIENT, {
     expiration: ACCOUNT_REFRESH_EXPIRATION,
