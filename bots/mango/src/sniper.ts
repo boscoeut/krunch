@@ -226,8 +226,6 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                             client.mangoAccount!,
                             client.user
                         )
-                        await checkForPriceMismatch(accountDetails.solPrice, accountDetails.bestBid, accountDetails.bestAsk,
-                            accountDefinition.buyPriceBuffer, accountDefinition.sellPriceBuffer)
                         await performSpap(client, accountDefinition,
                             accountDetails, accountDefinition.tradeSize, fundingRate, SIMULATE_TRADES)
                         return accountDetails
@@ -246,14 +244,20 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                             client.mangoAccount!,
                             client.user
                         )
-                        await checkForPriceMismatch(accountDetails.solPrice, accountDetails.bestBid, accountDetails.bestAsk,
-                            accountDefinition.buyPriceBuffer, accountDefinition.sellPriceBuffer)
                         await cancelOpenOrders(client.client, client.mangoAccount!, client.group,
                             accountDetails.perpMarket.perpMarketIndex, accountDefinition.name)
                         return accountDetails
                     }
                 });
                 accountDetailList.push(...await Promise.all(newItems))
+
+                // check for price mismatches
+                if (accountDetailList.length > 0) {
+                    const accountDetails = accountDetailList[0]
+                    const accountDefinition = accountDefinitions[0]
+                    await checkForPriceMismatch(accountDetails.solPrice, accountDetails.bestBid, accountDetails.bestAsk,
+                        accountDefinition.buyPriceBuffer, accountDefinition.sellPriceBuffer)
+                }
 
                 const now = Date.now()
                 if ((UPDATE_GOOGLE_SHEET || db.getOpenTransactions() > 0) &&
