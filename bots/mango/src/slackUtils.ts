@@ -208,6 +208,45 @@ export const postToSlackAlert = async (account: string, side: "BUY" | "SELL",
     await postToSlack(data)
 }
 
+export const postToSlackPriceAlert = async (
+    oracle: number,
+    bestBid:number,
+    bestAsk:number,
+    buySpread:number,
+    sellSpread:number) => {
+    
+    const alertType = buySpread > sellSpread ? 'BUY' : 'SELL'
+    const spread = buySpread > sellSpread ? buySpread : sellSpread
+
+    const data = {
+        "channel": ALERT_CHANNEL_ID,
+        text: `${alertType} Spread: ${buySpread.toFixed(3)} `,
+        blocks: [
+
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `*${alertType} ${spread.toFixed(3)}*`,
+                },
+            },
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `SOL=$${oracle.toFixed(3)}.  Bid=$${bestBid.toFixed(3)} Ask=$${bestAsk.toFixed(3)}`,   
+                },
+            },
+            {
+                "type": "divider"
+            }, {
+                "type": "divider"
+            }
+        ]
+    }
+    await postToSlack(data)
+}
+
 export const postToSlack = async (data: any) => {
     console.log('Posting to slack')
     const token = process.env.SLACK_TOKEN

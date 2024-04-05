@@ -21,7 +21,7 @@ import {
 import {
     sleep
 } from './mangoUtils';
-import { postToSlackFunding } from './slackUtils';
+import { postToSlackFunding, postToSlackPriceAlert } from './slackUtils';
 import {
     AccountDefinition,
     AccountDetail,
@@ -141,7 +141,7 @@ async function performSpap(client: Client,
         if (orders.find(o => o.side === PerpOrderSide.ask)) {
             sellPerpTradeSize = 0
         }
-    
+
         await spotAndPerpSwap(
             spotAmount,
             solBank,
@@ -160,6 +160,19 @@ async function performSpap(client: Client,
             spotUnbalanced ? 0 : accountDefinition.sellPriceBuffer,
             spotUnbalanced ? 0 : accountDefinition.buyPriceBuffer,
             orders.length)
+    }
+}
+
+async function checkForPriceMismatch(solPrice: number, bestBid: number, bestAsk: number, buyPriceBuffer: number, sellPriceBuffer: number) {
+    const buySpread = solPrice - bestAsk
+    const sellSpread = bestBid - solPrice
+    console.log('BUY PRICE MISMATCH: ', buySpread)
+    console.log('SELL PRICE MISMATCH: ', sellSpread)
+    if (buySpread > buyPriceBuffer) {
+        postToSlackPriceAlert(solPrice, bestBid, bestAsk, buySpread, sellSpread)
+    }
+    if (sellSpread > sellPriceBuffer) {
+        postToSlackPriceAlert(solPrice, bestBid, bestAsk, buySpread, sellSpread)
     }
 }
 
@@ -207,12 +220,14 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                             force: true
                         })
                         const accountDetails = await db.getAccountData(
-                                accountDefinition,
-                                client.client,
-                                client.group,
-                                client.mangoAccount!,
-                                client.user
+                            accountDefinition,
+                            client.client,
+                            client.group,
+                            client.mangoAccount!,
+                            client.user
                         )
+                        await checkForPriceMismatch(accountDetails.solPrice, accountDetails.bestBid, accountDetails.bestAsk,
+                            accountDefinition.buyPriceBuffer, accountDefinition.sellPriceBuffer)
                         await performSpap(client, accountDefinition,
                             accountDetails, accountDefinition.tradeSize, fundingRate, SIMULATE_TRADES)
                         return accountDetails
@@ -225,13 +240,14 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                         })
 
                         const accountDetails = await db.getAccountData(
-                                accountDefinition,
-                                client.client,
-                                client.group,
-                                client.mangoAccount!,
-                                client.user
+                            accountDefinition,
+                            client.client,
+                            client.group,
+                            client.mangoAccount!,
+                            client.user
                         )
-
+                        await checkForPriceMismatch(accountDetails.solPrice, accountDetails.bestBid, accountDetails.bestAsk,
+                            accountDefinition.buyPriceBuffer, accountDefinition.sellPriceBuffer)
                         await cancelOpenOrders(client.client, client.mangoAccount!, client.group,
                             accountDetails.perpMarket.perpMarketIndex, accountDefinition.name)
                         return accountDetails
@@ -264,7 +280,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 }
 
 try {
-    doubleSwapLoop(true , true, false);
+    doubleSwapLoop(true, true, false);
 } catch (error) {
     console.log(error);
 }
