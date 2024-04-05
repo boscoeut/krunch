@@ -30,7 +30,8 @@ export async function updateGoogleSheet(googleSheets: any,
         console.log('fundingRate', fundingRate)
         const jupPrice = await db.fetchJupPrice()
         const solPrice = getItem<number>(DB_KEYS.SOL_PRICE) || jupPrice.solPrice
-        const feeEstimate = db.getFeeEstimate(true)
+        const wormholePrice = jupPrice.wormholePrice || 0
+        const feeEstimate = await db.getFeeEstimate(true) || 0
 
         //  accounts
         let endRow = START_ROW + accountDetails.length
@@ -70,7 +71,7 @@ export async function updateGoogleSheet(googleSheets: any,
                         [fundingRate / 100, bestAsk]],
 
                     }, {
-                        range: `SOL!J1:J2`,
+                        range: `SOL!L1:L2`,
                         values: [[fee], [feeEstimate]],
 
                     }, {
@@ -78,8 +79,8 @@ export async function updateGoogleSheet(googleSheets: any,
                         values: accountValues,
 
                     }, {
-                        range: `SOL!O1:O2`,
-                        values: [[jupPrice.solPrice], [jupPrice.jupPrice]],
+                        range: `SOL!Q1:Q3`,
+                        values: [[jupPrice.solPrice], [jupPrice.jupPrice],[wormholePrice]],
                     }]
             }
         });

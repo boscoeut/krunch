@@ -88,7 +88,8 @@ export const fetchJupPrice = async () => {
         const response = await axios.get(url)
         const jupPrice = response.data.data.JUP.price
         const solPrice = response.data.data.SOL.price
-        return { jupPrice, solPrice }
+        const wormholePrice = response.data.data["85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ"].price
+        return { jupPrice, solPrice, wormholePrice }
     } catch (e) {
         console.log('Failed to fetch jup price', e)
         return { jupPrice: 0, solPrice: 0 }

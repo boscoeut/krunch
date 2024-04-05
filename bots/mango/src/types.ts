@@ -60,7 +60,8 @@ export type AccountDefinition = {
     healthThreshold: number;
     canTrade:boolean,
     useMangoSpotTrades:boolean,
-    priceBuffer: number,  
+    sellPriceBuffer: number,  
+    buyPriceBuffer: number,
     tradeSize:number
 };
 

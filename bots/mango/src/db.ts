@@ -2,14 +2,12 @@ import { Group, MangoAccount, MangoClient, PerpMarket } from "@blockworks-founda
 import { Keypair } from '@solana/web3.js';
 import {
     ACCOUNT_REFRESH_EXPIRATION, BID_ASK_CACHE_EXPIRATION,
-    CURRENT_FUNDING_EXPIRATION,
     DEFAULT_CACHE_EXPIRATION,
     FEE_CACHE_EXPIRATION,
     FUNDING_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION,
     INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION
 } from "./constants";
 import {
-    getCurrentFunding,
     handleEstimateFeeWithAddressLookup,
     setupClient,
     fetchFundingData as utilFetchFundingData, fetchInterestData as utilFetchInterestData, fetchJupPrice as utilFetchJupPrice,
@@ -39,8 +37,7 @@ export enum DB_KEYS {
     GET_CLIENT = "GET_CLIENT",
     SOL_PRICE = "SOL_PRICE",
     ACCOUNT_DETAILS = "ACCOUNT_DETAILS",
-    FEE_ESTIMATE = "FEE_ESTIMATE",
-    CURR_FUNDING_DATA = "CURR_FUNDING_DATA",
+    FEE_ESTIMATE = "FEE_ESTIMATE"
 }
 
 export type GetOptions = {
@@ -159,7 +156,7 @@ registerModifier(DB_KEYS.INTEREST_DATA, {
 })
 
 export const fetchJupPrice = async () => {
-    return await get<{ solPrice: number, jupPrice: number }>(DB_KEYS.JUP_PRICE)
+    return await get<{ solPrice: number, jupPrice: number, wormholePrice:number }>(DB_KEYS.JUP_PRICE)
 }
 registerModifier(DB_KEYS.JUP_PRICE, {
     expiration: JUP_PRICE_EXPIRATION,
@@ -208,11 +205,14 @@ registerModifier(DB_KEYS.FEE_ESTIMATE, {
 })
 //// MODIFIERS
 
-registerModifier(DB_KEYS.CURR_FUNDING_DATA, {
-    expiration: CURRENT_FUNDING_EXPIRATION,
-    modifier: getCurrentFunding
-})
-
+// export const getClient = async () => {
+//     let client = await get<Client>(DB_KEYS.GET_CLIENT, {
+//         params: [accountDefinition, DEFAULT_PRIORITY_FEE],
+//         cacheKey: accountDefinition.name,
+//         force: false
+//     })
+//     return client;
+// }
 registerModifier(DB_KEYS.GET_CLIENT, {
     expiration: ACCOUNT_REFRESH_EXPIRATION,
     modifier: setupClient

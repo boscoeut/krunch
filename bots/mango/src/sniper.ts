@@ -16,7 +16,6 @@ import { DB_KEYS } from './db';
 import { authorize, updateGoogleSheet } from './googleUtils';
 import {
     cancelOpenOrders,
-    getTradePossibilities,
     spotAndPerpSwap
 } from './mangoSpotUtils';
 import {
@@ -142,9 +141,7 @@ async function performSpap(client: Client,
         if (orders.find(o => o.side === PerpOrderSide.ask)) {
             sellPerpTradeSize = 0
         }
-        const possibilities = await getTradePossibilities(accountDefinition.name, client.client,
-            client.group, solPrice, spotAmount, usdcBank, solBank);
-
+    
         await spotAndPerpSwap(
             spotAmount,
             solBank,
@@ -156,13 +153,13 @@ async function performSpap(client: Client,
             spotSide,
             accountDefinition,
             solPrice,
-            spotSide === Side.SELL ? possibilities.bestSellRoute : possibilities.bestBuyRoute,
-            spotSide === Side.SELL ? possibilities.sellSpotPrice : possibilities.buySpotPrice,
             accountDetails.walletSol,
             !simulateTrades,
             buyPerpTradeSize,
             sellPerpTradeSize,
-            spotUnbalanced ? 0 : accountDefinition.priceBuffer)
+            spotUnbalanced ? 0 : accountDefinition.sellPriceBuffer,
+            spotUnbalanced ? 0 : accountDefinition.buyPriceBuffer,
+            orders.length)
     }
 }
 
@@ -267,7 +264,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 }
 
 try {
-    doubleSwapLoop(true, true, false);
+    doubleSwapLoop(true , true, false);
 } catch (error) {
     console.log(error);
 }

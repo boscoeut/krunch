@@ -333,73 +333,6 @@ export const getBestPrice = async (side: Side, spotAmount: number, inBank: Bank,
     };
 }
 
-export const getTradePossibilities = async (
-    name: string,
-    client: MangoClient,
-    group: Group,
-    oraclePrice: number,
-    tradeSize: number,
-    usdcBank: Bank,
-    solBank: Bank) => {
-    const values = group.perpMarketsMapByMarketIndex.values()
-    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
-    const orderBook = await getBidsAndAsks(perpMarket, client);
-    const buyPerpDiscount = oraclePrice - orderBook.bestAsk;
-    const sellPerpDiscount = orderBook.bestBid - oraclePrice;
-
-    // specify a minimum quote amount
-    const quoteAmount = Math.max(tradeSize, 0.001)
-
-    const { price: buySpotPrice, bestRoute: bestBuyRoute } = await getBestPrice(Side.BUY, quoteAmount * oraclePrice, usdcBank, solBank)
-    const { price: sellSpotPrice, bestRoute: bestSellRoute } = await getBestPrice(Side.SELL, quoteAmount, solBank, usdcBank)
-
-    const buySpotDiscount = sellSpotPrice - oraclePrice;
-    const sellSpotDiscount = oraclePrice - sellSpotPrice;
-
-    // buy scenario
-    const perpBuy = orderBook.bestAsk;
-    const spotSell = sellSpotPrice;
-    const buyPerpSellSpot = spotSell - perpBuy;
-    // sell scenario
-    const perpSell = orderBook.bestBid;
-    const spotBuy = buySpotPrice;
-    const sellPerpBuySpot = perpSell - spotBuy;
-
-    console.log('*** ' + name + ' ***')
-    console.log('Best Bid: ', orderBook.bestBid, orderBook.bestBid > oraclePrice ? '***' : '')
-    console.log('Oracle Price: ', oraclePrice)
-    console.log('Best Ask: ', orderBook.bestAsk, orderBook.bestAsk < oraclePrice ? '***' : '')
-    console.log('Max Sell Size: ', orderBook.bestBidSize)
-    console.log('Max Buy Size: ', orderBook.bestAskSize)
-    console.log(name + ' Buy Perp Scenario: ', buyPerpSellSpot)
-    console.log('   spotSell', spotSell, sellSpotDiscount)
-    console.log('   oracle', oraclePrice)
-    console.log('   perpBuy', perpBuy, buyPerpDiscount)
-    console.log(name + ' Sell Perp Scenario: ', sellPerpBuySpot)
-    console.log('   perpSell', perpSell, sellPerpDiscount)
-    console.log('   oracle', oraclePrice)
-    console.log('   spotBuy', spotBuy, buySpotDiscount)
-    
-    return {
-        buyPerpDiscount,
-        sellPerpDiscount,
-        buySpotDiscount,
-        sellSpotDiscount,
-        buyDiscount: buyPerpDiscount + buySpotDiscount,
-        sellDiscount: sellPerpDiscount + sellSpotDiscount,
-        maxBuySize: orderBook.bestAskSize,
-        maxSellSize: orderBook.bestBidSize,
-        bestBuyRoute,
-        bestSellRoute,
-        buyPerpSellSpot,
-        sellPerpBuySpot,
-        buySpotPrice,
-        sellSpotPrice,
-        bestAsk: orderBook.bestAsk,
-        bestBid: orderBook.bestBid
-    }
-}
-
 export const checkPrice = (oraclePrice: number, spotPrice: number, side: Side) => {
     let priceDiff = spotPrice - oraclePrice
     if (side === Side.SELL) {
@@ -429,8 +362,8 @@ export const cancelOpenOrders = async (client: MangoClient, mangoAccount: MangoA
 
 export const spotAndPerpSwap = async (
     spotAmount: number,
-    inBank: Bank,
-    outBank: Bank,
+    solBank: Bank,
+    usdcBank: Bank,
     client: MangoClient,
     mangoAccount: MangoAccount,
     user: Keypair,
@@ -438,16 +371,17 @@ export const spotAndPerpSwap = async (
     spotSide: Side,
     accountDefinition: AccountDefinition,
     solPrice: number,
-    bestRoute: any,
-    spotPrice: any,
     walletSol: number,
     SHOULD_TRADE: boolean,
     buyPerpSize: number,
     sellPerpSize: number,
-    priceBuffer: number) => {
+    sellPriceBuffer: number,
+    buyPriceBuffer: number,
+    numOrders: number) => {
 
     let perpPrice = solPrice
     let perpSide: PerpOrderSide = PerpOrderSide.bid
+    let spotPrice = 0
 
     try {
         let doPerp = buyPerpSize > 0 || sellPerpSize > 0
@@ -469,6 +403,13 @@ export const spotAndPerpSwap = async (
         } else {
             // SPOT TRADE
             if (doSpot) {
+                const inBank = spotSide === Side.SELL ? solBank : usdcBank
+                const outBank = spotSide === Side.SELL ? usdcBank : solBank
+
+                const quoteAmount = Side.BUY === spotSide ? spotAmount * solPrice : spotAmount
+                const { price, bestRoute: bestRoute } = await getBestPrice(spotSide, quoteAmount, inBank, outBank)
+                spotPrice = price
+               
                 checkPrice(solPrice, spotPrice, spotSide)
                 const [ixs, alts] = await fetchJupiterTransaction(
                     client.connection,
@@ -501,9 +442,6 @@ export const spotAndPerpSwap = async (
 
             // PERP TRADE
             if (doPerp) {
-                const cancelInstructions = await client.perpCancelAllOrdersIx(group, mangoAccount, perpMarket.perpMarketIndex, 5);
-                tradeInstructions.push(cancelInstructions)
-
                 // determine perp amount
                 if (buyPerpSize > 0) {
                     perpSide = PerpOrderSide.bid
@@ -512,7 +450,7 @@ export const spotAndPerpSwap = async (
                         mangoAccount!,
                         perpMarket.perpMarketIndex,
                         PerpOrderSide.bid,
-                        -1 * (priceBuffer),// price Offset
+                        -1 * (buyPriceBuffer),// price Offset
                         toFixedFloor(buyPerpSize),// size
                         undefined, //piglimit
                         undefined,//maxQuoteQuantity,
@@ -524,7 +462,6 @@ export const spotAndPerpSwap = async (
                         undefined // limit
                     ))
                 }
-
                 if (sellPerpSize > 0) {
                     perpSide = PerpOrderSide.ask
                     tradeInstructions.push(await client.perpPlaceOrderPeggedV2Ix(
@@ -532,7 +469,7 @@ export const spotAndPerpSwap = async (
                         mangoAccount!,
                         perpMarket.perpMarketIndex,
                         PerpOrderSide.ask,
-                        priceBuffer,// price Offset
+                        sellPriceBuffer,// price Offset
                         toFixedFloor(sellPerpSize),// size
                         undefined, //piglimit
                         undefined,//maxQuoteQuantity,
@@ -543,6 +480,11 @@ export const spotAndPerpSwap = async (
                         undefined, //expiryTimestamp,
                         undefined // limit
                     ))
+                }
+
+                if (numOrders > 1 && (buyPerpSize > 0 || sellPerpSize > 0)) {
+                    const cancelInstructions = await client.perpCancelAllOrdersIx(group, mangoAccount, perpMarket.perpMarketIndex, 5);
+                    tradeInstructions.push(cancelInstructions)
                 }
 
                 console.log(`${accountDefinition.name} PERP ${perpSide === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
@@ -568,7 +510,7 @@ export const spotAndPerpSwap = async (
                 const id = setTimeout(() => {
                     clearTimeout(id);
                     reject(new Error('Timed out'));
-                }, 45 * 1000); // 30 seconds timeout
+                }, 60 * 1000); // 60 seconds timeout
             });
             const sig: any = await Promise.race([timeout, request])
             console.log(`*** ${accountDefinition.name} SPOT ${spotSide} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
@@ -589,19 +531,28 @@ export const spotAndPerpSwap = async (
         let delay = 0;
         try {
             const eValue = JSON.parse(e.message)
-            if (eValue.value.err.InstructionError[1].Custom === 1) {
+            let customError = 0
+            try {
+                customError = eValue.value.err.InstructionError[1].Custom
+            } catch {
+                // error parsing message    
+            }
+            if (customError === 1) {
                 errorMessage = 'Custom InstructionError.  Trying again in 30 seconds'
                 delay = 30
-            } else if (eValue.value.err.InstructionError[1].Custom === 6001) {
-                errorMessage = 'Slippage exceeded for Spot Price:' + spotPrice
-            } else if (eValue.value.err.InstructionError[1].Custom === 6023) {
+            } else if (customError === 6001) {
+                errorMessage = '6001 Sport Slippage exceeded for Spot Price:' + spotPrice
+            } else if (customError === 6007) {
+                errorMessage = '6007 Spot Custom program error: 0x1777'
+            } else if (customError === 6023) {
                 errorMessage = '6023 Spot Error Message: Invalid tick array sequence'
-            } else if (eValue.value.err.InstructionError[1].Custom === 3005) {
+            } else if (customError === 3005) {
                 errorMessage = '3005 Spot Error Number: Error Message: Not enough account keys given to the instruction'
-            } else if (eValue.value.err.InstructionError[1].Custom === 6028) {
+            } else if (customError === 6028) {
                 errorMessage = '6028 Spot Error Message: Invaild first tick array account'
-            } else if (eValue.value.err.InstructionError[1].Custom === 6024) {
+            } else if (customError === 6024) {
                 errorMessage = '6024. Error Message: an oracle is stale; name: USDC'
+                delay = 30
             }
         } catch (ex: any) {
             // error parsing message

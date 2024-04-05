@@ -1,6 +1,5 @@
 import axios from "axios"
 import { PERP_BUY_PRICE_BUFFER, PERP_SELL_PRICE_BUFFER } from "./constants"
-import { DB_KEYS } from "./db"
 import * as db from "./db"
 
 const FUNDING_CHANNEL_ID = "C06S9MMH57B"
@@ -47,7 +46,7 @@ export const postToSlackTradeError = async (
 
     
     const data = {
-        "channel": FUNDING_CHANNEL_ID,
+        "channel": ALERT_CHANNEL_ID,
         text: `${account} ${spotSide} Spot: ${spotPrice.toFixed(3)} Perp: ${perpSize} ${perpSide} ${perpPrice.toFixed(3)}`,
         blocks: [
 
@@ -113,7 +112,7 @@ export const postToSlackTrade = async (
         })
     }
     const data = {
-        "channel": FUNDING_CHANNEL_ID,
+        "channel": ALERT_CHANNEL_ID,
         text: `${account} ${spotSide} Spot: ${spotPrice.toFixed(3)} Perp: ${perpSize} ${perpSide} ${perpPrice.toFixed(3)}`,
         blocks: [
 
