@@ -166,14 +166,15 @@ async function performSpap(client: Client,
 async function checkForPriceMismatch(solPrice: number, bestBid: number, bestAsk: number, buyPriceBuffer: number, sellPriceBuffer: number) {
     const buySpread = solPrice - bestAsk
     const sellSpread = bestBid - solPrice
-    console.log('BUY PRICE MISMATCH: ', buySpread)
-    console.log('SELL PRICE MISMATCH: ', sellSpread)
+    console.log(`BUY  PRICE MISMATCH: BestAsk=${bestAsk.toFixed(2)} Oracle=${solPrice.toFixed(2)}  Diff=${buySpread.toFixed(2)}` )
+    console.log(`SELL PRICE MISMATCH: BestBid=${bestBid.toFixed(2)} Oracle=${solPrice.toFixed(2)}  Diff=${sellSpread.toFixed(2)}`)
     if (buySpread > buyPriceBuffer) {
         postToSlackPriceAlert(solPrice, bestBid, bestAsk, buySpread, sellSpread)
     }
     if (sellSpread > sellPriceBuffer) {
         postToSlackPriceAlert(solPrice, bestBid, bestAsk, buySpread, sellSpread)
     }
+    return { buyMismatch: buySpread, sellMismatch: sellSpread } 
 }
 
 async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
@@ -210,7 +211,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
             console.log('FUNDING RATE: ', fundingRate)
             if (fundingRate === 0) {
                 console.log('FUNDING RATE IS 0, SLEEPING FOR 5 SECONDS')
-                await sleep(5 * 1000)
+                await sleep(10 * 1000)
             } else {
                 const newItems = accountDefinitions.map(async (accountDefinition) => {
                     if (accountDefinition.canTrade && CAN_TRADE_NOW) {
@@ -252,11 +253,15 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                 accountDetailList.push(...await Promise.all(newItems))
 
                 // check for price mismatches
+                let buyMismatch = 0
+                let sellMismatch = 0    
                 if (accountDetailList.length > 0) {
                     const accountDetails = accountDetailList[0]
                     const accountDefinition = accountDefinitions[0]
-                    await checkForPriceMismatch(accountDetails.solPrice, accountDetails.bestBid, accountDetails.bestAsk,
+                    const result = await checkForPriceMismatch(accountDetails.solPrice, accountDetails.bestBid, accountDetails.bestAsk,
                         accountDefinition.buyPriceBuffer, accountDefinition.sellPriceBuffer)
+                    buyMismatch = result.buyMismatch
+                    sellMismatch = result.sellMismatch
                 }
 
                 const now = Date.now()
@@ -264,7 +269,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                     (now - lastGoogleUpdate > googleUpdateInterval) &&
                     accountDetailList.length === accountDefinitions.length) {
                     // update google sheet
-                    await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate)
+                    await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate, buyMismatch, sellMismatch)
                     // end google sheet update
                     console.log('Google Sheet Updated', new Date().toTimeString())
                     lastGoogleUpdate = now

@@ -23,7 +23,7 @@ export function loadSavedCredentialsIfExist() {
 }
 
 export async function updateGoogleSheet(googleSheets: any,
-    accountDetails: AccountDetail[] = [], fee: number
+    accountDetails: AccountDetail[] = [], fee: number, buyMismatch:number,sellMismatch:number
 ) {
     try {
         const fundingRate = await db.getFundingRate()
@@ -81,6 +81,9 @@ export async function updateGoogleSheet(googleSheets: any,
                     }, {
                         range: `SOL!Q1:Q3`,
                         values: [[jupPrice.solPrice], [jupPrice.jupPrice],[wormholePrice]],
+                    }, {
+                        range: `SOL!J1:J2`,
+                        values: [[buyMismatch], [sellMismatch]],
                     }]
             }
         });

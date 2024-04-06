@@ -99,7 +99,7 @@ export const fetchJupPrice = async () => {
 export const fetchFundingData = async (mangoAccountPk: string) => {
     try {
         const url = `${MANGO_DATA_API_URL}/stats/funding-account-total?mango-account=${mangoAccountPk}`
-        const response = await axios.get(url, { timeout: 2000 })
+        const response = await axios.get(url, { timeout: 10000 })
         const res: any = response.data
         if (res) {
             const entries: [string, Omit<TotalAccountFundingItem, 'market'>][] =
@@ -143,7 +143,7 @@ export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient
 
 export async function getFundingRate() {
     try {
-        const fundingRate = await axios.get(FUNDING_RATE_API, { timeout: 3000 })
+        const fundingRate = await axios.get(FUNDING_RATE_API, { timeout: 15000 })
         const data: any = fundingRate.data
         if (data?.find) {
             const hourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
