@@ -16,6 +16,7 @@ import { DB_KEYS } from './db';
 import { authorize, updateGoogleSheet } from './googleUtils';
 import {
     cancelOpenOrders,
+    perpTrade,
     spotAndPerpSwap
 } from './mangoSpotUtils';
 import {
@@ -135,38 +136,69 @@ async function performSpap(client: Client,
             accountDetails.perpMarket.perpMarketIndex,
             true
         )
-        if (orders.find(o => o.side === PerpOrderSide.bid)) {
-            buyPerpTradeSize = 0
-        }
-        if (orders.find(o => o.side === PerpOrderSide.ask)) {
-            sellPerpTradeSize = 0
-        }
+        const result = await checkForPriceMismatch(accountDefinition, accountDetails)
+        if (!spotUnbalanced && (result.buyMismatch > accountDefinition.buyPriceBuffer || result.sellMismatch > accountDefinition.sellPriceBuffer)) {
+            const side = buyPerpTradeSize > sellPerpTradeSize ? PerpOrderSide.bid : PerpOrderSide.ask
+            let size = buyPerpTradeSize > sellPerpTradeSize ? buyPerpTradeSize : sellPerpTradeSize
+            const price = buyPerpTradeSize > sellPerpTradeSize ? solPrice - accountDefinition.buyPriceBuffer : solPrice + accountDefinition.sellPriceBuffer
 
-        await spotAndPerpSwap(
-            spotAmount,
-            solBank,
-            usdcBank,
-            client.client,
-            client.mangoAccount!,
-            client.user,
-            client.group,
-            spotSide,
-            accountDefinition,
-            solPrice,
-            accountDetails.walletSol,
-            !simulateTrades,
-            buyPerpTradeSize,
-            sellPerpTradeSize,
-            spotUnbalanced ? 0 : accountDefinition.sellPriceBuffer,
-            spotUnbalanced ? 0 : accountDefinition.buyPriceBuffer,
-            orders.length)
+            if (side === PerpOrderSide.bid && orders.find(o => o.side === PerpOrderSide.bid && !o.isOraclePegged)) {
+                size = 0
+            }
+            if (side === PerpOrderSide.ask && orders.find(o => o.side === PerpOrderSide.ask && !o.isOraclePegged)) {
+                size = 0
+            }
+
+            if (size > 0) {
+                await perpTrade(
+                    client.client,
+                    client.mangoAccount!,
+                    client.group,
+                    price,
+                    size,
+                    side)
+            }
+        } else {
+            if (orders.find(o => o.side === PerpOrderSide.bid)) {
+                buyPerpTradeSize = 0
+            }
+            if (orders.find(o => o.side === PerpOrderSide.ask)) {
+                sellPerpTradeSize = 0
+            }
+            await spotAndPerpSwap(
+                spotAmount,
+                solBank,
+                usdcBank,
+                client.client,
+                client.mangoAccount!,
+                client.user,
+                client.group,
+                spotSide,
+                accountDefinition,
+                solPrice,
+                accountDetails.walletSol,
+                !simulateTrades,
+                buyPerpTradeSize,
+                sellPerpTradeSize,
+                spotUnbalanced ? 0 : accountDefinition.sellPriceBuffer,
+                spotUnbalanced ? 0 : accountDefinition.buyPriceBuffer,
+                orders.length)
+        }
     }
 }
 
-async function checkForPriceMismatch(solPrice: number, bestBid: number, bestAsk: number, buyPriceBuffer: number, sellPriceBuffer: number) {
+async function checkForPriceMismatch(
+    accountDefinition: AccountDefinition,
+    accountDetails: AccountDetail) {
+    const buyPriceBuffer = accountDefinition.buyPriceBuffer
+    const sellPriceBuffer = accountDefinition.sellPriceBuffer
+    const solPrice = accountDetails.solPrice
+    const bestBid = accountDetails.bestBid
+    const bestAsk = accountDetails.bestAsk
+
     const buySpread = solPrice - bestAsk
     const sellSpread = bestBid - solPrice
-    console.log(`BUY  PRICE MISMATCH: BestAsk=${bestAsk.toFixed(2)} Oracle=${solPrice.toFixed(2)}  Diff=${buySpread.toFixed(2)}` )
+    console.log(`BUY  PRICE MISMATCH: BestAsk=${bestAsk.toFixed(2)} Oracle=${solPrice.toFixed(2)}  Diff=${buySpread.toFixed(2)}`)
     console.log(`SELL PRICE MISMATCH: BestBid=${bestBid.toFixed(2)} Oracle=${solPrice.toFixed(2)}  Diff=${sellSpread.toFixed(2)}`)
     if (buySpread > buyPriceBuffer) {
         postToSlackPriceAlert(solPrice, bestBid, bestAsk, buySpread, sellSpread)
@@ -174,7 +206,7 @@ async function checkForPriceMismatch(solPrice: number, bestBid: number, bestAsk:
     if (sellSpread > sellPriceBuffer) {
         postToSlackPriceAlert(solPrice, bestBid, bestAsk, buySpread, sellSpread)
     }
-    return { buyMismatch: buySpread, sellMismatch: sellSpread } 
+    return { buyMismatch: buySpread, sellMismatch: sellSpread }
 }
 
 async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
@@ -185,6 +217,8 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
     const accountDetailList: AccountDetail[] = []
     let lastGoogleUpdate = 0
     let lastFundingRate = 0
+    let buyMismatch = 0
+    let sellMismatch = 0
     const FUNDING_DIFF = 50
     const CHECK_FEES = false
     let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
@@ -214,55 +248,35 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                 await sleep(10 * 1000)
             } else {
                 const newItems = accountDefinitions.map(async (accountDefinition) => {
+                    let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
+                        params: [accountDefinition, DEFAULT_PRIORITY_FEE],
+                        cacheKey: accountDefinition.name,
+                        force: false
+                    })
+
+                    const accountDetails = await db.getAccountData(
+                        accountDefinition,
+                        client.client,
+                        client.group,
+                        client.mangoAccount!,
+                        client.user
+                    )
+                    const result = await checkForPriceMismatch(accountDefinition, accountDetails)
+                    buyMismatch = result.buyMismatch
+                    sellMismatch = result.sellMismatch
                     if (accountDefinition.canTrade && CAN_TRADE_NOW) {
-                        let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
-                            params: [accountDefinition, DEFAULT_PRIORITY_FEE],
-                            cacheKey: accountDefinition.name,
-                            force: true
-                        })
-                        const accountDetails = await db.getAccountData(
-                            accountDefinition,
-                            client.client,
-                            client.group,
-                            client.mangoAccount!,
-                            client.user
-                        )
                         await performSpap(client, accountDefinition,
                             accountDetails, accountDefinition.tradeSize, fundingRate, SIMULATE_TRADES)
                         return accountDetails
                     } else {
                         console.log('CANNOT TRADE NOW: ', accountDefinition.name)
-                        let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
-                            params: [accountDefinition, DEFAULT_PRIORITY_FEE],
-                            cacheKey: accountDefinition.name,
-                            force: false
-                        })
 
-                        const accountDetails = await db.getAccountData(
-                            accountDefinition,
-                            client.client,
-                            client.group,
-                            client.mangoAccount!,
-                            client.user
-                        )
                         await cancelOpenOrders(client.client, client.mangoAccount!, client.group,
                             accountDetails.perpMarket.perpMarketIndex, accountDefinition.name)
                         return accountDetails
                     }
                 });
                 accountDetailList.push(...await Promise.all(newItems))
-
-                // check for price mismatches
-                let buyMismatch = 0
-                let sellMismatch = 0    
-                if (accountDetailList.length > 0) {
-                    const accountDetails = accountDetailList[0]
-                    const accountDefinition = accountDefinitions[0]
-                    const result = await checkForPriceMismatch(accountDetails.solPrice, accountDetails.bestBid, accountDetails.bestAsk,
-                        accountDefinition.buyPriceBuffer, accountDefinition.sellPriceBuffer)
-                    buyMismatch = result.buyMismatch
-                    sellMismatch = result.sellMismatch
-                }
 
                 const now = Date.now()
                 if ((UPDATE_GOOGLE_SHEET || db.getOpenTransactions() > 0) &&

@@ -33,11 +33,12 @@ import {
     POST_TRADE_TIMEOUT,
     SOL_MINT,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
+    ORDER_EXPIRATION,
     SOL_RESERVE,
     SWAP_ONLY_DIRECT_ROUTES
 } from './constants';
 import * as db from './db';
-import { getBidsAndAsks, sleep, toFixedFloor } from './mangoUtils';
+import { sleep, toFixedFloor } from './mangoUtils';
 import { postToSlackTrade, postToSlackTradeError } from './slackUtils';
 import {
     AccountDefinition,
@@ -358,6 +359,27 @@ export const cancelOpenOrders = async (client: MangoClient, mangoAccount: MangoA
         console.log(`Cancelling ${orders.length} orders for ${account}`)
         await client.perpCancelAllOrders(group, mangoAccount, perpMarketIndex, 10)
     }
+}
+
+export const perpTrade = async (client:MangoClient, mangoAccount:MangoAccount,
+    group:Group, price:number, quantity:number,side:PerpOrderSide)=>{
+        const values = group.perpMarketsMapByMarketIndex.values()
+        const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+
+    await client.perpPlaceOrder(
+        group,
+        mangoAccount!,
+        perpMarket.perpMarketIndex,
+        side,
+        price,// price 
+        toFixedFloor(quantity),// quantity
+        undefined,//maxQuoteQuantity,
+        Date.now(),//clientOrderId,
+        PerpOrderType.limit,
+        false, //reduceOnly
+        Date.now() / 1000 + ORDER_EXPIRATION, //expiryTimestamp,
+        undefined // limit
+    )
 }
 
 export const spotAndPerpSwap = async (

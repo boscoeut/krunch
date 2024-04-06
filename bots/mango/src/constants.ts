@@ -45,7 +45,7 @@ export const FILTER_TO_ACCOUNTS: Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
 
 // CACHE EXPIRATIONS
-export const ORDER_EXPIRATION = 1 * 60
+export const ORDER_EXPIRATION = 1 * 20
 export const TRANSACTION_EXPIRATION = 1.5 * 60 * 1000
 export const FUNDING_RATE_CACHE_EXPIRATION = 1
 export const INTEREST_CACHE_EXPIRATION = 5

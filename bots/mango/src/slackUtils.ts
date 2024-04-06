@@ -227,7 +227,7 @@ export const postToSlackPriceAlert = async (
                 type: "section",
                 text: {
                     type: "mrkdwn",
-                    text: `*${alertType} ${spread.toFixed(3)}*`,
+                    text: `*${alertType} ${spread.toFixed(3)} DIFF*`,
                 },
             },
             {
