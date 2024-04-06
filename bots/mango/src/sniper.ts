@@ -137,7 +137,12 @@ async function performSpap(client: Client,
             true
         )
         const result = await checkForPriceMismatch(accountDefinition, accountDetails)
-        if (!spotUnbalanced && (result.buyMismatch > accountDefinition.buyPriceBuffer || result.sellMismatch > accountDefinition.sellPriceBuffer)) {
+        const buyMismatch =result.buyMismatch > accountDefinition.buyPriceBuffer
+        const sellMismatch = result.sellMismatch > accountDefinition.sellPriceBuffer
+
+        if (!spotUnbalanced && (buyMismatch || sellMismatch)) {
+            // If balanced and there is a price mismatch, place a perp trade
+
             const side = buyPerpTradeSize > sellPerpTradeSize ? PerpOrderSide.bid : PerpOrderSide.ask
             let size = buyPerpTradeSize > sellPerpTradeSize ? buyPerpTradeSize : sellPerpTradeSize
             const price = buyPerpTradeSize > sellPerpTradeSize ? solPrice - accountDefinition.buyPriceBuffer : solPrice + accountDefinition.sellPriceBuffer
@@ -159,6 +164,8 @@ async function performSpap(client: Client,
                     side)
             }
         } else {
+            // place spot and perp trade.  perp trades are oracle pegged
+            // spot trades attempt to balance the wallet
             if (orders.find(o => o.side === PerpOrderSide.bid)) {
                 buyPerpTradeSize = 0
             }
