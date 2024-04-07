@@ -158,6 +158,7 @@ async function performSpap(client: Client,
 
             if (size > 0) {
                 await perpTrade(
+                    accountDefinition,
                     client.client,
                     client.mangoAccount!,
                     client.group,
@@ -210,10 +211,10 @@ async function checkForPriceMismatch(
     console.log(`------ ${accountDefinition.name} PRICE MISMATCH --------`)
     console.log(`BUY  PRICE MISMATCH: BestAsk=${bestAsk.toFixed(2)} Oracle=${solPrice.toFixed(2)}  Diff=${buySpread.toFixed(2)}`)
     console.log(`SELL PRICE MISMATCH: BestBid=${bestBid.toFixed(2)} Oracle=${solPrice.toFixed(2)}  Diff=${sellSpread.toFixed(2)}`)
-    if (buySpread > buyPriceBuffer) {
+    if (buySpread > buyPriceBuffer && bestAsk > 0) {
         postToSlackPriceAlert(solPrice, bestBid, bestAsk, buySpread, sellSpread)
     }
-    if (sellSpread > sellPriceBuffer) {
+    if (sellSpread > sellPriceBuffer && bestBid > 0) {
         postToSlackPriceAlert(solPrice, bestBid, bestAsk, buySpread, sellSpread)
     }
     return { buyMismatch: buySpread, sellMismatch: sellSpread }
@@ -227,7 +228,8 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     let swapSol = 0
     let perpUsdc = 0
     let perpSol = 0
-    const feedItems = feed.data.filter((item: any) => new Date(item.block_datetime) > new Date('2024-04-04'))
+    const feedItems = feed.data.filter((item: any) => new Date(item.block_datetime) > new Date('2024-04-07'))
+    // const feedItems = feed.data.slice(2,2   )
     for (const item of feedItems) {
         if (item.activity_type === 'swap') {
             if (item.activity_details.swap_in_symbol === "USDC") {
@@ -237,7 +239,7 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
             } else {
                 swapUsdc += item.activity_details.swap_out_amount
                 swapSol -= item.activity_details.swap_in_amount
-                swapUsdc-=item.activity_details.loan_origination_fee
+                swapUsdc -= item.activity_details.loan_origination_fee
             }
         } else if (item.activity_type === 'perp_trade') {
             let itemTotal = item.activity_details.price * item.activity_details.quantity
@@ -261,13 +263,12 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     }
     const swapUsdcTotal = swapUsdc / Math.abs(swapSol)
     const perpUsdcTotal = perpUsdc / Math.abs(perpSol)
-    if (accountName === 'BIRD') {
-        console.log(`------ ${accountName} HISTORY --------`)
-        console.log(`${accountName} SWAP: ${swapUsdcTotal} USDC`)
-        console.log(`${accountName} PERP: ${perpUsdcTotal} USDC`)
-        console.log(`${accountName} TOTAL: ${(swapUsdcTotal + perpUsdcTotal)} USDC`)
-    }
+    console.log(`------ ${accountName} HISTORY --------`)
+    console.log(`${accountName} SWAP: ${swapUsdcTotal} USDC`)
+    console.log(`${accountName} PERP: ${perpUsdcTotal} USDC`)
+    console.log(`${accountName} TOTAL: ${(swapUsdcTotal + perpUsdcTotal)} USDC`)
 }
+
 async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
     let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     const googleClient: any = await authorize();
@@ -312,7 +313,10 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                         cacheKey: accountDefinition.name,
                         force: false
                     })
-                    //await checkActivityFeed(accountDefinition.name, client.mangoAccount!.publicKey.toString())
+
+                    if (accountDefinition.name === 'BIRD') {
+                        await checkActivityFeed(accountDefinition.name, client.mangoAccount!.publicKey.toString())
+                    }
 
                     const accountDetails = await db.getAccountData(
                         accountDefinition,

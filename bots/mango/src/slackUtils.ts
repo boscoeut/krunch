@@ -220,7 +220,7 @@ export const postToSlackPriceAlert = async (
 
     const data = {
         "channel": ALERT_CHANNEL_ID,
-        text: `${alertType} Spread: ${buySpread.toFixed(3)} `,
+        text: `${alertType} Spread: ${spread.toFixed(3)} `,
         blocks: [
 
             {

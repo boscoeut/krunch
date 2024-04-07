@@ -30,10 +30,10 @@ import {
     JUPITER_SPOT_SLIPPAGE,
     JUPITER_V6_QUOTE_API_MAINNET,
     MIN_SOL_WALLET_BALANCE,
+    ORDER_EXPIRATION,
     POST_TRADE_TIMEOUT,
     SOL_MINT,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
-    ORDER_EXPIRATION,
     SOL_RESERVE,
     SWAP_ONLY_DIRECT_ROUTES
 } from './constants';
@@ -361,25 +361,78 @@ export const cancelOpenOrders = async (client: MangoClient, mangoAccount: MangoA
     }
 }
 
-export const perpTrade = async (client:MangoClient, mangoAccount:MangoAccount,
-    group:Group, price:number, quantity:number,side:PerpOrderSide)=>{
-        const values = group.perpMarketsMapByMarketIndex.values()
-        const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+export const perpTrade = async (accountDefinition:AccountDefinition,client: MangoClient, mangoAccount: MangoAccount,
+    group: Group, price: number, quantity: number, side: PerpOrderSide) => {
+    const values = group.perpMarketsMapByMarketIndex.values()
+    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
 
-    await client.perpPlaceOrder(
-        group,
-        mangoAccount!,
-        perpMarket.perpMarketIndex,
-        side,
-        price,// price 
-        toFixedFloor(quantity),// quantity
-        undefined,//maxQuoteQuantity,
-        Date.now(),//clientOrderId,
-        PerpOrderType.limit,
-        false, //reduceOnly
-        Date.now() / 1000 + ORDER_EXPIRATION, //expiryTimestamp,
-        undefined // limit
-    )
+    try {
+        await client.perpPlaceOrder(
+            group,
+            mangoAccount!,
+            perpMarket.perpMarketIndex,
+            side,
+            price,// price 
+            toFixedFloor(quantity),// quantity
+            undefined,//maxQuoteQuantity,
+            Date.now(),//clientOrderId,
+            PerpOrderType.limit,
+            false, //reduceOnly
+            Date.now() / 1000 + ORDER_EXPIRATION, //expiryTimestamp,
+            undefined // limit
+        )
+        await new Promise(resolve => setTimeout(resolve, POST_TRADE_TIMEOUT * 1000));
+    } catch (e: any) {
+        const errorMessage = await handleError(e)
+        postToSlackTradeError(
+            accountDefinition.name,
+            quantity,
+            price,
+            side === PerpOrderSide.ask ? Side.SELL : Side.BUY,
+            Side.BUY,
+            0,
+            0,
+            errorMessage)
+    }
+}
+
+export const handleError = async (e: any) => {
+    let errorMessage = e.message
+    let delay = 0;
+    try {
+        const eValue = JSON.parse(e.message)
+        let customError = 0
+        try {
+            customError = eValue.value.err.InstructionError[1].Custom
+        } catch {
+            // error parsing message    
+        }
+        if (customError === 1) {
+            errorMessage = 'Custom InstructionError.  Trying again in 30 seconds'
+            delay = 30
+        } else if (customError === 6001) {
+            errorMessage = '6001 Sport Slippage exceeded for Spot Price'
+        } else if (customError === 6007) {
+            errorMessage = '6007 Spot Custom program error: 0x1777'
+        } else if (customError === 6023) {
+            errorMessage = '6023 Spot Error Message: Invalid tick array sequence'
+        } else if (customError === 3005) {
+            errorMessage = '3005 Spot Error Number: Error Message: Not enough account keys given to the instruction'
+        } else if (customError === 6028) {
+            errorMessage = '6028 Spot Error Message: Invaild first tick array account'
+        } else if (customError === 6024) {
+            errorMessage = '6024. Error Message: an oracle is stale; name: USDC'
+            delay = 30
+        }
+    } catch (ex: any) {
+        // error parsing message
+    } finally {
+        console.error(errorMessage)
+    }
+    if (delay > 0) {
+        await sleep(delay * 1000)
+    }
+    return errorMessage
 }
 
 export const spotAndPerpSwap = async (
@@ -431,7 +484,7 @@ export const spotAndPerpSwap = async (
                 const quoteAmount = Side.BUY === spotSide ? spotAmount * solPrice : spotAmount
                 const { price, bestRoute: bestRoute } = await getBestPrice(spotSide, quoteAmount, inBank, outBank)
                 spotPrice = price
-               
+
                 checkPrice(solPrice, spotPrice, spotSide)
                 const [ixs, alts] = await fetchJupiterTransaction(
                     client.connection,
@@ -549,42 +602,7 @@ export const spotAndPerpSwap = async (
             }
         }
     } catch (e: any) {
-        let errorMessage = `Error *${e.message}* in comp trade:  Account=${accountDefinition.name}  Amount=${spotAmount}  Oracle=${solPrice}  Side=${spotSide}  `
-        let delay = 0;
-        try {
-            const eValue = JSON.parse(e.message)
-            let customError = 0
-            try {
-                customError = eValue.value.err.InstructionError[1].Custom
-            } catch {
-                // error parsing message    
-            }
-            if (customError === 1) {
-                errorMessage = 'Custom InstructionError.  Trying again in 30 seconds'
-                delay = 30
-            } else if (customError === 6001) {
-                errorMessage = '6001 Sport Slippage exceeded for Spot Price:' + spotPrice
-            } else if (customError === 6007) {
-                errorMessage = '6007 Spot Custom program error: 0x1777'
-            } else if (customError === 6023) {
-                errorMessage = '6023 Spot Error Message: Invalid tick array sequence'
-            } else if (customError === 3005) {
-                errorMessage = '3005 Spot Error Number: Error Message: Not enough account keys given to the instruction'
-            } else if (customError === 6028) {
-                errorMessage = '6028 Spot Error Message: Invaild first tick array account'
-            } else if (customError === 6024) {
-                errorMessage = '6024. Error Message: an oracle is stale; name: USDC'
-                delay = 30
-            }
-        } catch (ex: any) {
-            // error parsing message
-        } finally {
-            console.error(errorMessage)
-        }
-        if (delay > 0) {
-            await sleep(delay * 1000)
-        }
-
+        const errorMessage = await handleError(e)
         postToSlackTradeError(
             accountDefinition.name,
             perpSide === PerpOrderSide.ask ? sellPerpSize : buyPerpSize,
