@@ -367,6 +367,9 @@ export const perpTrade = async (accountDefinition:AccountDefinition,client: Mang
     const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
 
     try {
+        console.log(`${accountDefinition.name} PERP BEGIN ${side === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
+        console.log(`  Price=`, price)
+        console.log(`  Amount=`, quantity)
         await client.perpPlaceOrder(
             group,
             mangoAccount!,
@@ -381,6 +384,7 @@ export const perpTrade = async (accountDefinition:AccountDefinition,client: Mang
             Date.now() / 1000 + ORDER_EXPIRATION, //expiryTimestamp,
             undefined // limit
         )
+        console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
         await new Promise(resolve => setTimeout(resolve, POST_TRADE_TIMEOUT * 1000));
     } catch (e: any) {
         const errorMessage = await handleError(e)

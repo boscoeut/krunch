@@ -1,6 +1,7 @@
 import {
     PerpOrderSide
 } from '@blockworks-foundation/mango-v4';
+import axios from 'axios';
 import fs from 'fs';
 import {
     ACTIVITY_FEED_URL,
@@ -30,12 +31,11 @@ import {
     Client,
     Side
 } from './types';
-import axios from 'axios';
 
 const { google } = require('googleapis');
 
-function roundToNearestHalf(num: number) {
-    return Math.floor(num * 2) / 2;
+function roundToNearestFloor(num: number, nearest:number= 2) {
+    return Math.floor(num * nearest) / nearest;
 }
 
 function getTradeSize(requestedTradeSize: number, solAmount: number, action: Side,
@@ -44,7 +44,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
 ) {
     const freeCash = borrow - accountDefinition.healthThreshold
     let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0 // 2.1 to account for other side of trade
-    maxSize = roundToNearestHalf(maxSize)
+    maxSize = roundToNearestFloor(maxSize,4)
 
     if (action === Side.BUY) {
         maxSize = Math.min(maxSize, maxPerp - solAmount)
@@ -105,29 +105,29 @@ async function performSpap(client: Client,
     let spotAmount = 0
     if (spotUnbalanced) {
         if (spotVsPerpDiff > 0) {
-            if (buyPerpTradeSize <= 0) {
-                spotSide = Side.BUY
-                spotAmount = 0
-                buyPerpTradeSize = 0
-                sellPerpTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-            } else {
+            // if (buyPerpTradeSize <= 0) {
+            //     spotSide = Side.BUY
+            //     spotAmount = 0
+            //     buyPerpTradeSize = 0
+            //     sellPerpTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+            // } else {
                 spotSide = Side.SELL
                 buyPerpTradeSize = 0
                 sellPerpTradeSize = 0
                 spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-            }
+            // }
         } else {
-            if (sellPerpTradeSize <= 0) {
-                spotSide = Side.SELL
-                spotAmount = 0
-                sellPerpTradeSize = 0
-                buyPerpTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-            } else {
+            // if (sellPerpTradeSize <= 0) {
+            //     spotSide = Side.SELL
+            //     spotAmount = 0
+            //     sellPerpTradeSize = 0
+            //     buyPerpTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+            // } else {
                 spotSide = Side.BUY
                 buyPerpTradeSize = 0
                 sellPerpTradeSize = 0
                 spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-            }
+            // }
         }
     }
 
@@ -142,13 +142,15 @@ async function performSpap(client: Client,
         const buyMismatch = result.buyMismatch > accountDefinition.buyPriceBuffer
         const sellMismatch = result.sellMismatch > accountDefinition.sellPriceBuffer
 
+        let shouldExecuteImmediately = false
+        let perpSize = 0
+        let perpSide:PerpOrderSide = PerpOrderSide.bid
+        let perpPrice = 0
         if (!spotUnbalanced && (buyMismatch || sellMismatch)) {
             // If balanced and there is a price mismatch, place a perp trade
-
-            const side = buyPerpTradeSize > sellPerpTradeSize ? PerpOrderSide.bid : PerpOrderSide.ask
-            let size = buyPerpTradeSize > sellPerpTradeSize ? buyPerpTradeSize : sellPerpTradeSize
-            const price = buyPerpTradeSize > sellPerpTradeSize ? solPrice - accountDefinition.buyPriceBuffer : solPrice + accountDefinition.sellPriceBuffer
-
+            const side = result.buyMismatch > result.sellMismatch ? PerpOrderSide.bid : PerpOrderSide.ask
+            let size = side === PerpOrderSide.bid ? buyPerpTradeSize : sellPerpTradeSize
+            const price = side === PerpOrderSide.bid ? solPrice - accountDefinition.buyPriceBuffer : solPrice + accountDefinition.sellPriceBuffer
             if (side === PerpOrderSide.bid && orders.find(o => o.side === PerpOrderSide.bid && !o.isOraclePegged)) {
                 size = 0
             }
@@ -157,15 +159,21 @@ async function performSpap(client: Client,
             }
 
             if (size > 0) {
-                await perpTrade(
-                    accountDefinition,
-                    client.client,
-                    client.mangoAccount!,
-                    client.group,
-                    price,
-                    size,
-                    side)
+                shouldExecuteImmediately = true
+                perpSize = size
+                perpSide = side
+                perpPrice = price
             }
+        }
+        if (shouldExecuteImmediately){
+            await perpTrade(
+                accountDefinition,
+                client.client,
+                client.mangoAccount!,
+                client.group,
+                perpPrice,
+                perpSize,
+                perpSide)
         } else {
             // place spot and perp trade.  perp trades are oracle pegged
             // spot trades attempt to balance the wallet
@@ -229,7 +237,7 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     let perpUsdc = 0
     let perpSol = 0
     const feedItems = feed.data.filter((item: any) => new Date(item.block_datetime) > new Date('2024-04-07'))
-    // const feedItems = feed.data.slice(2,2   )
+    // const feedItems = feed.data.slice(2,4)
     for (const item of feedItems) {
         if (item.activity_type === 'swap') {
             if (item.activity_details.swap_in_symbol === "USDC") {
@@ -367,7 +375,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 }
 
 try {
-    doubleSwapLoop(true, true, false);
+    doubleSwapLoop(false, true, false);
 } catch (error) {
     console.log(error);
 }
