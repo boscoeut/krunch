@@ -3,7 +3,8 @@ import { PERP_BUY_PRICE_BUFFER, PERP_SELL_PRICE_BUFFER } from "./constants"
 import * as db from "./db"
 
 const FUNDING_CHANNEL_ID = "C06S9MMH57B"
-const ALERT_CHANNEL_ID = "C06S9L6EXDX"
+const TRADE_CHANNEL_ID = "C06S9L6EXDX"
+const ALERT_CHANNEL_ID = "C06TJNYLJRG"
 export const postToSlackFunding = async (fundingRate: number) => {
     const data = {
         "channel": FUNDING_CHANNEL_ID,
@@ -46,7 +47,7 @@ export const postToSlackTradeError = async (
 
     
     const data = {
-        "channel": ALERT_CHANNEL_ID,
+        "channel": TRADE_CHANNEL_ID,
         text: `${account} ${spotSide} Spot: ${spotPrice.toFixed(3)} Perp: ${perpSize} ${perpSide} ${perpPrice.toFixed(3)}`,
         blocks: [
 
@@ -112,7 +113,7 @@ export const postToSlackTrade = async (
         })
     }
     const data = {
-        "channel": ALERT_CHANNEL_ID,
+        "channel": TRADE_CHANNEL_ID,
         text: `${account} ${spotSide} Spot: ${spotPrice.toFixed(3)} Perp: ${perpSize} ${perpSide} ${perpPrice.toFixed(3)}`,
         blocks: [
 

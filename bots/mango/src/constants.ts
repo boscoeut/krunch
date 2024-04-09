@@ -16,8 +16,8 @@ export const MIN_USDC_WALLET_AMOUNT = 10
 // TRADING TRIGGERS
 export const MINUS_THRESHOLD = -75
 export const PLUS_THRESHOLD = 75
-export const MAX_SHORT_PERP = -40
-export const MAX_LONG_PERP = 40
+export const MAX_SHORT_PERP = -50
+export const MAX_LONG_PERP = 50
 
 // TRADING PARAMS
 export const CAN_TRADE = false
@@ -37,7 +37,7 @@ export const PERP_BUY_PRICE_BUFFER = 0.55
 export const PERP_SELL_PRICE_BUFFER = 0.75
 export const FUNDING_RATE_PRICE_RATIO = 600
 export const POST_TRADE_TIMEOUT = 45
-
+export const MIN_HEALTH_FACTOR = 95
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
@@ -45,7 +45,7 @@ export const FILTER_TO_ACCOUNTS: Array<String> = []
 // export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
 
 // CACHE EXPIRATIONS
-export const ORDER_EXPIRATION = 1 * 20
+export const ORDER_EXPIRATION = 1 * 30
 export const TRANSACTION_EXPIRATION = 1.5 * 60 * 1000
 export const FUNDING_RATE_CACHE_EXPIRATION = 1
 export const INTEREST_CACHE_EXPIRATION = 5

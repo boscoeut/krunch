@@ -11,6 +11,7 @@ import {
     MAX_PERP_TRADE_SIZE,
     MAX_SHORT_PERP,
     SLEEP_MAIN_LOOP_IN_MINUTES,
+    MIN_HEALTH_FACTOR,
     SOL_RESERVE
 } from './constants';
 import * as db from './db';
@@ -34,7 +35,7 @@ import {
 
 const { google } = require('googleapis');
 
-function roundToNearestFloor(num: number, nearest:number= 2) {
+function roundToNearestFloor(num: number, nearest: number = 2) {
     return Math.floor(num * nearest) / nearest;
 }
 
@@ -44,7 +45,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
 ) {
     const freeCash = borrow - accountDefinition.healthThreshold
     let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0 // 2.1 to account for other side of trade
-    maxSize = roundToNearestFloor(maxSize,4)
+    maxSize = roundToNearestFloor(maxSize, 4)
 
     if (action === Side.BUY) {
         maxSize = Math.min(maxSize, maxPerp - solAmount)
@@ -55,7 +56,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
     let tradeSize = requestedTradeSize
     if (solAmount > 0 && action === Side.BUY) {
         tradeSize = Math.min(requestedTradeSize, maxSize)
-        if (health < 100) {
+        if (health < MIN_HEALTH_FACTOR) {
             tradeSize = 0
         }
     } else if (solAmount < 0 && action === Side.BUY) {
@@ -63,7 +64,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
         tradeSize = Math.min(requestedTradeSize, amt)
     } else if (solAmount < 0 && action === Side.SELL) {
         tradeSize = Math.min(requestedTradeSize, maxSize)
-        if (health < 100) {
+        if (health < MIN_HEALTH_FACTOR) {
             tradeSize = 0
         }
     } else if (solAmount > 0 && action === Side.SELL) {
@@ -73,7 +74,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
     return Math.max(tradeSize, 0)
 }
 
-async function performSpap(client: Client,
+async function performSwap(client: Client,
     accountDefinition: AccountDefinition,
     accountDetails: AccountDetail,
     tradeSize: number,
@@ -111,10 +112,10 @@ async function performSpap(client: Client,
             //     buyPerpTradeSize = 0
             //     sellPerpTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
             // } else {
-                spotSide = Side.SELL
-                buyPerpTradeSize = 0
-                sellPerpTradeSize = 0
-                spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+            spotSide = Side.SELL
+            buyPerpTradeSize = 0
+            sellPerpTradeSize = 0
+            spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
             // }
         } else {
             // if (sellPerpTradeSize <= 0) {
@@ -123,10 +124,10 @@ async function performSpap(client: Client,
             //     sellPerpTradeSize = 0
             //     buyPerpTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
             // } else {
-                spotSide = Side.BUY
-                buyPerpTradeSize = 0
-                sellPerpTradeSize = 0
-                spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+            spotSide = Side.BUY
+            buyPerpTradeSize = 0
+            sellPerpTradeSize = 0
+            spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
             // }
         }
     }
@@ -144,7 +145,7 @@ async function performSpap(client: Client,
 
         let shouldExecuteImmediately = false
         let perpSize = 0
-        let perpSide:PerpOrderSide = PerpOrderSide.bid
+        let perpSide: PerpOrderSide = PerpOrderSide.bid
         let perpPrice = 0
         if (!spotUnbalanced && (buyMismatch || sellMismatch)) {
             // If balanced and there is a price mismatch, place a perp trade
@@ -165,7 +166,7 @@ async function performSpap(client: Client,
                 perpPrice = price
             }
         }
-        if (shouldExecuteImmediately){
+        if (shouldExecuteImmediately) {
             await perpTrade(
                 accountDefinition,
                 client.client,
@@ -236,7 +237,7 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     let swapSol = 0
     let perpUsdc = 0
     let perpSol = 0
-    const feedItems = feed.data.filter((item: any) => new Date(item.block_datetime) > new Date('2024-04-07'))
+    const feedItems = feed.data.filter((item: any) => new Date(item.block_datetime) > new Date('2024-04-09'))
     // const feedItems = feed.data.slice(2,4)
     for (const item of feedItems) {
         if (item.activity_type === 'swap') {
@@ -269,8 +270,8 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
             }
         }
     }
-    const swapUsdcTotal = swapUsdc / Math.abs(swapSol)
-    const perpUsdcTotal = perpUsdc / Math.abs(perpSol)
+    const swapUsdcTotal = Math.abs(swapSol) > 0 ? swapUsdc / Math.abs(swapSol) : 0
+    const perpUsdcTotal = Math.abs(swapSol) > 0 ? perpUsdc / Math.abs(perpSol) : 0
     console.log(`------ ${accountName} HISTORY --------`)
     console.log(`${accountName} SWAP: ${swapUsdcTotal} USDC`)
     console.log(`${accountName} PERP: ${perpUsdcTotal} USDC`)
@@ -322,7 +323,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                         force: false
                     })
 
-                    if (accountDefinition.name === 'BIRD') {
+                    if (accountDefinition.name === 'BUCKET' || accountDefinition.name === 'BIRD' || accountDefinition.name === 'SIX' ||accountDefinition.name === 'SOL_FLARE') {
                         await checkActivityFeed(accountDefinition.name, client.mangoAccount!.publicKey.toString())
                     }
 
@@ -337,7 +338,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                     buyMismatch = result.buyMismatch
                     sellMismatch = result.sellMismatch
                     if (accountDefinition.canTrade && CAN_TRADE_NOW) {
-                        await performSpap(client, accountDefinition,
+                        await performSwap(client, accountDefinition,
                             accountDetails, accountDefinition.tradeSize, fundingRate, SIMULATE_TRADES)
                         return accountDetails
                     } else {
@@ -375,7 +376,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 }
 
 try {
-    doubleSwapLoop(false, true, false);
+    doubleSwapLoop(true, true, false);
 } catch (error) {
     console.log(error);
 }

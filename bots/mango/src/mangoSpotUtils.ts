@@ -370,7 +370,10 @@ export const perpTrade = async (accountDefinition:AccountDefinition,client: Mang
         console.log(`${accountDefinition.name} PERP BEGIN ${side === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
         console.log(`  Price=`, price)
         console.log(`  Amount=`, quantity)
-        await client.perpPlaceOrder(
+        let addressLookupTables: any = []
+        let tradeInstructions: any = []
+        tradeInstructions.push(await client.perpUpdateFundingIx(group, perpMarket))
+        tradeInstructions.push(await client.perpPlaceOrderIx(
             group,
             mangoAccount!,
             perpMarket.perpMarketIndex,
@@ -383,7 +386,13 @@ export const perpTrade = async (accountDefinition:AccountDefinition,client: Mang
             false, //reduceOnly
             Date.now() / 1000 + ORDER_EXPIRATION, //expiryTimestamp,
             undefined // limit
-        )
+        ))
+
+        const request = client.sendAndConfirmTransactionForGroup(
+            group,
+            tradeInstructions,
+            { alts: [...group.addressLookupTablesList, ...addressLookupTables] },
+        );
         console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
         await new Promise(resolve => setTimeout(resolve, POST_TRADE_TIMEOUT * 1000));
     } catch (e: any) {
@@ -574,6 +583,7 @@ export const spotAndPerpSwap = async (
         }
 
         if (tradeInstructions.length > 0 && SHOULD_TRADE) {
+            tradeInstructions.unshift(await client.perpUpdateFundingIx(group, perpMarket))
             postToSlackTrade(accountDefinition.name + ' START', solPrice, perpSide === PerpOrderSide.ask ? sellPerpSize : buyPerpSize,
                 perpPrice, perpSide === PerpOrderSide.ask ? Side.SELL : Side.BUY,
                 spotSide, spotPrice, spotAmount,
