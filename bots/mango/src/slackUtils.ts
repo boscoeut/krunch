@@ -5,6 +5,7 @@ import * as db from "./db"
 const FUNDING_CHANNEL_ID = "C06S9MMH57B"
 const TRADE_CHANNEL_ID = "C06S9L6EXDX"
 const ALERT_CHANNEL_ID = "C06TJNYLJRG"
+
 export const postToSlackFunding = async (fundingRate: number) => {
     const data = {
         "channel": FUNDING_CHANNEL_ID,
@@ -35,6 +36,7 @@ export const postToSlackFunding = async (fundingRate: number) => {
     }
     await postToSlack(data)
 }
+
 export const postToSlackTradeError = async (
     account: string,
     perpSize: number,
@@ -82,6 +84,7 @@ export const postToSlackTradeError = async (
     }
     await postToSlack(data)
 }
+
 export const postToSlackTrade = async (
     account: string,
     solPrice: number,
@@ -148,6 +151,7 @@ export const postToSlackTrade = async (
     }
     await postToSlack(data)
 }
+
 export const postToSlackAlert = async (account: string, side: "BUY" | "SELL",
     diff: number, spotPrice: number, perpPrice: number, oraclePrice: number) => {
     const fundingRate = await db.getFundingRate()

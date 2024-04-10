@@ -14,9 +14,9 @@ import {
     getAccountData as utilGetAccountData,
     getBidsAndAsks as utilGetBidsAndAsks, getFundingRate as utilGetFundingRate
 } from './mangoUtils';
-import { AccountDefinition, AccountDetail, CacheItem } from "./types";
+import { AccountDefinition, AccountDetail, CacheItem, OpenTransaction } from "./types";
 
-
+const transactionCache: OpenTransaction[] = []
 let openTransactions = 0
 export function incrementOpenTransactions() {
     openTransactions++
@@ -27,6 +27,21 @@ export function clearOpenTransactions() {
 export function getOpenTransactions() {
     return openTransactions
 }
+
+export const tradeHistory = new Map<string, number>()
+
+export function addOpenTransaction(openTransaction: OpenTransaction) {
+    transactionCache.unshift(openTransaction)
+    if (transactionCache.length > 10) {
+        transactionCache.pop()
+    }
+}
+
+export function getTransactionCache() {
+    return transactionCache
+}
+
+
 
 export enum DB_KEYS {
     FUNDING_RATE = "FUNDING_RATE",

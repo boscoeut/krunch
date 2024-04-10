@@ -276,6 +276,7 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     console.log(`${accountName} SWAP: ${swapUsdcTotal} USDC`)
     console.log(`${accountName} PERP: ${perpUsdcTotal} USDC`)
     console.log(`${accountName} TOTAL: ${(swapUsdcTotal + perpUsdcTotal)} USDC`)
+    db.tradeHistory.set(accountName,swapUsdcTotal + perpUsdcTotal)
 }
 
 async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
@@ -356,7 +357,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                     (now - lastGoogleUpdate > googleUpdateInterval) &&
                     accountDetailList.length === accountDefinitions.length) {
                     // update google sheet
-                    await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate, buyMismatch, sellMismatch)
+                    await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate, buyMismatch, sellMismatch, db.getTransactionCache())
                     // end google sheet update
                     console.log('Google Sheet Updated', new Date().toTimeString())
                     lastGoogleUpdate = now

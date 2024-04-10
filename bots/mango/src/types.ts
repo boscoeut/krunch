@@ -9,6 +9,16 @@ import { Wallet } from '@coral-xyz/anchor';
 
 
 // create an enum for BUY and SELL
+
+export type OpenTransaction = {
+    date: Date,
+    account: string,
+    side: string,
+    price: number,
+    size: number,
+    error: string,
+    type:string
+}
 export enum Side {
     BUY = 'BUY',
     SELL = 'SELL',

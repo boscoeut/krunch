@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import * as db from './db';
-import { DB_KEYS, Increment, getItem, getItems } from './db';
-import { AccountDetail } from './types';
+import { DB_KEYS, getItem } from './db';
+import { AccountDetail, OpenTransaction } from './types';
 
 import { SPREADSHEET_ID } from './constants';
 const { authenticate } = require('@google-cloud/local-auth');
@@ -23,7 +23,8 @@ export function loadSavedCredentialsIfExist() {
 }
 
 export async function updateGoogleSheet(googleSheets: any,
-    accountDetails: AccountDetail[] = [], fee: number, buyMismatch:number,sellMismatch:number
+    accountDetails: AccountDetail[] = [], fee: number, buyMismatch: number, sellMismatch: number,
+    transactionCache: OpenTransaction[] = []
 ) {
     try {
         const fundingRate = await db.getFundingRate()
@@ -60,6 +61,26 @@ export async function updateGoogleSheet(googleSheets: any,
         const bestBid = accountDetails[0]?.bestBid || 0
         const bestAsk = accountDetails[0]?.bestAsk || 0
 
+        // transactions
+        const transactionValues:any[] = []
+        for(let i=0; i<10; i++) {  
+            let transaction:any = transactionCache[i]
+            if (!transaction){
+                transactionValues.push(["","","","","","",""])
+            }else{
+                transactionValues.push([
+                    toGoogleSheetsDate(transaction.date),
+                    transaction.account,
+                    transaction.side,
+                    transaction.price,
+                    transaction.size,
+                    transaction.type,
+                    transaction.error
+                ])
+            }
+            
+        }
+
         await googleSheets.spreadsheets.values.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,
             resource: {
@@ -80,11 +101,40 @@ export async function updateGoogleSheet(googleSheets: any,
 
                     }, {
                         range: `SOL!Q1:Q3`,
-                        values: [[jupPrice.solPrice], [jupPrice.jupPrice],[wormholePrice]],
+                        values: [[jupPrice.solPrice], [jupPrice.jupPrice], [wormholePrice]],
                     }, {
                         range: `SOL!J1:J2`,
                         values: [[buyMismatch], [sellMismatch]],
-                    }]
+                    },
+
+                    /// NEW
+                    {
+                        range: `Account_Data!A2:P${accountValues.length + 1}`,
+                        values: accountValues.map((accountDetail) => {
+                            return [...accountDetail, db.tradeHistory.get(accountDetail[0] as string) || 0  ]
+                        }),
+                    },
+                    {
+                        range: `Market_data!B1:B11`,
+                        values: [
+                            [fundingRate / 100],
+                            [fee],
+                            [feeEstimate],
+                            [solPrice],
+                            [jupPrice.solPrice],
+                            [jupPrice.jupPrice],
+                            [wormholePrice],
+                            [bestBid],
+                            [bestAsk],
+                            [buyMismatch],
+                            [sellMismatch]
+                        ],
+                    },
+                    {
+                        range: `Transaction_Cache!A2:G11`,
+                        values: transactionValues
+                    }
+                ]
             }
         });
     } catch (e) {
