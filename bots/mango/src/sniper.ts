@@ -12,6 +12,7 @@ import {
     MAX_SHORT_PERP,
     SLEEP_MAIN_LOOP_IN_MINUTES,
     MIN_HEALTH_FACTOR,
+    GOOGLE_UPDATE_INTERVAL,
     SOL_RESERVE
 } from './constants';
 import * as db from './db';
@@ -20,7 +21,8 @@ import { authorize, updateGoogleSheet } from './googleUtils';
 import {
     cancelOpenOrders,
     perpTrade,
-    spotAndPerpSwap
+    spotAndPerpSwap,
+    getBestPrice
 } from './mangoSpotUtils';
 import {
     sleep
@@ -283,7 +285,6 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
     let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
-    const googleUpdateInterval = 30 * 1000
     const accountDetailList: AccountDetail[] = []
     let lastGoogleUpdate = 0
     let lastFundingRate = 0
@@ -305,6 +306,8 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                 }
                 console.log('FEE ESTIMATE: ', newFeeEstimate)
             }
+
+            // check for best route
             db.clearOpenTransactions()
 
             const fundingRate = await db.getFundingRate()
@@ -324,7 +327,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                         force: false
                     })
 
-                    if (accountDefinition.name === 'BUCKET' || accountDefinition.name === 'BIRD' || accountDefinition.name === 'SIX' ||accountDefinition.name === 'SOL_FLARE') {
+                    if (accountDefinition.name === 'PRIVATE3') {
                         await checkActivityFeed(accountDefinition.name, client.mangoAccount!.publicKey.toString())
                     }
 
@@ -352,12 +355,34 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                 });
                 accountDetailList.push(...await Promise.all(newItems))
 
+                // check for best route
+                let bestBuyPrice = 0
+                let bestSellPrice = 0
+                let solPrice = 0
+                if (accountDetailList.length >0) {
+                    const inBank = accountDetailList[0].solBank
+                    const outBank = accountDetailList[0].usdcBank
+                    solPrice = accountDetailList[0].solPrice
+                    const sellRoute = await getBestPrice(Side.SELL, 1, inBank, outBank)
+                    const buyRoute = await getBestPrice(Side.BUY, solPrice, outBank, inBank)
+                    bestBuyPrice = buyRoute.price
+                    bestSellPrice = sellRoute.price
+                    if (sellRoute.price > solPrice) {
+                        console.log('sell opportunity', sellRoute.price-solPrice)
+                    }
+                    if (buyRoute.price < solPrice) {
+                        console.log('buy opportunity', solPrice-buyRoute.price)
+                    }
+                }
+                
+
                 const now = Date.now()
                 if ((UPDATE_GOOGLE_SHEET || db.getOpenTransactions() > 0) &&
-                    (now - lastGoogleUpdate > googleUpdateInterval) &&
+                    (now - lastGoogleUpdate > GOOGLE_UPDATE_INTERVAL) &&
                     accountDetailList.length === accountDefinitions.length) {
                     // update google sheet
-                    await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate, buyMismatch, sellMismatch, db.getTransactionCache())
+                    await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate, buyMismatch, 
+                        sellMismatch, db.getTransactionCache(), bestBuyPrice, bestSellPrice, solPrice)
                     // end google sheet update
                     console.log('Google Sheet Updated', new Date().toTimeString())
                     lastGoogleUpdate = now

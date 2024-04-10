@@ -24,13 +24,13 @@ export function loadSavedCredentialsIfExist() {
 
 export async function updateGoogleSheet(googleSheets: any,
     accountDetails: AccountDetail[] = [], fee: number, buyMismatch: number, sellMismatch: number,
-    transactionCache: OpenTransaction[] = []
+    transactionCache: OpenTransaction[] = [],bestBuyPrice:number,bestSellPrice:number,
+    solPrice: number
 ) {
     try {
         const fundingRate = await db.getFundingRate()
         console.log('fundingRate', fundingRate)
         const jupPrice = await db.fetchJupPrice()
-        const solPrice = getItem<number>(DB_KEYS.SOL_PRICE) || jupPrice.solPrice
         const wormholePrice = jupPrice.wormholePrice || 0
         const feeEstimate = await db.getFeeEstimate(true) || 0
 
@@ -115,7 +115,7 @@ export async function updateGoogleSheet(googleSheets: any,
                         }),
                     },
                     {
-                        range: `Market_data!B1:B11`,
+                        range: `Market_data!B1:B13`,
                         values: [
                             [fundingRate / 100],
                             [fee],
@@ -127,7 +127,9 @@ export async function updateGoogleSheet(googleSheets: any,
                             [bestBid],
                             [bestAsk],
                             [buyMismatch],
-                            [sellMismatch]
+                            [sellMismatch],
+                            [bestBuyPrice],
+                            [bestSellPrice]
                         ],
                     },
                     {

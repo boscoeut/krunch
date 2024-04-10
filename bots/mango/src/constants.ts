@@ -37,7 +37,7 @@ export const PERP_BUY_PRICE_BUFFER = 0.55
 export const PERP_SELL_PRICE_BUFFER = 0.75
 export const FUNDING_RATE_PRICE_RATIO = 600
 export const POST_TRADE_TIMEOUT = 45
-export const MIN_HEALTH_FACTOR = 95
+export const MIN_HEALTH_FACTOR = 100
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
@@ -98,3 +98,4 @@ export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL,85VBFQZC
 
 // GOOGLE SHEETS
 export const SPREADSHEET_ID = '1-k6Lv4quwIS-rRck-JYLA0WiuC9x43nDuMa_95q8CIw';
+export const GOOGLE_UPDATE_INTERVAL = 15 * 1000
