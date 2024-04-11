@@ -1,18 +1,25 @@
 import {
-    PerpOrderSide
+    Bank, Group,
+    PerpOrderSide,
+    toNative
 } from '@blockworks-foundation/mango-v4';
+import {
+    PublicKey
+} from '@solana/web3.js';
 import axios from 'axios';
 import fs from 'fs';
 import {
     ACTIVITY_FEED_URL,
     DEFAULT_PRIORITY_FEE,
+    GOOGLE_UPDATE_INTERVAL,
     MAX_FEE,
     MAX_LONG_PERP,
     MAX_PERP_TRADE_SIZE,
     MAX_SHORT_PERP,
-    SLEEP_MAIN_LOOP_IN_MINUTES,
     MIN_HEALTH_FACTOR,
-    GOOGLE_UPDATE_INTERVAL,
+    MIN_SOL_WALLET_BALANCE,
+    SLEEP_MAIN_LOOP_IN_MINUTES,
+    SOL_MINT,
     SOL_RESERVE
 } from './constants';
 import * as db from './db';
@@ -20,9 +27,10 @@ import { DB_KEYS } from './db';
 import { authorize, updateGoogleSheet } from './googleUtils';
 import {
     cancelOpenOrders,
+    getBestPrice,
     perpTrade,
-    spotAndPerpSwap,
-    getBestPrice
+    postTrades,
+    spotAndPerpSwap
 } from './mangoSpotUtils';
 import {
     getFundingRate,
@@ -44,17 +52,23 @@ function roundToNearestFloor(num: number, nearest: number = 2) {
 
 function getTradeSize(requestedTradeSize: number, solAmount: number, action: Side,
     borrow: number, accountDefinition: AccountDefinition, solPrice: number,
-    minPerp: number, maxPerp: number, health: number
+    minPerp: number, maxPerp: number, health: number, market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP"
 ) {
     const freeCash = borrow - accountDefinition.healthThreshold
     let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0 // 2.1 to account for other side of trade
-    maxSize = roundToNearestFloor(maxSize, 4)
+    let tickSize = 0.01
+    if (market === "BTC-PERP") {
+        tickSize = 0.0001
+    } else if (market === "ETH-PERP") {
+        tickSize = 0.0001
+    }
+    maxSize = roundToNearestFloor(maxSize, 1 / tickSize)
 
     if (action === Side.BUY) {
-        maxSize = Math.min(maxSize, maxPerp - solAmount)
+        maxSize = Math.min(maxSize, (maxPerp / solPrice) - solAmount)
     }
     if (action === Side.SELL) {
-        maxSize = Math.min(maxSize, Math.abs(minPerp) + solAmount)
+        maxSize = Math.min(maxSize, Math.abs(minPerp / solPrice) + solAmount)
     }
     let tradeSize = requestedTradeSize
     if (solAmount > 0 && action === Side.BUY) {
@@ -82,56 +96,71 @@ async function performSwap(client: Client,
     accountDetails: AccountDetail,
     tradeSize: number,
     fundingRate: number,
-    simulateTrades: boolean = false) {
+    group: Group,
+    market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP") {
 
+    let tradeInstructions: Array<any> = []
+    let addressLookupTables: Array<any> = []
     console.log('----- ')
-    console.log(accountDefinition.name + " FUNDING RATE: ", fundingRate)
+    console.log(`${accountDefinition.name} ${market} FUNDING RATE: `, fundingRate)
 
     const walletSol = accountDetails.walletSol - SOL_RESERVE
-    const { solBalance, solAmount, solBank, usdcBank, solPrice } = accountDetails
+    const { solBalance, solAmount, solBank, usdcBank, solPrice, btcBalance, btcAmount, btcBank,
+        ethAmount, ethBalance, ethBank
+    } = accountDetails
+    let perpBank: Bank = solBank
+    let perpAmount = solAmount
+    let perpBalance = solBalance
+    let oraclePrice = solPrice
+    let bestBid = accountDetails.bestBid
+    let bestAsk = accountDetails.bestAsk
+    const values = group.perpMarketsMapByMarketIndex.values()
+    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
+
+    if (market === "BTC-PERP") {
+        perpBank = btcBank
+        perpAmount = btcAmount
+        perpBalance = btcBalance
+        oraclePrice = accountDetails.btcPrice
+        bestBid = accountDetails.btcBestBid
+        bestAsk = accountDetails.btcBestAsk
+    } else if (market === "ETH-PERP") {
+        perpBank = ethBank
+        perpAmount = ethAmount
+        perpBalance = ethBalance
+        oraclePrice = accountDetails.ethPrice
+        bestBid = accountDetails.ethBestBid
+        bestAsk = accountDetails.ethBestAsk
+    }
 
     const INCLUDE_WALLET = false
-    const MIN_DIFF_SIZE = 0.01
+    const MIN_DIFF_SIZE = 10 / oraclePrice // $10 worth
 
-    const spotVsPerpDiff = solBalance + solAmount + (INCLUDE_WALLET ? walletSol : 0)
+    const spotVsPerpDiff = perpBalance + perpAmount + (INCLUDE_WALLET ? walletSol : 0)
     const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
 
     let spotSide: Side = Side.BUY
     let buyPerpTradeSize = getTradeSize(
-        tradeSize, solAmount,
+        tradeSize, perpAmount,
         Side.BUY, accountDetails.borrow,
-        accountDefinition, solPrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health)
+        accountDefinition, oraclePrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health, market)
     let sellPerpTradeSize = getTradeSize(
-        tradeSize, solAmount,
+        tradeSize, perpAmount,
         Side.SELL, accountDetails.borrow,
-        accountDefinition, solPrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health)
+        accountDefinition, oraclePrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health, market)
 
     let spotAmount = 0
     if (spotUnbalanced) {
         if (spotVsPerpDiff > 0) {
-            // if (buyPerpTradeSize <= 0) {
-            //     spotSide = Side.BUY
-            //     spotAmount = 0
-            //     buyPerpTradeSize = 0
-            //     sellPerpTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-            // } else {
             spotSide = Side.SELL
             buyPerpTradeSize = 0
             sellPerpTradeSize = 0
             spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-            // }
         } else {
-            // if (sellPerpTradeSize <= 0) {
-            //     spotSide = Side.SELL
-            //     spotAmount = 0
-            //     sellPerpTradeSize = 0
-            //     buyPerpTradeSize = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-            // } else {
             spotSide = Side.BUY
             buyPerpTradeSize = 0
             sellPerpTradeSize = 0
             spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
-            // }
         }
     }
 
@@ -139,22 +168,22 @@ async function performSwap(client: Client,
         const orders = await client.mangoAccount!.loadPerpOpenOrdersForMarket(
             client.client,
             client.group,
-            accountDetails.perpMarket.perpMarketIndex,
+            perpMarket.perpMarketIndex,
             true
         )
-        const result = await checkForPriceMismatch(accountDefinition, accountDetails)
-        const buyMismatch = result.buyMismatch > accountDefinition.buyPriceBuffer
-        const sellMismatch = result.sellMismatch > accountDefinition.sellPriceBuffer
+        const result = await checkForPriceMismatch(accountDefinition, oraclePrice, bestBid, bestAsk)
+        const buyMismatch = result.buyMismatch > accountDefinition.buyPriceBuffer * oraclePrice
+        const sellMismatch = result.sellMismatch > accountDefinition.sellPriceBuffer * oraclePrice
 
         let shouldExecuteImmediately = false
         let perpSize = 0
         let perpSide: PerpOrderSide = PerpOrderSide.bid
-        let perpPrice = 0
+        let perpPrice = oraclePrice
         if (!spotUnbalanced && (buyMismatch || sellMismatch)) {
             // If balanced and there is a price mismatch, place a perp trade
             const side = result.buyMismatch > result.sellMismatch ? PerpOrderSide.bid : PerpOrderSide.ask
             let size = side === PerpOrderSide.bid ? buyPerpTradeSize : sellPerpTradeSize
-            const price = side === PerpOrderSide.bid ? solPrice - accountDefinition.buyPriceBuffer : solPrice + accountDefinition.sellPriceBuffer
+            const price = side === PerpOrderSide.bid ? perpPrice - (accountDefinition.buyPriceBuffer * perpPrice) : perpPrice + (accountDefinition.sellPriceBuffer * perpPrice)
             if (side === PerpOrderSide.bid && orders.find(o => o.side === PerpOrderSide.bid && !o.isOraclePegged)) {
                 size = 0
             }
@@ -169,15 +198,19 @@ async function performSwap(client: Client,
                 perpPrice = price
             }
         }
+
         if (shouldExecuteImmediately) {
-            await perpTrade(
+            const result = await perpTrade(
                 accountDefinition,
                 client.client,
                 client.mangoAccount!,
                 client.group,
                 perpPrice,
                 perpSize,
-                perpSide)
+                perpSide,
+                market)
+            tradeInstructions.push(...result.tradeInstructions)
+            addressLookupTables.push(...result.addressLookupTables)
         } else {
             // place spot and perp trade.  perp trades are oracle pegged
             // spot trades attempt to balance the wallet
@@ -187,9 +220,9 @@ async function performSwap(client: Client,
             if (orders.find(o => o.side === PerpOrderSide.ask)) {
                 sellPerpTradeSize = 0
             }
-            await spotAndPerpSwap(
+            const result = await spotAndPerpSwap(
                 spotAmount,
-                solBank,
+                perpBank,
                 usdcBank,
                 client.client,
                 client.mangoAccount!,
@@ -197,37 +230,38 @@ async function performSwap(client: Client,
                 client.group,
                 spotSide,
                 accountDefinition,
-                solPrice,
-                accountDetails.walletSol,
-                !simulateTrades,
+                perpPrice,
                 buyPerpTradeSize,
                 sellPerpTradeSize,
-                spotUnbalanced ? 0 : accountDefinition.sellPriceBuffer,
-                spotUnbalanced ? 0 : accountDefinition.buyPriceBuffer,
-                orders.length)
+                spotUnbalanced ? 0 : (perpPrice * accountDefinition.sellPriceBuffer),
+                spotUnbalanced ? 0 : (perpPrice * accountDefinition.buyPriceBuffer),
+                orders.length,
+                market)
+            tradeInstructions.push(...result.tradeInstructions)
+            addressLookupTables.push(...result.addressLookupTables)
         }
     }
+    return { tradeInstructions, addressLookupTables }
 }
 
 async function checkForPriceMismatch(
     accountDefinition: AccountDefinition,
-    accountDetails: AccountDetail) {
-    const buyPriceBuffer = accountDefinition.buyPriceBuffer
-    const sellPriceBuffer = accountDefinition.sellPriceBuffer
-    const solPrice = accountDetails.solPrice
-    const bestBid = accountDetails.bestBid
-    const bestAsk = accountDetails.bestAsk
+    perpPrice: number,
+    bestBid: number,
+    bestAsk: number) {
+    const buyPriceBuffer = accountDefinition.buyPriceBuffer * perpPrice
+    const sellPriceBuffer = accountDefinition.sellPriceBuffer * perpPrice
 
-    const buySpread = solPrice - bestAsk
-    const sellSpread = bestBid - solPrice
+    const buySpread = perpPrice - bestAsk
+    const sellSpread = bestBid - perpPrice
     console.log(`------ ${accountDefinition.name} PRICE MISMATCH --------`)
-    console.log(`BUY  PRICE MISMATCH: BestAsk=${bestAsk.toFixed(2)} Oracle=${solPrice.toFixed(2)}  Diff=${buySpread.toFixed(2)}`)
-    console.log(`SELL PRICE MISMATCH: BestBid=${bestBid.toFixed(2)} Oracle=${solPrice.toFixed(2)}  Diff=${sellSpread.toFixed(2)}`)
-    if (buySpread > buyPriceBuffer && bestAsk > 0) {
-        postToSlackPriceAlert(solPrice, bestBid, bestAsk, buySpread, sellSpread)
+    console.log(`BUY  PRICE MISMATCH: BestAsk=${bestAsk.toFixed(2)} Oracle=${perpPrice.toFixed(2)}  Diff=${buySpread.toFixed(2)}`)
+    console.log(`SELL PRICE MISMATCH: BestBid=${bestBid.toFixed(2)} Oracle=${perpPrice.toFixed(2)}  Diff=${sellSpread.toFixed(2)}`)
+    if (buySpread > buyPriceBuffer * perpPrice && bestAsk > 0) {
+        postToSlackPriceAlert(perpPrice, bestBid, bestAsk, buySpread, sellSpread)
     }
-    if (sellSpread > sellPriceBuffer && bestBid > 0) {
-        postToSlackPriceAlert(solPrice, bestBid, bestAsk, buySpread, sellSpread)
+    if (sellSpread > sellPriceBuffer * perpPrice && bestBid > 0) {
+        postToSlackPriceAlert(perpPrice, bestBid, bestAsk, buySpread, sellSpread)
     }
     return { buyMismatch: buySpread, sellMismatch: sellSpread }
 }
@@ -279,7 +313,7 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     console.log(`${accountName} SWAP: ${swapUsdcTotal} USDC`)
     console.log(`${accountName} PERP: ${perpUsdcTotal} USDC`)
     console.log(`${accountName} TOTAL: ${(swapUsdcTotal + perpUsdcTotal)} USDC`)
-    db.tradeHistory.set(accountName,swapUsdcTotal + perpUsdcTotal)
+    db.tradeHistory.set(accountName, swapUsdcTotal + perpUsdcTotal)
 }
 
 async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
@@ -339,28 +373,61 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                         client.mangoAccount!,
                         client.user
                     )
-                    const result = await checkForPriceMismatch(accountDefinition, accountDetails)
-                    buyMismatch = result.buyMismatch
-                    sellMismatch = result.sellMismatch
+                    let tradeInstructions: Array<any> = []
+                    let addressLookupTables: Array<any> = []
+
                     if (accountDefinition.canTrade && CAN_TRADE_NOW) {
-                        await performSwap(client, accountDefinition,
-                            accountDetails, accountDefinition.tradeSize, fundingRates.solFundingRate, SIMULATE_TRADES)
-                        return accountDetails
+                        if (accountDetails.walletSol < MIN_SOL_WALLET_BALANCE) {
+                            const borrowAmount = SOL_RESERVE - accountDetails.walletSol
+                            const mintPk = new PublicKey(SOL_MINT)
+                            const borrowAmountBN = toNative(borrowAmount, client.group.getMintDecimals(mintPk));
+                            const ix = await client.client.tokenWithdrawNativeIx(client.group, client.mangoAccount!, mintPk, borrowAmountBN, true)
+                            tradeInstructions.push(ix)
+                        } else {
+                            if (accountDefinition.ethTradeSize > 0 && tradeInstructions.length <= 0) {
+                                const result = await performSwap(client, accountDefinition,
+                                    accountDetails, accountDefinition.ethTradeSize, fundingRates.ethFundingRate, client.group, "ETH-PERP")
+                                tradeInstructions.push(...result.tradeInstructions)
+                                addressLookupTables.push(...result.addressLookupTables)
+                            }                           
+                            if (accountDefinition.btcTradeSize > 0 && tradeInstructions.length <= 0) {
+                                const result = await performSwap(client, accountDefinition,
+                                    accountDetails, accountDefinition.btcTradeSize, fundingRates.btcFundingRate, client.group, "BTC-PERP")
+                                tradeInstructions.push(...result.tradeInstructions)
+                                addressLookupTables.push(...result.addressLookupTables)
+                            }
+                            if (accountDefinition.solTradeSize > 0 && tradeInstructions.length <= 0) {
+                                const result = await performSwap(client, accountDefinition,
+                                    accountDetails, accountDefinition.solTradeSize, fundingRates.solFundingRate, client.group, "SOL-PERP")
+                                tradeInstructions.push(...result.tradeInstructions)
+                                addressLookupTables.push(...result.addressLookupTables)
+                            }
+                        }
                     } else {
                         console.log('CANNOT TRADE NOW: ', accountDefinition.name)
-
-                        await cancelOpenOrders(client.client, client.mangoAccount!, client.group,
-                            accountDetails.perpMarket.perpMarketIndex, accountDefinition.name)
-                        return accountDetails
+                        await cancelOpenOrders(client.client, client.mangoAccount!, client.group, "ETH-PERP", accountDefinition.name)
+                        await cancelOpenOrders(client.client, client.mangoAccount!, client.group, "SOL-PERP", accountDefinition.name)
+                        await cancelOpenOrders(client.client, client.mangoAccount!, client.group, "BTC-PERP", accountDefinition.name)
                     }
+
+                    if (!SIMULATE_TRADES && tradeInstructions.length > 0) {
+                        await postTrades(accountDefinition.name,
+                            tradeInstructions,
+                            client.client,
+                            client.group,
+                            addressLookupTables,
+                            false)
+                    }
+                    return accountDetails
                 });
+
                 accountDetailList.push(...await Promise.all(newItems))
 
                 // check for best route
                 let bestBuyPrice = 0
                 let bestSellPrice = 0
                 let solPrice = 0
-                if (accountDetailList.length >0) {
+                if (accountDetailList.length > 0) {
                     const inBank = accountDetailList[0].solBank
                     const outBank = accountDetailList[0].usdcBank
                     solPrice = accountDetailList[0].solPrice
@@ -369,21 +436,20 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                     bestBuyPrice = buyRoute.price
                     bestSellPrice = sellRoute.price
                     if (sellRoute.price > solPrice) {
-                        console.log('sell opportunity', sellRoute.price-solPrice)
+                        console.log('sell opportunity', sellRoute.price - solPrice)
                     }
                     if (buyRoute.price < solPrice) {
-                        console.log('buy opportunity', solPrice-buyRoute.price)
+                        console.log('buy opportunity', solPrice - buyRoute.price)
                     }
                 }
-                
+
 
                 const now = Date.now()
                 if ((UPDATE_GOOGLE_SHEET || db.getOpenTransactions() > 0) &&
                     (now - lastGoogleUpdate > GOOGLE_UPDATE_INTERVAL) &&
                     accountDetailList.length === accountDefinitions.length) {
                     // update google sheet
-                    await updateGoogleSheet(fundingRates, googleSheets, accountDetailList, feeEstimate, buyMismatch, 
-                        sellMismatch, db.getTransactionCache(), bestBuyPrice, bestSellPrice, solPrice)
+                    await updateGoogleSheet(fundingRates, googleSheets, accountDetailList, feeEstimate, db.getTransactionCache(), bestBuyPrice, bestSellPrice, solPrice)
                     // end google sheet update
                     console.log('Google Sheet Updated', new Date().toTimeString())
                     lastGoogleUpdate = now
@@ -403,7 +469,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 }
 
 try {
-    doubleSwapLoop(false, true, false);
+    doubleSwapLoop(true, true, false);
 } catch (error) {
     console.log(error);
 }

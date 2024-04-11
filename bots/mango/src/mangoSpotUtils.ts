@@ -39,7 +39,7 @@ import {
 } from './constants';
 import * as db from './db';
 import { sleep, toFixedFloor } from './mangoUtils';
-import { postToSlackTrade, postToSlackTradeError } from './slackUtils';
+import { postToSlackTradeError } from './slackUtils';
 import {
     AccountDefinition,
     Side
@@ -348,85 +348,59 @@ export const checkPrice = (oraclePrice: number, spotPrice: number, side: Side) =
 }
 
 export const cancelOpenOrders = async (client: MangoClient, mangoAccount: MangoAccount,
-    group: Group, perpMarketIndex: number, account: string) => {
+    group: Group,market:string, account: string) => {
+    const values = group.perpMarketsMapByMarketIndex.values()
+    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
     const orders = await mangoAccount.loadPerpOpenOrdersForMarket(
         client,
         group,
-        perpMarketIndex,
+        perpMarket.perpMarketIndex,
         true
     )
     if (orders.length > 0) {
         console.log(`Cancelling ${orders.length} orders for ${account}`)
-        await client.perpCancelAllOrders(group, mangoAccount, perpMarketIndex, 10)
+        await client.perpCancelAllOrders(group, mangoAccount, perpMarket.perpMarketIndex, 10)
     }
 }
 
 export const perpTrade = async (accountDefinition: AccountDefinition, client: MangoClient, mangoAccount: MangoAccount,
-    group: Group, price: number, quantity: number, side: PerpOrderSide) => {
+    group: Group, price: number, quantity: number, side: PerpOrderSide, market:string) => {
     const values = group.perpMarketsMapByMarketIndex.values()
-    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
 
-    try {
-        console.log(`${accountDefinition.name} PERP BEGIN ${side === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
-        console.log(`  Price=`, price)
-        console.log(`  Amount=`, quantity)
-        let addressLookupTables: any = []
-        let tradeInstructions: any = []
-        tradeInstructions.push(await client.perpUpdateFundingIx(group, perpMarket))
-        tradeInstructions.push(await client.perpPlaceOrderIx(
-            group,
-            mangoAccount!,
-            perpMarket.perpMarketIndex,
-            side,
-            price,// price 
-            toFixedFloor(quantity),// quantity
-            undefined,//maxQuoteQuantity,
-            Date.now(),//clientOrderId,
-            PerpOrderType.limit,
-            false, //reduceOnly
-            Date.now() / 1000 + ORDER_EXPIRATION, //expiryTimestamp,
-            undefined // limit
-        ))
+    console.log(`${accountDefinition.name} PERP BEGIN ${side === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
+    console.log(`  Price=`, price)
+    console.log(`  Amount=`, quantity)
+    let addressLookupTables: any = []
+    let tradeInstructions: any = []
+    tradeInstructions.push(await client.perpUpdateFundingIx(group, perpMarket))
+    tradeInstructions.push(await client.perpPlaceOrderIx(
+        group,
+        mangoAccount!,
+        perpMarket.perpMarketIndex,
+        side,
+        price,// price 
+        toFixedFloor(quantity),// quantity
+        undefined,//maxQuoteQuantity,
+        Date.now(),//clientOrderId,
+        PerpOrderType.limit,
+        false, //reduceOnly
+        Date.now() / 1000 + ORDER_EXPIRATION, //expiryTimestamp,
+        undefined // limit
+    ))
 
-        const request = client.sendAndConfirmTransactionForGroup(
-            group,
-            tradeInstructions,
-            { alts: [...group.addressLookupTablesList, ...addressLookupTables] },
-        );
-        console.log(`${accountDefinition.name} PERP COMPLETE ${side === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
+    db.addOpenTransaction({
+        account: accountDefinition.name,
+        side: side === PerpOrderSide.ask ? Side.SELL : Side.BUY,
+        price: price,
+        size: toFixedFloor(quantity),
+        error: 'Pending',
+        type: 'PERP',
+        date: new Date()
+    })
 
-        db.addOpenTransaction({
-            account: accountDefinition.name,
-            side: side === PerpOrderSide.ask ? Side.SELL : Side.BUY,
-            price: price,
-            size: toFixedFloor(quantity),
-            error: 'Success!',
-            type: 'PERP',
-            date: new Date()
-        })
+    return { tradeInstructions, addressLookupTables }
 
-        await new Promise(resolve => setTimeout(resolve, POST_TRADE_TIMEOUT * 1000));
-    } catch (e: any) {
-        const errorMessage = await handleError(e)
-        db.addOpenTransaction({
-            account: accountDefinition.name,
-            side: PerpOrderSide.ask ? Side.SELL : Side.BUY,
-            price: price,
-            size: quantity,
-            error: errorMessage,
-            type: 'PERP',
-            date: new Date()
-        })
-        postToSlackTradeError(
-            accountDefinition.name,
-            quantity,
-            price,
-            side === PerpOrderSide.ask ? Side.SELL : Side.BUY,
-            Side.BUY,
-            0,
-            0,
-            errorMessage)
-    }
 }
 
 export const handleError = async (e: any) => {
@@ -453,6 +427,8 @@ export const handleError = async (e: any) => {
             errorMessage = '3005 Spot Error Number: Error Message: Not enough account keys given to the instruction'
         } else if (customError === 6028) {
             errorMessage = '6028 Spot Error Message: Invaild first tick array account'
+        } else if (customError === 6047) {
+            errorMessage = '6047 incorrect number of health accounts; received 8 accounts but expected 10 (2 banks, 2 bank oracles, 3 perp markets, 3 perp oracles, 0 serum3 oos).'
         } else if (customError === 6024) {
             errorMessage = '6024. Error Message: an oracle is stale; name: USDC'
             delay = 30
@@ -470,7 +446,7 @@ export const handleError = async (e: any) => {
 
 export const spotAndPerpSwap = async (
     spotAmount: number,
-    solBank: Bank,
+    perpBank: Bank,
     usdcBank: Bank,
     client: MangoClient,
     mangoAccount: MangoAccount,
@@ -478,165 +454,157 @@ export const spotAndPerpSwap = async (
     group: Group,
     spotSide: Side,
     accountDefinition: AccountDefinition,
-    solPrice: number,
-    walletSol: number,
-    SHOULD_TRADE: boolean,
+    perpPrice: number,
     buyPerpSize: number,
     sellPerpSize: number,
     sellPriceBuffer: number,
     buyPriceBuffer: number,
-    numOrders: number) => {
+    numOrders: number,
+    market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') => {
 
-    let perpPrice = solPrice
     let perpSide: PerpOrderSide = PerpOrderSide.bid
     let spotPrice = 0
 
-    try {
-        let doPerp = buyPerpSize > 0 || sellPerpSize > 0
-        let doSpot = spotAmount > 0
-        let tradeInstructions: any = []
-        let addressLookupTables: any = []
+    let doPerp = buyPerpSize > 0 || sellPerpSize > 0
+    let doSpot = spotAmount > 0
+    let tradeInstructions: Array<any> = []
+    let addressLookupTables: Array<any> = []
 
-        console.log(`***** ${accountDefinition.name} spotAndPerpSwap *****`)
-        const values = group.perpMarketsMapByMarketIndex.values()
-        const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+    console.log(`***** ${accountDefinition.name} spotAndPerpSwap *****`)
+    const values = group.perpMarketsMapByMarketIndex.values()
+    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
 
-        // CHECK WALLET
-        if (walletSol < MIN_SOL_WALLET_BALANCE) {
-            const borrowAmount = SOL_RESERVE - walletSol
-            const mintPk = new PublicKey(SOL_MINT)
-            const borrowAmountBN = toNative(borrowAmount, group.getMintDecimals(mintPk));
-            const ix = await client.tokenWithdrawNativeIx(group, mangoAccount, mintPk, borrowAmountBN, true)
-            tradeInstructions.push(...ix)
-        } else {
-            // SPOT TRADE
-            if (doSpot) {
-                const inBank = spotSide === Side.SELL ? solBank : usdcBank
-                const outBank = spotSide === Side.SELL ? usdcBank : solBank
+    // SPOT TRADE
+    if (doSpot) {
+        const inBank = spotSide === Side.SELL ? perpBank : usdcBank
+        const outBank = spotSide === Side.SELL ? usdcBank : perpBank
 
-                const quoteAmount = Side.BUY === spotSide ? spotAmount * solPrice : spotAmount
-                const { price, bestRoute: bestRoute } = await getBestPrice(spotSide, quoteAmount, inBank, outBank)
-                spotPrice = price
+        const quoteAmount = Side.BUY === spotSide ? spotAmount * perpPrice : spotAmount
+        const { price, bestRoute: bestRoute } = await getBestPrice(spotSide, quoteAmount, inBank, outBank)
+        spotPrice = price
 
-                checkPrice(solPrice, spotPrice, spotSide)
-                const [ixs, alts] = await fetchJupiterTransaction(
-                    client.connection,
-                    bestRoute,
-                    user.publicKey,
-                    inBank.mint,
-                    outBank.mint
-                );
+        checkPrice(perpPrice, spotPrice, spotSide)
+        const [ixs, alts] = await fetchJupiterTransaction(
+            client.connection,
+            bestRoute,
+            user.publicKey,
+            inBank.mint,
+            outBank.mint
+        );
 
-                const amountIn = bestRoute.inAmount / 10 ** inBank.mintDecimals
-                const amountOut = bestRoute.outAmount / 10 ** outBank.mintDecimals
-                const marginInstructions = await getMarginTradeIx(
-                    {
-                        client: client,
-                        group: group,
-                        mangoAccount: mangoAccount,
-                        inputMintPk: inBank.mint,
-                        amountIn,
-                        outputMintPk: outBank.mint,
-                        userDefinedInstructions: ixs,
-                        flashLoanType: FlashLoanType.swap
-                    }
-                )
-                addressLookupTables.push(...alts)
-                tradeInstructions.push(...marginInstructions)
-                console.log(`${accountDefinition.name} SPOT ${spotSide}`)
-                console.log(`  Price=`, spotPrice)
-                console.log(`  Amount=`, spotAmount)
-                console.log(`  Oracle=`, solPrice)
-
-                db.addOpenTransaction({
-                    account: accountDefinition.name,
-                    side: spotSide,
-                    price: price,
-                    size: amountOut,
-                    error: 'Pending',
-                    type: 'SPOT',
-                    date: new Date()
-                })
+        const amountIn = bestRoute.inAmount / 10 ** inBank.mintDecimals
+        const amountOut = bestRoute.outAmount / 10 ** outBank.mintDecimals
+        const marginInstructions = await getMarginTradeIx(
+            {
+                client: client,
+                group: group,
+                mangoAccount: mangoAccount,
+                inputMintPk: inBank.mint,
+                amountIn,
+                outputMintPk: outBank.mint,
+                userDefinedInstructions: ixs,
+                flashLoanType: FlashLoanType.swap
             }
+        )
+        addressLookupTables.push(...alts)
+        tradeInstructions.push(...marginInstructions)
+        console.log(`${accountDefinition.name} SPOT ${spotSide}`)
+        console.log(`  Price=`, spotPrice)
+        console.log(`  Amount=`, spotAmount)
+        console.log(`  Oracle=`, perpPrice)
 
-            // PERP TRADE
-            if (doPerp) {
-                // determine perp amount
-                if (buyPerpSize > 0) {
-                    perpSide = PerpOrderSide.bid
-                    tradeInstructions.push(await client.perpPlaceOrderPeggedV2Ix(
-                        group,
-                        mangoAccount!,
-                        perpMarket.perpMarketIndex,
-                        PerpOrderSide.bid,
-                        -1 * (buyPriceBuffer),// price Offset
-                        toFixedFloor(buyPerpSize),// size
-                        undefined, //piglimit
-                        undefined,//maxQuoteQuantity,
-                        Date.now(),//clientOrderId,
-                        PerpOrderType.limit,
-                        PerpSelfTradeBehavior.cancelProvide,
-                        false, //reduceOnly
-                        undefined, //expiryTimestamp,
-                        undefined // limit
-                    ))
-                    db.addOpenTransaction({
-                        account: accountDefinition.name,
-                        side: Side.BUY,
-                        price: solPrice - 1 * buyPriceBuffer,
-                        size: toFixedFloor(buyPerpSize),
-                        error: 'Pending',
-                        type: 'PERP',
-                        date: new Date()
-                    })
-                }
-                if (sellPerpSize > 0) {
-                    perpSide = PerpOrderSide.ask
-                    tradeInstructions.push(await client.perpPlaceOrderPeggedV2Ix(
-                        group,
-                        mangoAccount!,
-                        perpMarket.perpMarketIndex,
-                        PerpOrderSide.ask,
-                        sellPriceBuffer,// price Offset
-                        toFixedFloor(sellPerpSize),// size
-                        undefined, //piglimit
-                        undefined,//maxQuoteQuantity,
-                        Date.now(),//clientOrderId,
-                        PerpOrderType.limit,
-                        PerpSelfTradeBehavior.cancelProvide,
-                        false, //reduceOnly
-                        undefined, //expiryTimestamp,
-                        undefined // limit
-                    ))
-                    db.addOpenTransaction({
-                        account: accountDefinition.name,
-                        side: Side.SELL,
-                        price: solPrice + 1 * buyPriceBuffer,
-                        size: toFixedFloor(sellPerpSize),
-                        error: 'Pending',
-                        type: 'PERP',
-                        date: new Date()
-                    })
-                }
+        db.addOpenTransaction({
+            account: accountDefinition.name,
+            side: spotSide,
+            price: price,
+            size: amountOut,
+            error: 'Pending',
+            type: 'SPOT',
+            date: new Date()
+        })
+    }
 
-                if (numOrders > 1 && (buyPerpSize > 0 || sellPerpSize > 0)) {
-                    const cancelInstructions = await client.perpCancelAllOrdersIx(group, mangoAccount, perpMarket.perpMarketIndex, 5);
-                    tradeInstructions.push(cancelInstructions)
-                }
-
-                console.log(`${accountDefinition.name} PERP ${perpSide === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
-                console.log(`   sellPerpSize=`, sellPerpSize)
-                console.log(`   buyPerpSize=`, buyPerpSize)
-                console.log(`   Oracle=`, solPrice)
-            }
+    // PERP TRADE
+    if (doPerp) {
+        // determine perp amount
+        if (buyPerpSize + sellPerpSize > 0) {
+            //tradeInstructions.push(await client.perpUpdateFundingIx(group, perpMarket))
+        }
+        if (buyPerpSize > 0) {
+            perpSide = PerpOrderSide.bid
+            tradeInstructions.push(await client.perpPlaceOrderPeggedV2Ix(
+                group,
+                mangoAccount!,
+                perpMarket.perpMarketIndex,
+                PerpOrderSide.bid,
+                -1 * (buyPriceBuffer),// price Offset
+                toFixedFloor(buyPerpSize),// size
+                undefined, //piglimit
+                undefined,//maxQuoteQuantity,
+                Date.now(),//clientOrderId,
+                PerpOrderType.limit,
+                PerpSelfTradeBehavior.cancelProvide,
+                false, //reduceOnly
+                undefined, //expiryTimestamp,
+                undefined // limit
+            ))
+            db.addOpenTransaction({
+                account: accountDefinition.name,
+                side: Side.BUY,
+                price: perpPrice - 1 * buyPriceBuffer,
+                size: toFixedFloor(buyPerpSize),
+                error: 'Pending',
+                type: 'PERP',
+                date: new Date()
+            })
+        }
+        if (sellPerpSize > 0) {
+            perpSide = PerpOrderSide.ask
+            tradeInstructions.push(await client.perpPlaceOrderPeggedV2Ix(
+                group,
+                mangoAccount!,
+                perpMarket.perpMarketIndex,
+                PerpOrderSide.ask,
+                sellPriceBuffer,// price Offset
+                toFixedFloor(sellPerpSize),// size
+                undefined, //piglimit
+                undefined,//maxQuoteQuantity,
+                Date.now(),//clientOrderId,
+                PerpOrderType.limit,
+                PerpSelfTradeBehavior.cancelProvide,
+                false, //reduceOnly
+                undefined, //expiryTimestamp,
+                undefined // limit
+            ))
+            db.addOpenTransaction({
+                account: accountDefinition.name,
+                side: Side.SELL,
+                price: perpPrice + 1 * buyPriceBuffer,
+                size: toFixedFloor(sellPerpSize),
+                error: 'Pending',
+                type: 'PERP',
+                date: new Date()
+            })
         }
 
-        if (tradeInstructions.length > 0 && SHOULD_TRADE) {
-            tradeInstructions.unshift(await client.perpUpdateFundingIx(group, perpMarket))
-            postToSlackTrade(accountDefinition.name + ' START', solPrice, perpSide === PerpOrderSide.ask ? sellPerpSize : buyPerpSize,
-                perpPrice, perpSide === PerpOrderSide.ask ? Side.SELL : Side.BUY,
-                spotSide, spotPrice, spotAmount,
-                perpSide === PerpOrderSide.bid ? solPrice - perpPrice : perpPrice - solPrice)
+        if (numOrders > 1 && (buyPerpSize > 0 || sellPerpSize > 0)) {
+            const cancelInstructions = await client.perpCancelAllOrdersIx(group, mangoAccount, perpMarket.perpMarketIndex, 5);
+            tradeInstructions.unshift(cancelInstructions)
+        }
+        console.log(`${accountDefinition.name} ${market} PERP ${perpSide === PerpOrderSide.bid ? Side.BUY : Side.SELL}`)
+        console.log(`   sellPerpSize=`, sellPerpSize)
+        console.log(`   buyPerpSize=`, buyPerpSize)
+        console.log(`   Oracle=`, perpPrice)
+    }
+
+    return { tradeInstructions, addressLookupTables }
+
+}
+
+export const postTrades = async (accountName: string, tradeInstructions: any, client: MangoClient, group: Group, addressLookupTables: any, addDelay: boolean) => {
+    try {
+
+        if (tradeInstructions.length > 0) {
             db.incrementOpenTransactions()
             const request = client.sendAndConfirmTransactionForGroup(
                 group,
@@ -651,38 +619,34 @@ export const spotAndPerpSwap = async (
                 }, 60 * 1000); // 60 seconds timeout
             });
             const sig: any = await Promise.race([timeout, request])
-            console.log(`*** ${accountDefinition.name} SPOT ${spotSide} COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
+            console.log(`*** ${accountName} TX COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
             console.log(`sig = ${sig.signature}`)
 
-            postToSlackTrade(accountDefinition.name + ' COMPLETE', solPrice, perpSide === PerpOrderSide.ask ? sellPerpSize : buyPerpSize,
-                perpPrice, perpSide === PerpOrderSide.ask ? Side.SELL : Side.BUY,
-                spotSide, spotPrice, spotAmount,
-                perpSide === PerpOrderSide.bid ? solPrice - perpPrice : perpPrice - solPrice)
+            db.addOpenTransaction({
+                account: accountName,
+                side: Side.SELL,
+                price: 0,
+                size: 0,
+                error: 'COMPLETE',
+                type: 'PERP',
+                date: new Date()
+            })
 
             // sleep to allow perp trade to settle
-            if (doSpot) {
+            if (addDelay) {
                 await new Promise(resolve => setTimeout(resolve, POST_TRADE_TIMEOUT * 1000));
             }
         }
     } catch (e: any) {
         const errorMessage = await handleError(e)
         db.addOpenTransaction({
-            account: accountDefinition.name,
-            side: spotAmount > (sellPerpSize + buyPerpSize) ? spotSide : perpSide === PerpOrderSide.ask ? Side.SELL : Side.BUY,
-            price: spotAmount > (sellPerpSize + buyPerpSize) ? spotPrice : solPrice,
-            size: spotAmount > (sellPerpSize + buyPerpSize) ? spotAmount : (sellPerpSize + buyPerpSize),
+            account: accountName,
+            side: Side.BUY,
+            price: 0,
+            size: 0,
             error: errorMessage,
-            type: spotAmount > (sellPerpSize + buyPerpSize) ?   'SPOT' : 'PERP',
+            type: 'PERP',
             date: new Date()
         })
-        postToSlackTradeError(
-            accountDefinition.name,
-            perpSide === PerpOrderSide.ask ? sellPerpSize : buyPerpSize,
-            perpPrice,
-            perpSide === PerpOrderSide.ask ? Side.SELL : Side.BUY,
-            spotSide,
-            spotPrice,
-            spotAmount,
-            errorMessage)
     }
 }

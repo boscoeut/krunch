@@ -162,7 +162,7 @@ registerModifier(DB_KEYS.INTEREST_DATA, {
 })
 
 export const fetchJupPrice = async () => {
-    return await get<{ solPrice: number, jupPrice: number, wormholePrice:number }>(DB_KEYS.JUP_PRICE)
+    return await get<{ solPrice: number, jupPrice: number, wormholePrice:number, btcPrice:number,ethPrice:number }>(DB_KEYS.JUP_PRICE)
 }
 registerModifier(DB_KEYS.JUP_PRICE, {
     expiration: JUP_PRICE_EXPIRATION,

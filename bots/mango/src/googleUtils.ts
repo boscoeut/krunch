@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import * as db from './db';
-import { DB_KEYS, getItem } from './db';
 import { AccountDetail, FundingRates, OpenTransaction } from './types';
 
 import { SPREADSHEET_ID } from './constants';
@@ -10,7 +9,6 @@ const { google } = require('googleapis');
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const TOKEN_PATH = path.join(process.cwd(), 'secrets/token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), 'secrets/google_creds.json');
-const START_ROW = 10
 
 export function loadSavedCredentialsIfExist() {
     try {
@@ -25,7 +23,7 @@ export function loadSavedCredentialsIfExist() {
 export async function updateGoogleSheet(
     fundingRates:FundingRates,
     googleSheets: any,
-    accountDetails: AccountDetail[] = [], fee: number, buyMismatch: number, sellMismatch: number,
+    accountDetails: AccountDetail[] = [], fee: number, 
     transactionCache: OpenTransaction[] = [],bestBuyPrice:number,bestSellPrice:number,
     solPrice: number
 ) {
@@ -35,8 +33,6 @@ export async function updateGoogleSheet(
         const feeEstimate = await db.getFeeEstimate(true) || 0
 
         //  accounts
-        let endRow = START_ROW + accountDetails.length
-        const ACCOUNT_VALUES_RANGE = `SOL!A${START_ROW}:O${endRow}`;
         accountDetails.sort((a, b) => a.name.localeCompare(b.name));
         const accountValues = accountDetails.map((accountDetail) => {
             return [
@@ -54,7 +50,18 @@ export async function updateGoogleSheet(
                 accountDetail.walletSol,
                 accountDetail.walletUsdc,
                 accountDetail.usdcBalance,
-                accountDetail.fundingAmount
+                accountDetail.fundingAmount,
+                db.tradeHistory.get(accountDetail.name) || 0,
+                accountDetail.ethAmount,
+                accountDetail.ethBalance,
+                accountDetail.btcAmount,
+                accountDetail.btcBalance,
+                accountDetail.ethFundingAmount,
+                accountDetail.btcFundingAmount,
+                accountDetail.ethBestBid,
+                accountDetail.ethBestAsk,
+                accountDetail.btcBestBid,
+                accountDetail.btcBestAsk
             ]
         });
 
@@ -85,37 +92,15 @@ export async function updateGoogleSheet(
             spreadsheetId: SPREADSHEET_ID,
             resource: {
                 valueInputOption: 'USER_ENTERED',
-                data: [
+                data: [                    
                     {
-                        range: `SOL!B1:C2`,
-                        values: [[solPrice, bestBid],
-                        [fundingRates.solFundingRate / 100, bestAsk]],
-
-                    }, {
-                        range: `SOL!L1:L2`,
-                        values: [[fee], [feeEstimate]],
-
-                    }, {
-                        range: ACCOUNT_VALUES_RANGE,
-                        values: accountValues,
-
-                    }, {
-                        range: `SOL!Q1:Q3`,
-                        values: [[jupPrice.solPrice], [jupPrice.jupPrice], [wormholePrice]],
-                    }, {
-                        range: `SOL!J1:J2`,
-                        values: [[buyMismatch], [sellMismatch]],
-                    },
-
-                    /// NEW
-                    {
-                        range: `Account_Data!A2:P${accountValues.length + 1}`,
+                        range: `Account_Data!A2:Z${accountValues.length + 1}`,
                         values: accountValues.map((accountDetail) => {
-                            return [...accountDetail, db.tradeHistory.get(accountDetail[0] as string) || 0  ]
+                            return accountDetail
                         }),
                     },
                     {
-                        range: `Market_data!B1:B15`,
+                        range: `Market_data!B1:B17`,
                         values: [
                             [fundingRates.solFundingRate / 100],
                             [fee],
@@ -126,12 +111,14 @@ export async function updateGoogleSheet(
                             [wormholePrice],
                             [bestBid],
                             [bestAsk],
-                            [buyMismatch],
-                            [sellMismatch],
+                            [],
+                            [],
                             [bestBuyPrice],
                             [bestSellPrice],
                             [fundingRates.btcFundingRate / 100],
-                            [fundingRates.ethFundingRate / 100]    
+                            [fundingRates.ethFundingRate / 100],
+                            [jupPrice.btcPrice],
+                            [jupPrice.ethPrice]
                         ],
                     },
                     {

@@ -16,8 +16,8 @@ export const MIN_USDC_WALLET_AMOUNT = 10
 // TRADING TRIGGERS
 export const MINUS_THRESHOLD = -75
 export const PLUS_THRESHOLD = 75
-export const MAX_SHORT_PERP = -50
-export const MAX_LONG_PERP = 50
+export const MAX_SHORT_PERP = -5000
+export const MAX_LONG_PERP = 5000
 
 // TRADING PARAMS
 export const CAN_TRADE = false
@@ -93,7 +93,7 @@ export const DEFAULT_PRIORITY_FEE = 40_000
 export const FEE_MULTIPLIER = 1
 
 // JUP
-export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL,85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ"
+export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL,85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ,TBTC,ETH"
 
 // GOOGLE SHEETS
 export const SPREADSHEET_ID = '1-k6Lv4quwIS-rRck-JYLA0WiuC9x43nDuMa_95q8CIw';

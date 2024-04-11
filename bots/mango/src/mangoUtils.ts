@@ -89,11 +89,13 @@ export const fetchJupPrice = async () => {
         const response = await axios.get(url)
         const jupPrice = response.data.data.JUP.price
         const solPrice = response.data.data.SOL.price
+        const btcPrice = response.data.data.TBTC.price
+        const ethPrice = response.data.data.ETH.price
         const wormholePrice = response.data.data["85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ"].price
-        return { jupPrice, solPrice, wormholePrice }
+        return { jupPrice, solPrice, wormholePrice, ethPrice, btcPrice }
     } catch (e) {
         console.log('Failed to fetch jup price', e)
-        return { jupPrice: 0, solPrice: 0 }
+        return { jupPrice: 0, solPrice: 0, wormwholePrice: 0, ethPrice: 0, btcPrice: 0 }
     }
 }
 
@@ -318,7 +320,10 @@ export async function getAccountData(
     user: Keypair
 ): Promise<AccountDetail> {
     const values = group.perpMarketsMapByMarketIndex.values()
-    const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+    const valuesArray = Array.from(values)
+    const perpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
+    const btcPerpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === 'BTC-PERP');
+    const ethPerpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === 'ETH-PERP');
 
     const tokens = await getTokenAccountsByOwnerWithWrappedSol(client.connection, user.publicKey)
     const usdcToken = tokens.find((t) => t.mint.toString() === USDC_MINT)
@@ -328,14 +333,55 @@ export async function getAccountData(
 
     const perpPosition = mangoAccount
         .perpActive()
-        .find((pp: any) => pp.marketIndex === perpMarket.perpMarketIndex);
+        .find((pp: any) => pp.marketIndex === perpMarket!.perpMarketIndex);
 
-    const fund1 = perpPosition?.getCumulativeFunding(perpMarket)
-    const fundingAmount = ((fund1?.cumulativeShortFunding || 0) - (fund1!.cumulativeLongFunding || 0)) / 10 ** 6
+    let btcAmount = 0
+    let ethAmount = 0
+    let btcFundingAmount = 0
+    let ethFundingAmount = 0
+    let ethBestBid = 0
+    let ethBestAsk = 0
+    let btcBestBid = 0
+    let btcBestAsk = 0
+
+    if (btcPerpMarket) {
+        const btcBidAsks = await getBidsAndAsks(btcPerpMarket, client)
+        btcBestBid = btcBidAsks.bestBid
+        btcBestAsk = btcBidAsks.bestAsk
+        const btcPerpPosition = mangoAccount
+            .perpActive()
+            .find((pp: any) => pp.marketIndex === btcPerpMarket!.perpMarketIndex);
+        if (btcPerpPosition) {
+            btcAmount = btcPerpPosition!.basePositionLots.toNumber() / 100
+            const btcFunding = btcPerpPosition?.getCumulativeFunding(btcPerpMarket)
+            btcFundingAmount = ((btcFunding?.cumulativeShortFunding || 0) - (btcFunding!.cumulativeLongFunding || 0)) / 10 ** 6
+        }
+    }
+    if (ethPerpMarket) {
+        const ethsBidAsks = await getBidsAndAsks(ethPerpMarket, client)
+        ethBestBid = ethsBidAsks.bestBid
+        ethBestAsk = ethsBidAsks.bestAsk
+        const ethPerpPosition = mangoAccount
+            .perpActive()
+            .find((pp: any) => pp.marketIndex === ethPerpMarket!.perpMarketIndex);
+        if (ethPerpPosition) {
+            ethAmount = ethPerpPosition!.basePositionLots.toNumber() / 100
+            const ethFunding = ethPerpPosition?.getCumulativeFunding(ethPerpMarket)
+            ethFundingAmount = ((ethFunding?.cumulativeShortFunding || 0) - (ethFunding!.cumulativeLongFunding || 0)) / 10 ** 6
+        }
+    }
+
+    let fundingAmount = 0
+    if (perpPosition) {
+        const solFunding = perpPosition?.getCumulativeFunding(perpMarket)
+        fundingAmount = ((solFunding?.cumulativeShortFunding || 0) - (solFunding!.cumulativeLongFunding || 0)) / 10 ** 6
+    }
+
 
     let historicalFunding = 0;
     let interestAmount = 0;
     let solAmount = perpPosition!.basePositionLots.toNumber() / 100
+
     const { bestBid, bestAsk } = await db.getBidsAndAsks(accountDefinition.name, perpMarket, client)
     const fundingData = await db.fetchHistoricalFundingData(mangoAccount.publicKey.toBase58())
     if (fundingData && fundingData.length > 0) {
@@ -351,13 +397,19 @@ export async function getAccountData(
 
     const banks = Array.from(group.banksMapByName.values()).flat();
     const solBank: any = banks.find((bank: any) => bank.name === 'SOL');
+    const btcBank: any = banks.find((bank: any) => bank.name === 'TBTC');
+    const ethBank: any = banks.find((bank: any) => bank.name === 'ETH');
     const usdcBank: any = banks.find((bank: any) => bank.name === 'USDC');
     const solBalance = solBank ? mangoAccount.getTokenBalanceUi(solBank) : 0;
     const usdcBalance = usdcBank ? mangoAccount.getTokenBalanceUi(usdcBank) : 0;
+    const btcBalance = btcBank ? mangoAccount.getTokenBalanceUi(btcBank) : 0;
+    const ethBalance = ethBank ? mangoAccount.getTokenBalanceUi(ethBank) : 0;
 
     let borrow = toUiDecimalsForQuote(mangoAccount.getCollateralValue(group)!.toNumber())
     const equity = toUiDecimalsForQuote(mangoAccount.getEquity(group)!.toNumber())
     const solPrice = perpMarket.price.toNumber() * 1000
+    const btcPrice = btcPerpMarket.price.toNumber() 
+    const ethPrice = ethPerpMarket.price.toNumber() 
 
     return {
         account: accountDefinition.key,
@@ -382,7 +434,22 @@ export async function getAccountData(
         historicalFunding,
         walletSol: sol,
         walletUsdc: usdc,
-        solDiff: solAmount + sol + solBalance - SOL_RESERVE
+        solDiff: solAmount + sol + solBalance - SOL_RESERVE,
+        ethBank,
+        btcBank,
+        ethBalance,
+        btcBalance,
+        btcAmount,
+        ethAmount,
+        btcFundingAmount,
+        ethFundingAmount,
+        ethBestBid,
+        ethBestAsk,
+        btcBestBid,
+        btcBestAsk,
+        btcPrice,
+        ethPrice
+
     }
 }
 
