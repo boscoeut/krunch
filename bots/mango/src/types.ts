@@ -9,6 +9,11 @@ import { Wallet } from '@coral-xyz/anchor';
 
 
 // create an enum for BUY and SELL
+export type FundingRates = {
+  solFundingRate: number,
+  btcFundingRate: number,
+  ethFundingRate: number
+}
 
 export type OpenTransaction = {
     date: Date,

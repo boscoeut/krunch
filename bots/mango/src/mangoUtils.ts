@@ -44,6 +44,7 @@ import {
     AccountDefinition,
     AccountDetail,
     Client,
+    FundingRates,
     TokenAccount,
     TotalAccountFundingItem,
     TotalInterestDataItem
@@ -141,19 +142,34 @@ export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient
     }
 }
 
-export async function getFundingRate() {
+export async function getFundingRate(): Promise<FundingRates> {
     try {
         const fundingRate = await axios.get(FUNDING_RATE_API, { timeout: 15000 })
         const data: any = fundingRate.data
         if (data?.find) {
-            const hourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
-            return Number((hourlyRate * 100 * 24 * 365).toFixed(3))
+            const solHourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
+            const ethHourlyRate = data?.find((d: any) => d.name === 'ETH-PERP').funding_rate_hourly
+            const btcHourlyRate = data?.find((d: any) => d.name === 'BTC-PERP').funding_rate_hourly
+
+            return {
+                solFundingRate: Number((solHourlyRate * 100 * 24 * 365).toFixed(3)),
+                btcFundingRate: Number((btcHourlyRate * 100 * 24 * 365).toFixed(3)),
+                ethFundingRate: Number((ethHourlyRate * 100 * 24 * 365).toFixed(3))
+            }
         } else {
-            return 0
+            return {
+                solFundingRate: 0,
+                btcFundingRate: 0,
+                ethFundingRate: 0
+            }
         }
     } catch (x: any) {
         console.log('Failed to fetch funding rate', x.message)
-        return 0
+        return {
+            solFundingRate: 0,
+            btcFundingRate: 0,
+            ethFundingRate: 0
+        }
     }
 }
 

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import * as db from './db';
 import { DB_KEYS, getItem } from './db';
-import { AccountDetail, OpenTransaction } from './types';
+import { AccountDetail, FundingRates, OpenTransaction } from './types';
 
 import { SPREADSHEET_ID } from './constants';
 const { authenticate } = require('@google-cloud/local-auth');
@@ -22,14 +22,14 @@ export function loadSavedCredentialsIfExist() {
     }
 }
 
-export async function updateGoogleSheet(googleSheets: any,
+export async function updateGoogleSheet(
+    fundingRates:FundingRates,
+    googleSheets: any,
     accountDetails: AccountDetail[] = [], fee: number, buyMismatch: number, sellMismatch: number,
     transactionCache: OpenTransaction[] = [],bestBuyPrice:number,bestSellPrice:number,
     solPrice: number
 ) {
     try {
-        const fundingRate = await db.getFundingRate()
-        console.log('fundingRate', fundingRate)
         const jupPrice = await db.fetchJupPrice()
         const wormholePrice = jupPrice.wormholePrice || 0
         const feeEstimate = await db.getFeeEstimate(true) || 0
@@ -89,7 +89,7 @@ export async function updateGoogleSheet(googleSheets: any,
                     {
                         range: `SOL!B1:C2`,
                         values: [[solPrice, bestBid],
-                        [fundingRate / 100, bestAsk]],
+                        [fundingRates.solFundingRate / 100, bestAsk]],
 
                     }, {
                         range: `SOL!L1:L2`,
@@ -115,9 +115,9 @@ export async function updateGoogleSheet(googleSheets: any,
                         }),
                     },
                     {
-                        range: `Market_data!B1:B13`,
+                        range: `Market_data!B1:B15`,
                         values: [
-                            [fundingRate / 100],
+                            [fundingRates.solFundingRate / 100],
                             [fee],
                             [feeEstimate],
                             [solPrice],
@@ -129,7 +129,9 @@ export async function updateGoogleSheet(googleSheets: any,
                             [buyMismatch],
                             [sellMismatch],
                             [bestBuyPrice],
-                            [bestSellPrice]
+                            [bestSellPrice],
+                            [fundingRates.btcFundingRate / 100],
+                            [fundingRates.ethFundingRate / 100]    
                         ],
                     },
                     {

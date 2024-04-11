@@ -47,7 +47,6 @@ export const FILTER_TO_ACCOUNTS: Array<String> = []
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 1 * 30
 export const TRANSACTION_EXPIRATION = 1.5 * 60 * 1000
-export const FUNDING_RATE_CACHE_EXPIRATION = 1
 export const INTEREST_CACHE_EXPIRATION = 5
 export const FUNDING_CACHE_EXPIRATION = 5
 export const JUP_PRICE_EXPIRATION = 1

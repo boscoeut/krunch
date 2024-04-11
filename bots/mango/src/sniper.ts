@@ -25,6 +25,7 @@ import {
     getBestPrice
 } from './mangoSpotUtils';
 import {
+    getFundingRate,
     sleep
 } from './mangoUtils';
 import { postToSlackFunding, postToSlackPriceAlert } from './slackUtils';
@@ -310,13 +311,13 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
             // check for best route
             db.clearOpenTransactions()
 
-            const fundingRate = await db.getFundingRate()
-            if (Math.abs(fundingRate - lastFundingRate) > FUNDING_DIFF) {
-                postToSlackFunding(fundingRate)
-                lastFundingRate = fundingRate
+            const fundingRates = await getFundingRate()
+            if (Math.abs(fundingRates.solFundingRate - lastFundingRate) > FUNDING_DIFF) {
+                postToSlackFunding(fundingRates.solFundingRate)
+                lastFundingRate = fundingRates.solFundingRate
             }
-            console.log('FUNDING RATE: ', fundingRate)
-            if (fundingRate === 0) {
+            console.log('SOL FUNDING RATE: ', fundingRates.solFundingRate)
+            if (fundingRates.solFundingRate === 0) {
                 console.log('FUNDING RATE IS 0, SLEEPING FOR 5 SECONDS')
                 await sleep(10 * 1000)
             } else {
@@ -343,7 +344,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                     sellMismatch = result.sellMismatch
                     if (accountDefinition.canTrade && CAN_TRADE_NOW) {
                         await performSwap(client, accountDefinition,
-                            accountDetails, accountDefinition.tradeSize, fundingRate, SIMULATE_TRADES)
+                            accountDetails, accountDefinition.tradeSize, fundingRates.solFundingRate, SIMULATE_TRADES)
                         return accountDetails
                     } else {
                         console.log('CANNOT TRADE NOW: ', accountDefinition.name)
@@ -381,13 +382,13 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                     (now - lastGoogleUpdate > GOOGLE_UPDATE_INTERVAL) &&
                     accountDetailList.length === accountDefinitions.length) {
                     // update google sheet
-                    await updateGoogleSheet(googleSheets, accountDetailList, feeEstimate, buyMismatch, 
+                    await updateGoogleSheet(fundingRates, googleSheets, accountDetailList, feeEstimate, buyMismatch, 
                         sellMismatch, db.getTransactionCache(), bestBuyPrice, bestSellPrice, solPrice)
                     // end google sheet update
                     console.log('Google Sheet Updated', new Date().toTimeString())
                     lastGoogleUpdate = now
                 }
-                if (CAN_TRADE_NOW && (db.getOpenTransactions() > 0 || Math.abs(fundingRate) > 50)) {
+                if (CAN_TRADE_NOW && db.getOpenTransactions() > 0) {
                     await sleep(SLEEP_MAIN_LOOP_IN_MINUTES * 1000 * 60)
                 } else {
                     await sleep(0.5 * 1000 * 60)
@@ -402,7 +403,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 }
 
 try {
-    doubleSwapLoop(true, true, false);
+    doubleSwapLoop(false, true, false);
 } catch (error) {
     console.log(error);
 }

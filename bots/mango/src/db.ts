@@ -4,7 +4,7 @@ import {
     ACCOUNT_REFRESH_EXPIRATION, BID_ASK_CACHE_EXPIRATION,
     DEFAULT_CACHE_EXPIRATION,
     FEE_CACHE_EXPIRATION,
-    FUNDING_CACHE_EXPIRATION, FUNDING_RATE_CACHE_EXPIRATION,
+    FUNDING_CACHE_EXPIRATION,
     INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION
 } from "./constants";
 import {
@@ -12,7 +12,7 @@ import {
     setupClient,
     fetchFundingData as utilFetchFundingData, fetchInterestData as utilFetchInterestData, fetchJupPrice as utilFetchJupPrice,
     getAccountData as utilGetAccountData,
-    getBidsAndAsks as utilGetBidsAndAsks, getFundingRate as utilGetFundingRate
+    getBidsAndAsks as utilGetBidsAndAsks
 } from './mangoUtils';
 import { AccountDefinition, AccountDetail, CacheItem, OpenTransaction } from "./types";
 
@@ -44,7 +44,6 @@ export function getTransactionCache() {
 
 
 export enum DB_KEYS {
-    FUNDING_RATE = "FUNDING_RATE",
     HISTORICAL_FUNDING_DATA = "HISTORICAL_FUNDING_DATA",
     INTEREST_DATA = "INTEREST_DATA",
     JUP_PRICE = "JUP_PRICE",
@@ -145,14 +144,6 @@ export function getItems(dbKeys: DB_KEYS[]) {
 }
 
 // REGISTER MODIFIERS
-export const getFundingRate = async (force: boolean = false): Promise<number> => {
-    return await get<number>(DB_KEYS.FUNDING_RATE, { force })
-}
-registerModifier(DB_KEYS.FUNDING_RATE, {
-    expiration: FUNDING_RATE_CACHE_EXPIRATION,
-    modifier: utilGetFundingRate
-})
-
 export const fetchHistoricalFundingData = async (mangoAccountPk: string, force: boolean = false) => {
     const fundingData = await get<any[]>(DB_KEYS.HISTORICAL_FUNDING_DATA, { force, cacheKey: mangoAccountPk, params: [mangoAccountPk] })
     return fundingData
