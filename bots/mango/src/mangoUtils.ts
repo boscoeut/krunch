@@ -312,6 +312,32 @@ export async function reloadClient(client: Client) {
     }
 }
 
+export const getBuyPriceBuffer = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') => {
+    switch (market) {
+        case 'BTC-PERP':
+            return 0.04
+        case 'SOL-PERP':
+            return 0.04
+        case 'ETH-PERP':
+            return 0.04
+        default:
+            return 0.04
+    }
+}
+
+export const getSellPriceBuffer = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') => {
+    switch (market) {
+        case 'BTC-PERP':
+            return 0.002
+        case 'SOL-PERP':
+            return 0.004
+        case 'ETH-PERP':
+            return 0.003
+        default:
+            return 0.003
+    }
+}
+
 export async function getAccountData(
     accountDefinition: AccountDefinition,
     client: any,
@@ -352,7 +378,7 @@ export async function getAccountData(
             .perpActive()
             .find((pp: any) => pp.marketIndex === btcPerpMarket!.perpMarketIndex);
         if (btcPerpPosition) {
-            btcAmount = btcPerpPosition!.basePositionLots.toNumber() / 100
+            btcAmount = btcPerpPosition!.basePositionLots.toNumber() / 10000
             const btcFunding = btcPerpPosition?.getCumulativeFunding(btcPerpMarket)
             btcFundingAmount = ((btcFunding?.cumulativeShortFunding || 0) - (btcFunding!.cumulativeLongFunding || 0)) / 10 ** 6
         }
@@ -365,7 +391,7 @@ export async function getAccountData(
             .perpActive()
             .find((pp: any) => pp.marketIndex === ethPerpMarket!.perpMarketIndex);
         if (ethPerpPosition) {
-            ethAmount = ethPerpPosition!.basePositionLots.toNumber() / 100
+            ethAmount = ethPerpPosition!.basePositionLots.toNumber() / 10000
             const ethFunding = ethPerpPosition?.getCumulativeFunding(ethPerpMarket)
             ethFundingAmount = ((ethFunding?.cumulativeShortFunding || 0) - (ethFunding!.cumulativeLongFunding || 0)) / 10 ** 6
         }
@@ -398,7 +424,7 @@ export async function getAccountData(
     const banks = Array.from(group.banksMapByName.values()).flat();
     const solBank: any = banks.find((bank: any) => bank.name === 'SOL');
     const btcBank: any = banks.find((bank: any) => bank.name === 'TBTC');
-    const ethBank: any = banks.find((bank: any) => bank.name === 'ETH');
+    const ethBank: any = banks.find((bank: any) => bank.name === 'ETH (Portal)');
     const usdcBank: any = banks.find((bank: any) => bank.name === 'USDC');
     const solBalance = solBank ? mangoAccount.getTokenBalanceUi(solBank) : 0;
     const usdcBalance = usdcBank ? mangoAccount.getTokenBalanceUi(usdcBank) : 0;
@@ -408,8 +434,8 @@ export async function getAccountData(
     let borrow = toUiDecimalsForQuote(mangoAccount.getCollateralValue(group)!.toNumber())
     const equity = toUiDecimalsForQuote(mangoAccount.getEquity(group)!.toNumber())
     const solPrice = perpMarket.price.toNumber() * 1000
-    const btcPrice = btcPerpMarket.price.toNumber() 
-    const ethPrice = ethPerpMarket.price.toNumber() 
+    const btcPrice = btcPerpMarket.price.toNumber()
+    const ethPrice = ethPerpMarket.price.toNumber()
 
     return {
         account: accountDefinition.key,

@@ -29,17 +29,14 @@ import axios from 'axios';
 import {
     JUPITER_SPOT_SLIPPAGE,
     JUPITER_V6_QUOTE_API_MAINNET,
-    MIN_SOL_WALLET_BALANCE,
     ORDER_EXPIRATION,
     POST_TRADE_TIMEOUT,
-    SOL_MINT,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
-    SOL_RESERVE,
     SWAP_ONLY_DIRECT_ROUTES
 } from './constants';
 import * as db from './db';
-import { sleep, toFixedFloor } from './mangoUtils';
-import { postToSlackTradeError } from './slackUtils';
+import { getBuyPriceBuffer, sleep, toFixedFloor } from './mangoUtils';
+import { postToSlackTrade, postToSlackTradeError } from './slackUtils';
 import {
     AccountDefinition,
     Side
@@ -348,7 +345,7 @@ export const checkPrice = (oraclePrice: number, spotPrice: number, side: Side) =
 }
 
 export const cancelOpenOrders = async (client: MangoClient, mangoAccount: MangoAccount,
-    group: Group,market:string, account: string) => {
+    group: Group, market: string, account: string) => {
     const values = group.perpMarketsMapByMarketIndex.values()
     const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
     const orders = await mangoAccount.loadPerpOpenOrdersForMarket(
@@ -364,7 +361,7 @@ export const cancelOpenOrders = async (client: MangoClient, mangoAccount: MangoA
 }
 
 export const perpTrade = async (accountDefinition: AccountDefinition, client: MangoClient, mangoAccount: MangoAccount,
-    group: Group, price: number, quantity: number, side: PerpOrderSide, market:string) => {
+    group: Group, price: number, quantity: number, side: PerpOrderSide, market: string) => {
     const values = group.perpMarketsMapByMarketIndex.values()
     const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
 
@@ -396,7 +393,8 @@ export const perpTrade = async (accountDefinition: AccountDefinition, client: Ma
         size: toFixedFloor(quantity),
         error: 'Pending',
         type: 'PERP',
-        date: new Date()
+        date: new Date(),
+        market
     })
 
     return { tradeInstructions, addressLookupTables }
@@ -418,7 +416,7 @@ export const handleError = async (e: any) => {
             errorMessage = 'Custom InstructionError.  Trying again in 30 seconds'
             delay = 30
         } else if (customError === 6001) {
-            errorMessage = '6001 Sport Slippage exceeded for Spot Price'
+            errorMessage = '6001 Spot Slippage exceeded for Spot Price'
         } else if (customError === 6007) {
             errorMessage = '6007 Spot Custom program error: 0x1777'
         } else if (customError === 6023) {
@@ -483,45 +481,60 @@ export const spotAndPerpSwap = async (
         const { price, bestRoute: bestRoute } = await getBestPrice(spotSide, quoteAmount, inBank, outBank)
         spotPrice = price
 
-        checkPrice(perpPrice, spotPrice, spotSide)
-        const [ixs, alts] = await fetchJupiterTransaction(
-            client.connection,
-            bestRoute,
-            user.publicKey,
-            inBank.mint,
-            outBank.mint
-        );
+        try {
+            checkPrice(perpPrice, spotPrice, spotSide)
+            const [ixs, alts] = await fetchJupiterTransaction(
+                client.connection,
+                bestRoute,
+                user.publicKey,
+                inBank.mint,
+                outBank.mint
+            );
 
-        const amountIn = bestRoute.inAmount / 10 ** inBank.mintDecimals
-        const amountOut = bestRoute.outAmount / 10 ** outBank.mintDecimals
-        const marginInstructions = await getMarginTradeIx(
-            {
-                client: client,
-                group: group,
-                mangoAccount: mangoAccount,
-                inputMintPk: inBank.mint,
-                amountIn,
-                outputMintPk: outBank.mint,
-                userDefinedInstructions: ixs,
-                flashLoanType: FlashLoanType.swap
-            }
-        )
-        addressLookupTables.push(...alts)
-        tradeInstructions.push(...marginInstructions)
-        console.log(`${accountDefinition.name} SPOT ${spotSide}`)
-        console.log(`  Price=`, spotPrice)
-        console.log(`  Amount=`, spotAmount)
-        console.log(`  Oracle=`, perpPrice)
+            const amountIn = bestRoute.inAmount / 10 ** inBank.mintDecimals
+            const amountOut = bestRoute.outAmount / 10 ** outBank.mintDecimals
+            const marginInstructions = await getMarginTradeIx(
+                {
+                    client: client,
+                    group: group,
+                    mangoAccount: mangoAccount,
+                    inputMintPk: inBank.mint,
+                    amountIn,
+                    outputMintPk: outBank.mint,
+                    userDefinedInstructions: ixs,
+                    flashLoanType: FlashLoanType.swap
+                }
+            )
+            addressLookupTables.push(...alts)
+            tradeInstructions.push(...marginInstructions)
+            console.log(`${accountDefinition.name} SPOT ${spotSide}`)
+            console.log(`  Price=`, spotPrice)
+            console.log(`  Amount=`, spotAmount)
+            console.log(`  Oracle=`, perpPrice)
 
-        db.addOpenTransaction({
-            account: accountDefinition.name,
-            side: spotSide,
-            price: price,
-            size: amountOut,
-            error: 'Pending',
-            type: 'SPOT',
-            date: new Date()
-        })
+            db.addOpenTransaction({
+                account: accountDefinition.name,
+                side: spotSide,
+                price: price,
+                size: amountOut,
+                error: 'Pending',
+                type: 'SPOT',
+                date: new Date(),
+                market
+            })
+            postToSlackTradeError(accountDefinition.name, amountOut, spotPrice, spotSide, spotSide, spotPrice, amountOut, 'Pending')
+        } catch (e: any) {
+            db.addOpenTransaction({
+                account: accountDefinition.name,
+                side: spotSide,
+                price: price,
+                size: 0,
+                error: 'ERROR: ' + e.message,
+                type: 'SPOT',
+                date: new Date(),
+                market
+            })
+        }
     }
 
     // PERP TRADE
@@ -551,11 +564,12 @@ export const spotAndPerpSwap = async (
             db.addOpenTransaction({
                 account: accountDefinition.name,
                 side: Side.BUY,
-                price: perpPrice - 1 * buyPriceBuffer,
+                price: perpPrice - 1 * getBuyPriceBuffer(market),
                 size: toFixedFloor(buyPerpSize),
                 error: 'Pending',
                 type: 'PERP',
-                date: new Date()
+                date: new Date(),
+                market
             })
         }
         if (sellPerpSize > 0) {
@@ -579,11 +593,12 @@ export const spotAndPerpSwap = async (
             db.addOpenTransaction({
                 account: accountDefinition.name,
                 side: Side.SELL,
-                price: perpPrice + 1 * buyPriceBuffer,
+                price: perpPrice + 1 * getBuyPriceBuffer(market),
                 size: toFixedFloor(sellPerpSize),
                 error: 'Pending',
                 type: 'PERP',
-                date: new Date()
+                date: new Date(),
+                market
             })
         }
 
@@ -606,6 +621,8 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
 
         if (tradeInstructions.length > 0) {
             db.incrementOpenTransactions()
+            postToSlackTrade(accountName, 0, 0, 0, 'BUY', 'SELL', 0, 0, 0)
+
             const request = client.sendAndConfirmTransactionForGroup(
                 group,
                 tradeInstructions,
@@ -629,8 +646,10 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
                 size: 0,
                 error: 'COMPLETE',
                 type: 'PERP',
-                date: new Date()
+                date: new Date(),
+                market: 'MULTIPLE'
             })
+
 
             // sleep to allow perp trade to settle
             if (addDelay) {
@@ -646,7 +665,9 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
             size: 0,
             error: errorMessage,
             type: 'PERP',
-            date: new Date()
+            date: new Date(),
+            market: 'MULTIPLE'
         })
+        postToSlackTradeError(accountName, 0, 0, 'BUY', 'SELL', 0, 0, errorMessage)
     }
 }

@@ -8,6 +8,7 @@ import {
 } from '@solana/web3.js';
 import axios from 'axios';
 import fs from 'fs';
+import { getBuyPriceBuffer, getSellPriceBuffer } from './mangoUtils';
 import {
     ACTIVITY_FEED_URL,
     DEFAULT_PRIORITY_FEE,
@@ -51,10 +52,10 @@ function roundToNearestFloor(num: number, nearest: number = 2) {
 }
 
 function getTradeSize(requestedTradeSize: number, solAmount: number, action: Side,
-    borrow: number, accountDefinition: AccountDefinition, solPrice: number,
+    borrow: number, solPrice: number,
     minPerp: number, maxPerp: number, health: number, market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP"
 ) {
-    const freeCash = borrow - accountDefinition.healthThreshold
+    const freeCash = borrow 
     let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0 // 2.1 to account for other side of trade
     let tickSize = 0.01
     if (market === "BTC-PERP") {
@@ -143,11 +144,11 @@ async function performSwap(client: Client,
     let buyPerpTradeSize = getTradeSize(
         tradeSize, perpAmount,
         Side.BUY, accountDetails.borrow,
-        accountDefinition, oraclePrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health, market)
+        oraclePrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health, market)
     let sellPerpTradeSize = getTradeSize(
         tradeSize, perpAmount,
         Side.SELL, accountDetails.borrow,
-        accountDefinition, oraclePrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health, market)
+        oraclePrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health, market)
 
     let spotAmount = 0
     if (spotUnbalanced) {
@@ -171,9 +172,9 @@ async function performSwap(client: Client,
             perpMarket.perpMarketIndex,
             true
         )
-        const result = await checkForPriceMismatch(accountDefinition, oraclePrice, bestBid, bestAsk)
-        const buyMismatch = result.buyMismatch > accountDefinition.buyPriceBuffer * oraclePrice
-        const sellMismatch = result.sellMismatch > accountDefinition.sellPriceBuffer * oraclePrice
+        const result = await checkForPriceMismatch(accountDefinition, oraclePrice, bestBid, bestAsk, market)
+        const buyMismatch = result.buyMismatch > getBuyPriceBuffer(market) * oraclePrice
+        const sellMismatch = result.sellMismatch > getSellPriceBuffer(market) * oraclePrice
 
         let shouldExecuteImmediately = false
         let perpSize = 0
@@ -183,7 +184,7 @@ async function performSwap(client: Client,
             // If balanced and there is a price mismatch, place a perp trade
             const side = result.buyMismatch > result.sellMismatch ? PerpOrderSide.bid : PerpOrderSide.ask
             let size = side === PerpOrderSide.bid ? buyPerpTradeSize : sellPerpTradeSize
-            const price = side === PerpOrderSide.bid ? perpPrice - (accountDefinition.buyPriceBuffer * perpPrice) : perpPrice + (accountDefinition.sellPriceBuffer * perpPrice)
+            const price = side === PerpOrderSide.bid ? perpPrice - (getBuyPriceBuffer(market) * perpPrice) : perpPrice + (getSellPriceBuffer(market) * perpPrice)
             if (side === PerpOrderSide.bid && orders.find(o => o.side === PerpOrderSide.bid && !o.isOraclePegged)) {
                 size = 0
             }
@@ -233,8 +234,8 @@ async function performSwap(client: Client,
                 perpPrice,
                 buyPerpTradeSize,
                 sellPerpTradeSize,
-                spotUnbalanced ? 0 : (perpPrice * accountDefinition.sellPriceBuffer),
-                spotUnbalanced ? 0 : (perpPrice * accountDefinition.buyPriceBuffer),
+                spotUnbalanced ? 0 : (perpPrice * getSellPriceBuffer(market)),
+                spotUnbalanced ? 0 : (perpPrice * getBuyPriceBuffer(market)),
                 orders.length,
                 market)
             tradeInstructions.push(...result.tradeInstructions)
@@ -248,9 +249,10 @@ async function checkForPriceMismatch(
     accountDefinition: AccountDefinition,
     perpPrice: number,
     bestBid: number,
-    bestAsk: number) {
-    const buyPriceBuffer = accountDefinition.buyPriceBuffer * perpPrice
-    const sellPriceBuffer = accountDefinition.sellPriceBuffer * perpPrice
+    bestAsk: number,
+    market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP") {
+    const buyPriceBuffer = getBuyPriceBuffer(market) * perpPrice
+    const sellPriceBuffer = getSellPriceBuffer(market) * perpPrice
 
     const buySpread = perpPrice - bestAsk
     const sellSpread = bestBid - perpPrice
@@ -356,13 +358,9 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                 await sleep(10 * 1000)
             } else {
                 const newItems = accountDefinitions.map(async (accountDefinition) => {
-                    let client = await db.get<Client>(DB_KEYS.GET_CLIENT, {
-                        params: [accountDefinition, DEFAULT_PRIORITY_FEE],
-                        cacheKey: accountDefinition.name,
-                        force: false
-                    })
+                    let client = await db.getClient(accountDefinition, DEFAULT_PRIORITY_FEE)
 
-                    if (accountDefinition.name === 'PRIVATE3') {
+                    if (accountDefinition.name === 'DRIFT') {
                         await checkActivityFeed(accountDefinition.name, client.mangoAccount!.publicKey.toString())
                     }
 
@@ -381,8 +379,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                             const borrowAmount = SOL_RESERVE - accountDetails.walletSol
                             const mintPk = new PublicKey(SOL_MINT)
                             const borrowAmountBN = toNative(borrowAmount, client.group.getMintDecimals(mintPk));
-                            const ix = await client.client.tokenWithdrawNativeIx(client.group, client.mangoAccount!, mintPk, borrowAmountBN, true)
-                            tradeInstructions.push(ix)
+                            await client.client.tokenWithdrawNative(client.group, client.mangoAccount!, mintPk, borrowAmountBN, true)
                         } else {
                             if (accountDefinition.ethTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,

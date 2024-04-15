@@ -22,7 +22,8 @@ export type OpenTransaction = {
   price: number,
   size: number,
   error: string,
-  type: string
+  type: string,
+  market: string
 }
 export enum Side {
   BUY = 'BUY',
@@ -86,11 +87,8 @@ export type AccountDefinition = {
   usd: number;
   jup: number;
   privateKey: string;
-  healthThreshold: number;
   canTrade: boolean,
   useMangoSpotTrades: boolean,
-  sellPriceBuffer: number,
-  buyPriceBuffer: number,
   solTradeSize: number,
   btcTradeSize: number,
   ethTradeSize: number

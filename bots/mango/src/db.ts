@@ -1,7 +1,7 @@
 import { Group, MangoAccount, MangoClient, PerpMarket } from "@blockworks-foundation/mango-v4";
 import { Keypair } from '@solana/web3.js';
 import {
-    ACCOUNT_REFRESH_EXPIRATION, BID_ASK_CACHE_EXPIRATION,
+    BID_ASK_CACHE_EXPIRATION,
     DEFAULT_CACHE_EXPIRATION,
     FEE_CACHE_EXPIRATION,
     FUNDING_CACHE_EXPIRATION,
@@ -48,9 +48,7 @@ export enum DB_KEYS {
     INTEREST_DATA = "INTEREST_DATA",
     JUP_PRICE = "JUP_PRICE",
     BIDS_AND_ASKS = "BIDS_AND_ASKS",
-    GET_CLIENT = "GET_CLIENT",
     SOL_PRICE = "SOL_PRICE",
-    ACCOUNT_DETAILS = "ACCOUNT_DETAILS",
     FEE_ESTIMATE = "FEE_ESTIMATE"
 }
 
@@ -69,10 +67,36 @@ export type DBModifier<T> = {
     modifier: (...args: any) => Promise<T>
 }
 const dbCache = new Map<string, CacheItem>()
-const modifiers = new Map<DB_KEYS, DBModifier<any>>();
 
-export function registerModifier(key: DB_KEYS, modifier: DBModifier<any>) {
-    modifiers.set(key, modifier);
+export function getModifier(key: DB_KEYS) {
+    if (key === DB_KEYS.HISTORICAL_FUNDING_DATA) {
+        return {
+            expiration: FUNDING_CACHE_EXPIRATION,
+            modifier: utilFetchFundingData
+        }
+    } else if (key === DB_KEYS.INTEREST_DATA) {
+        return {
+            expiration: INTEREST_CACHE_EXPIRATION,
+            modifier: utilFetchInterestData
+        }
+    } else if (key === DB_KEYS.JUP_PRICE) {
+        return {
+            expiration: JUP_PRICE_EXPIRATION,
+            modifier: utilFetchJupPrice
+        }
+    } else if (key === DB_KEYS.BIDS_AND_ASKS) {
+        return {
+            expiration: BID_ASK_CACHE_EXPIRATION,
+            modifier: utilGetBidsAndAsks
+        }
+    } else if (key === DB_KEYS.FEE_ESTIMATE) {
+        return {
+            expiration: FEE_CACHE_EXPIRATION,
+            modifier: handleEstimateFeeWithAddressLookup
+        }
+    }
+    return null
+
 }
 
 const getDBKey = (key: DB_KEYS, options?: GetOptions) => {
@@ -82,16 +106,19 @@ const getDBKey = (key: DB_KEYS, options?: GetOptions) => {
 export async function get<T>(key: DB_KEYS, options?: GetOptions): Promise<T> {
     const dbKey = getDBKey(key, options)
     let item = dbCache.get(dbKey) || { date: new Date(0), item: null }
-    const modifier = modifiers.get(key)
+    const modifier = getModifier(key)
     const expiration = modifier?.expiration || DEFAULT_CACHE_EXPIRATION
     const now = new Date()
     const diff = (now.getTime() - item.date.getTime()) / 1000
     const shouldRefresh = (diff > expiration * 60 || options?.force) && expiration > 0
     const shouldInit = expiration < 0 && !item.item
     if (shouldRefresh || shouldInit || options?.force === true) {
-        const value = await modifier?.modifier(...(options?.params || []))
-        item = { date: now, item: value }
-        dbCache.set(dbKey, item)
+        if (modifier) {
+            const m = modifier.modifier as any
+            const value = await m(...(options?.params || []))
+            item = { date: now, item: value }
+            dbCache.set(dbKey, item)
+        }
     }
     return item.item
 }
@@ -148,33 +175,18 @@ export const fetchHistoricalFundingData = async (mangoAccountPk: string, force: 
     const fundingData = await get<any[]>(DB_KEYS.HISTORICAL_FUNDING_DATA, { force, cacheKey: mangoAccountPk, params: [mangoAccountPk] })
     return fundingData
 }
-registerModifier(DB_KEYS.HISTORICAL_FUNDING_DATA, {
-    expiration: FUNDING_CACHE_EXPIRATION,
-    modifier: utilFetchFundingData
-})
 
 export const fetchInterestData = async (mangoAccountPk: string, force: boolean = false) => {
     return await get<any[]>(DB_KEYS.INTEREST_DATA, { cacheKey: mangoAccountPk, force, params: [mangoAccountPk] })
 }
-registerModifier(DB_KEYS.INTEREST_DATA, {
-    expiration: INTEREST_CACHE_EXPIRATION,
-    modifier: utilFetchInterestData
-})
+
 
 export const fetchJupPrice = async () => {
-    return await get<{ solPrice: number, jupPrice: number, wormholePrice:number, btcPrice:number,ethPrice:number }>(DB_KEYS.JUP_PRICE)
+    return await get<{ solPrice: number, jupPrice: number, wormholePrice: number, btcPrice: number, ethPrice: number }>(DB_KEYS.JUP_PRICE)
 }
-registerModifier(DB_KEYS.JUP_PRICE, {
-    expiration: JUP_PRICE_EXPIRATION,
-    modifier: utilFetchJupPrice
-})
 export const getBidsAndAsks = async (marketName: string, perpMarket: PerpMarket, client: MangoClient) => {
     return await get<{ bestBid: number, bestAsk: number }>(DB_KEYS.BIDS_AND_ASKS, { cacheKey: marketName, params: [perpMarket, client] })
 }
-registerModifier(DB_KEYS.BIDS_AND_ASKS, {
-    expiration: BID_ASK_CACHE_EXPIRATION,
-    modifier: utilGetBidsAndAsks
-})
 
 export async function getAccountData(
     accountDefinition: AccountDefinition,
@@ -183,20 +195,15 @@ export async function getAccountData(
     mangoAccount: MangoAccount,
     user: Keypair
 ): Promise<AccountDetail> {
-    const accountDetails = await get<AccountDetail>(DB_KEYS.ACCOUNT_DETAILS, {
-        cacheKey: accountDefinition.name, params: [
-            accountDefinition,
-            client,
-            group,
-            mangoAccount,
-            user]
-    })
+    const accountDetails = await utilGetAccountData(
+        accountDefinition,
+        client,
+        group,
+        mangoAccount,
+        user)
     return accountDetails
 }
-registerModifier(DB_KEYS.ACCOUNT_DETAILS, {
-    expiration: ACCOUNT_REFRESH_EXPIRATION,
-    modifier: utilGetAccountData
-})
+
 export const getFeeEstimate = async (cacheOnly: boolean = false) => {
     if (cacheOnly) {
         return getItem<number>(DB_KEYS.FEE_ESTIMATE)
@@ -205,21 +212,7 @@ export const getFeeEstimate = async (cacheOnly: boolean = false) => {
         return await get<number>(DB_KEYS.FEE_ESTIMATE)
     }
 }
-registerModifier(DB_KEYS.FEE_ESTIMATE, {
-    expiration: FEE_CACHE_EXPIRATION,
-    modifier: handleEstimateFeeWithAddressLookup
-})
-//// MODIFIERS
 
-// export const getClient = async () => {
-//     let client = await get<Client>(DB_KEYS.GET_CLIENT, {
-//         params: [accountDefinition, DEFAULT_PRIORITY_FEE],
-//         cacheKey: accountDefinition.name,
-//         force: false
-//     })
-//     return client;
-// }
-registerModifier(DB_KEYS.GET_CLIENT, {
-    expiration: ACCOUNT_REFRESH_EXPIRATION,
-    modifier: setupClient
-})
+export const getClient = async (accountDefinition: AccountDefinition, DEFAULT_PRIORITY_FEE: number) => {
+    return await setupClient(accountDefinition, DEFAULT_PRIORITY_FEE)
+}

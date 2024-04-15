@@ -89,7 +89,7 @@ export const ACTIVITY_FEED_URL = 'https://api.mngo.cloud/data/v4/stats/activity-
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000
-export const DEFAULT_PRIORITY_FEE = 40_000
+export const DEFAULT_PRIORITY_FEE = 60_000
 export const FEE_MULTIPLIER = 1
 
 // JUP

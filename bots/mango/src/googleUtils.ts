@@ -61,7 +61,9 @@ export async function updateGoogleSheet(
                 accountDetail.ethBestBid,
                 accountDetail.ethBestAsk,
                 accountDetail.btcBestBid,
-                accountDetail.btcBestAsk
+                accountDetail.btcBestAsk,
+                accountDetail.btcPrice,
+                accountDetail.ethPrice,
             ]
         });
 
@@ -73,7 +75,7 @@ export async function updateGoogleSheet(
         for(let i=0; i<10; i++) {  
             let transaction:any = transactionCache[i]
             if (!transaction){
-                transactionValues.push(["","","","","","",""])
+                transactionValues.push(["","","","","","","",""])
             }else{
                 transactionValues.push([
                     toGoogleSheetsDate(transaction.date),
@@ -82,7 +84,8 @@ export async function updateGoogleSheet(
                     transaction.price,
                     transaction.size,
                     transaction.type,
-                    transaction.error
+                    transaction.market + (transaction.error ? ` - ${transaction.error}` : ""),
+                    transaction.error || "N/A"
                 ])
             }
             
@@ -94,7 +97,7 @@ export async function updateGoogleSheet(
                 valueInputOption: 'USER_ENTERED',
                 data: [                    
                     {
-                        range: `Account_Data!A2:Z${accountValues.length + 1}`,
+                        range: `Account_Data!A2:AB${accountValues.length + 1}`,
                         values: accountValues.map((accountDetail) => {
                             return accountDetail
                         }),
@@ -122,7 +125,7 @@ export async function updateGoogleSheet(
                         ],
                     },
                     {
-                        range: `Transaction_Cache!A2:G11`,
+                        range: `Transaction_Cache!A2:H11`,
                         values: transactionValues
                     }
                 ]

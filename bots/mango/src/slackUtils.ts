@@ -44,10 +44,10 @@ export const postToSlackTradeError = async (
     perpSide: "BUY" | "SELL",
     spotSide: 'BUY' | 'SELL',
     spotPrice: any,
-    spotSize:number,
-    error:string) => {
+    spotSize: number,
+    error: string) => {
 
-    
+
     const data = {
         "channel": TRADE_CHANNEL_ID,
         text: `${account} ${spotSide} Spot: ${spotPrice.toFixed(3)} Perp: ${perpSize} ${perpSide} ${perpPrice.toFixed(3)}`,
@@ -93,10 +93,10 @@ export const postToSlackTrade = async (
     perpSide: "BUY" | "SELL",
     spotSide: 'BUY' | 'SELL',
     spotPrice: any,
-    spotSize:number,
-    diffAmount:number) => {
+    spotSize: number,
+    diffAmount: number) => {
 
-    let tradeBlocks:any = []
+    let tradeBlocks: any = []
     if (perpSize > 0) {
         tradeBlocks.push({
             type: "section",
@@ -132,7 +132,7 @@ export const postToSlackTrade = async (
                 type: "section",
                 text: {
                     type: "mrkdwn",
-                    text: `Diff Amount $${diffAmount.toFixed(3)}`,   
+                    text: `Diff Amount $${diffAmount.toFixed(3)}`,
                 },
             },
             {
@@ -153,7 +153,7 @@ export const postToSlackTrade = async (
 }
 
 export const postToSlackAlert = async (account: string, side: "BUY" | "SELL",
-    diff: number, spotPrice: number, perpPrice: number, oraclePrice: number,fundingRate:number) => {
+    diff: number, spotPrice: number, perpPrice: number, oraclePrice: number, fundingRate: number) => {
     const message = `${account} ${side} Perp: ${(diff + PERP_BUY_PRICE_BUFFER).toFixed(3)}`
     const data = {
         "channel": ALERT_CHANNEL_ID,
@@ -214,11 +214,11 @@ export const postToSlackAlert = async (account: string, side: "BUY" | "SELL",
 
 export const postToSlackPriceAlert = async (
     oracle: number,
-    bestBid:number,
-    bestAsk:number,
-    buySpread:number,
-    sellSpread:number) => {
-    
+    bestBid: number,
+    bestAsk: number,
+    buySpread: number,
+    sellSpread: number) => {
+
     const alertType = buySpread > sellSpread ? 'BUY' : 'SELL'
     const spread = buySpread > sellSpread ? buySpread : sellSpread
 
@@ -238,7 +238,7 @@ export const postToSlackPriceAlert = async (
                 type: "section",
                 text: {
                     type: "mrkdwn",
-                    text: `SOL=$${oracle.toFixed(3)}.  Bid=$${bestBid.toFixed(3)} Ask=$${bestAsk.toFixed(3)}`,   
+                    text: `SOL=$${oracle.toFixed(3)}.  Bid=$${bestBid.toFixed(3)} Ask=$${bestAsk.toFixed(3)}`,
                 },
             },
             {
@@ -252,7 +252,6 @@ export const postToSlackPriceAlert = async (
 }
 
 export const postToSlack = async (data: any) => {
-    console.log('Posting to slack')
     const token = process.env.SLACK_TOKEN
     const url = "https://slack.com/api/chat.postMessage"
     const headers = {
@@ -260,7 +259,11 @@ export const postToSlack = async (data: any) => {
         'Authorization': `Bearer ${token}`
     }
     try {
-        await axios.post(url, data, { headers })
+        const SLACK_ARELRTS_ON = false
+        if (SLACK_ARELRTS_ON) {
+            const result = await axios.post(url, data, { headers })
+            console.log('posted to slack    ', result)
+        }
     } catch (e: any) {
         console.log('Error posting to slack:', e.message)
     }
