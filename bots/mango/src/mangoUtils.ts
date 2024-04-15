@@ -313,28 +313,30 @@ export async function reloadClient(client: Client) {
 }
 
 export const getBuyPriceBuffer = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') => {
+    const AMOUNT = 0.005
     switch (market) {
         case 'BTC-PERP':
-            return 0.04
+            return AMOUNT
         case 'SOL-PERP':
-            return 0.04
+            return AMOUNT
         case 'ETH-PERP':
-            return 0.04
+            return AMOUNT
         default:
-            return 0.04
+            return AMOUNT
     }
 }
 
 export const getSellPriceBuffer = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') => {
+    const AMOUNT = 0.0045
     switch (market) {
         case 'BTC-PERP':
-            return 0.002
+            return AMOUNT
         case 'SOL-PERP':
-            return 0.004
+            return AMOUNT
         case 'ETH-PERP':
-            return 0.003
+            return AMOUNT
         default:
-            return 0.003
+            return AMOUNT
     }
 }
 

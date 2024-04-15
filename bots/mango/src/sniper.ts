@@ -118,6 +118,10 @@ async function performSwap(client: Client,
     const values = group.perpMarketsMapByMarketIndex.values()
     const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
 
+    // set rates
+    db.setItem(DB_KEYS.USDC_BORROW_RATE, usdcBank.getBorrowRateUi() ||0 )
+    db.setItem (DB_KEYS.USDC_DEPOSIT_RATE, solBank.getDepositRateUi() || 0)
+
     if (market === "BTC-PERP") {
         perpBank = btcBank
         perpAmount = btcAmount
@@ -276,7 +280,7 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     let swapSol = 0
     let perpUsdc = 0
     let perpSol = 0
-    const feedItems = feed.data.filter((item: any) => new Date(item.block_datetime) > new Date('2024-04-09'))
+    const feedItems = feed.data.filter((item: any) => new Date(item.block_datetime) > new Date('2024-04-15'))
     // const feedItems = feed.data.slice(2,4)
     for (const item of feedItems) {
         if (item.activity_type === 'swap') {

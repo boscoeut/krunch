@@ -32,6 +32,9 @@ export async function updateGoogleSheet(
         const wormholePrice = jupPrice.wormholePrice || 0
         const feeEstimate = await db.getFeeEstimate(true) || 0
 
+        const borrowRate = db.getItem<number>(db.DB_KEYS.USDC_BORROW_RATE)
+        const depositRate = db.getItem <number>(db.DB_KEYS.USDC_DEPOSIT_RATE)
+
         //  accounts
         accountDetails.sort((a, b) => a.name.localeCompare(b.name));
         const accountValues = accountDetails.map((accountDetail) => {
@@ -63,7 +66,7 @@ export async function updateGoogleSheet(
                 accountDetail.btcBestBid,
                 accountDetail.btcBestAsk,
                 accountDetail.btcPrice,
-                accountDetail.ethPrice,
+                accountDetail.ethPrice
             ]
         });
 
@@ -103,7 +106,7 @@ export async function updateGoogleSheet(
                         }),
                     },
                     {
-                        range: `Market_data!B1:B17`,
+                        range: `Market_data!B1:B19`,
                         values: [
                             [fundingRates.solFundingRate / 100],
                             [fee],
@@ -121,7 +124,9 @@ export async function updateGoogleSheet(
                             [fundingRates.btcFundingRate / 100],
                             [fundingRates.ethFundingRate / 100],
                             [jupPrice.btcPrice],
-                            [jupPrice.ethPrice]
+                            [jupPrice.ethPrice],
+                            [borrowRate || 0],
+                            [depositRate || 0]
                         ],
                     },
                     {
