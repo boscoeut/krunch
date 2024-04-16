@@ -8,15 +8,15 @@ import {
 } from '@solana/web3.js';
 import axios from 'axios';
 import fs from 'fs';
-import { getBuyPriceBuffer, getSellPriceBuffer } from './mangoUtils';
+import { getDefaultTradeSize,canTradeAccount, getBuyPriceBuffer, getSellPriceBuffer,
+    getMaxLongPerpSize, getMaxShortPerpSize
+ } from './mangoUtils';
 import {
     ACTIVITY_FEED_URL,
     DEFAULT_PRIORITY_FEE,
     GOOGLE_UPDATE_INTERVAL,
     MAX_FEE,
-    MAX_LONG_PERP,
     MAX_PERP_TRADE_SIZE,
-    MAX_SHORT_PERP,
     MIN_HEALTH_FACTOR,
     MIN_SOL_WALLET_BALANCE,
     SLEEP_MAIN_LOOP_IN_MINUTES,
@@ -143,16 +143,17 @@ async function performSwap(client: Client,
 
     const spotVsPerpDiff = perpBalance + perpAmount + (INCLUDE_WALLET ? walletSol : 0)
     const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
+    const orderIds:Array<number> = []
 
     let spotSide: Side = Side.BUY
     let buyPerpTradeSize = getTradeSize(
         tradeSize, perpAmount,
         Side.BUY, accountDetails.borrow,
-        oraclePrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health, market)
+        oraclePrice, getMaxShortPerpSize(market,accountDefinition), getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market)
     let sellPerpTradeSize = getTradeSize(
         tradeSize, perpAmount,
         Side.SELL, accountDetails.borrow,
-        oraclePrice, MAX_SHORT_PERP, MAX_LONG_PERP, accountDetails.health, market)
+        oraclePrice, getMaxShortPerpSize(market,accountDefinition),  getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market)
 
     let spotAmount = 0
     if (spotUnbalanced) {
@@ -215,6 +216,7 @@ async function performSwap(client: Client,
                 perpSide,
                 market)
             tradeInstructions.push(...result.tradeInstructions)
+            orderIds.push(...result.orderIds)
             addressLookupTables.push(...result.addressLookupTables)
         } else {
             // place spot and perp trade.  perp trades are oracle pegged
@@ -243,10 +245,11 @@ async function performSwap(client: Client,
                 orders.length,
                 market)
             tradeInstructions.push(...result.tradeInstructions)
+            orderIds.push(...result.orderIds)
             addressLookupTables.push(...result.addressLookupTables)
         }
     }
-    return { tradeInstructions, addressLookupTables }
+    return { tradeInstructions, addressLookupTables, orderIds }
 }
 
 async function checkForPriceMismatch(
@@ -377,31 +380,39 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                     )
                     let tradeInstructions: Array<any> = []
                     let addressLookupTables: Array<any> = []
+                    let orderIds:Array<number> = []
 
-                    if (accountDefinition.canTrade && CAN_TRADE_NOW) {
+                    if (canTradeAccount(accountDefinition) && CAN_TRADE_NOW) {
                         if (accountDetails.walletSol < MIN_SOL_WALLET_BALANCE) {
                             const borrowAmount = SOL_RESERVE - accountDetails.walletSol
                             const mintPk = new PublicKey(SOL_MINT)
                             const borrowAmountBN = toNative(borrowAmount, client.group.getMintDecimals(mintPk));
                             await client.client.tokenWithdrawNative(client.group, client.mangoAccount!, mintPk, borrowAmountBN, true)
                         } else {
-                            if (accountDefinition.ethTradeSize > 0 && tradeInstructions.length <= 0) {
+                            const ethTradeSize = getDefaultTradeSize('ETH-PERP', accountDefinition)
+                            const btcTradeSize = getDefaultTradeSize('BTC-PERP', accountDefinition)
+                            const solTradeSize = getDefaultTradeSize('SOL-PERP', accountDefinition)
+
+                            if (ethTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
-                                    accountDetails, accountDefinition.ethTradeSize, fundingRates.ethFundingRate, client.group, "ETH-PERP")
+                                    accountDetails, ethTradeSize, fundingRates.ethFundingRate, client.group, "ETH-PERP")
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
+                                orderIds.push(...result.orderIds)
                             }                           
-                            if (accountDefinition.btcTradeSize > 0 && tradeInstructions.length <= 0) {
+                            if (btcTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
-                                    accountDetails, accountDefinition.btcTradeSize, fundingRates.btcFundingRate, client.group, "BTC-PERP")
+                                    accountDetails, btcTradeSize, fundingRates.btcFundingRate, client.group, "BTC-PERP")
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
+                                orderIds.push(...result.orderIds)
                             }
-                            if (accountDefinition.solTradeSize > 0 && tradeInstructions.length <= 0) {
+                            if (solTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
-                                    accountDetails, accountDefinition.solTradeSize, fundingRates.solFundingRate, client.group, "SOL-PERP")
+                                    accountDetails, solTradeSize, fundingRates.solFundingRate, client.group, "SOL-PERP")
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
+                                orderIds.push(...result.orderIds)
                             }
                         }
                     } else {
@@ -417,7 +428,8 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                             client.client,
                             client.group,
                             addressLookupTables,
-                            false)
+                            false, 
+                            orderIds)
                     }
                     return accountDetails
                 });

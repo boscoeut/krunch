@@ -23,7 +23,8 @@ export type OpenTransaction = {
   size: number,
   error: string,
   type: string,
-  market: string
+  market: string,
+  orderId: number
 }
 export enum Side {
   BUY = 'BUY',
@@ -82,16 +83,12 @@ export type AccountDetail = {
 };
 
 export type AccountDefinition = {
-  name: string,
+  name: string;
   key: string;
   usd: number;
   jup: number;
   privateKey: string;
-  canTrade: boolean,
-  useMangoSpotTrades: boolean,
-  solTradeSize: number,
-  btcTradeSize: number,
-  ethTradeSize: number
+  useMangoSpotTrades: boolean;
 };
 
 export class TokenAccount {

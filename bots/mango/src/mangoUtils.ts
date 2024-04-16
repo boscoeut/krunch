@@ -312,6 +312,22 @@ export async function reloadClient(client: Client) {
     }
 }
 
+export const canTradeAccount = (account: AccountDefinition) => {
+    const accounts = ["DRIFT","SOL_FLARE"]
+    return accounts.includes(account.name)
+}
+
+export const getDefaultTradeSize= (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP', account: AccountDefinition) => {  
+    switch (market) {
+        case 'BTC-PERP':
+            return 0.002
+        case 'SOL-PERP':
+            return 0.50
+        case 'ETH-PERP':
+            return 0.03
+    }
+}
+
 export const getBuyPriceBuffer = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') => {
     const AMOUNT = 0.005
     switch (market) {
@@ -323,6 +339,33 @@ export const getBuyPriceBuffer = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') 
             return AMOUNT
         default:
             return AMOUNT
+    }
+}
+
+export const getMaxLongPerpSize = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP', account:AccountDefinition) => {
+    switch (market) {
+        case 'BTC-PERP':
+            return 4000
+        case 'SOL-PERP':
+            return 4000
+        case 'ETH-PERP':
+            return 4000
+        default:
+            return 0
+    }
+}
+
+
+export const getMaxShortPerpSize = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP', account:AccountDefinition) => {
+    switch (market) {
+        case 'BTC-PERP':
+            return -4000
+        case 'SOL-PERP':
+            return -4000
+        case 'ETH-PERP':
+            return -4000
+        default:
+            return 0
     }
 }
 

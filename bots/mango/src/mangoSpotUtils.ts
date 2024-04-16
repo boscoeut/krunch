@@ -370,6 +370,7 @@ export const perpTrade = async (accountDefinition: AccountDefinition, client: Ma
     console.log(`  Amount=`, quantity)
     let addressLookupTables: any = []
     let tradeInstructions: any = []
+    const clientOrderId = Date.now()
     tradeInstructions.push(await client.perpUpdateFundingIx(group, perpMarket))
     tradeInstructions.push(await client.perpPlaceOrderIx(
         group,
@@ -379,7 +380,7 @@ export const perpTrade = async (accountDefinition: AccountDefinition, client: Ma
         price,// price 
         toFixedFloor(quantity),// quantity
         undefined,//maxQuoteQuantity,
-        Date.now(),//clientOrderId,
+        clientOrderId,//clientOrderId,
         PerpOrderType.limit,
         false, //reduceOnly
         Date.now() / 1000 + ORDER_EXPIRATION, //expiryTimestamp,
@@ -394,10 +395,11 @@ export const perpTrade = async (accountDefinition: AccountDefinition, client: Ma
         error: 'Pending',
         type: 'PERP',
         date: new Date(),
-        market
+        market,
+        orderId: clientOrderId
     })
 
-    return { tradeInstructions, addressLookupTables }
+    return { tradeInstructions, addressLookupTables, orderIds: [clientOrderId]}
 
 }
 
@@ -467,6 +469,7 @@ export const spotAndPerpSwap = async (
     let doSpot = spotAmount > 0
     let tradeInstructions: Array<any> = []
     let addressLookupTables: Array<any> = []
+    const orderIds: Array<number> = []
 
     console.log(`***** ${accountDefinition.name} spotAndPerpSwap *****`)
     const values = group.perpMarketsMapByMarketIndex.values()
@@ -480,7 +483,7 @@ export const spotAndPerpSwap = async (
         const quoteAmount = Side.BUY === spotSide ? spotAmount * perpPrice : spotAmount
         const { price, bestRoute: bestRoute } = await getBestPrice(spotSide, quoteAmount, inBank, outBank)
         spotPrice = price
-
+        const clientOrderId = Date.now()
         try {
             checkPrice(perpPrice, spotPrice, spotSide)
             const [ixs, alts] = await fetchJupiterTransaction(
@@ -507,6 +510,7 @@ export const spotAndPerpSwap = async (
             )
             addressLookupTables.push(...alts)
             tradeInstructions.push(...marginInstructions)
+            orderIds.push(clientOrderId)
             console.log(`${accountDefinition.name} SPOT ${spotSide}`)
             console.log(`  Price=`, spotPrice)
             console.log(`  Amount=`, spotAmount)
@@ -520,20 +524,12 @@ export const spotAndPerpSwap = async (
                 error: 'Pending',
                 type: 'SPOT',
                 date: new Date(),
-                market
+                market,
+                orderId: clientOrderId
             })
             postToSlackTradeError(accountDefinition.name, amountOut, spotPrice, spotSide, spotSide, spotPrice, amountOut, 'Pending')
         } catch (e: any) {
-            db.addOpenTransaction({
-                account: accountDefinition.name,
-                side: spotSide,
-                price: price,
-                size: 0,
-                error: 'ERROR: ' + e.message,
-                type: 'SPOT',
-                date: new Date(),
-                market
-            })
+            db.updateOpenTransaction(clientOrderId, 'ERROR: ' + e.message)
         }
     }
 
@@ -544,6 +540,7 @@ export const spotAndPerpSwap = async (
             //tradeInstructions.push(await client.perpUpdateFundingIx(group, perpMarket))
         }
         if (buyPerpSize > 0) {
+            const clientOrderId = Date.now()
             perpSide = PerpOrderSide.bid
             tradeInstructions.push(await client.perpPlaceOrderPeggedV2Ix(
                 group,
@@ -554,7 +551,7 @@ export const spotAndPerpSwap = async (
                 toFixedFloor(buyPerpSize),// size
                 undefined, //piglimit
                 undefined,//maxQuoteQuantity,
-                Date.now(),//clientOrderId,
+                clientOrderId,//clientOrderId,
                 PerpOrderType.limit,
                 PerpSelfTradeBehavior.cancelProvide,
                 false, //reduceOnly
@@ -569,11 +566,14 @@ export const spotAndPerpSwap = async (
                 error: 'Pending',
                 type: 'PERP',
                 date: new Date(),
-                market
+                market,
+                orderId: clientOrderId
             })
+            orderIds.push(clientOrderId)
         }
         if (sellPerpSize > 0) {
             perpSide = PerpOrderSide.ask
+            const clientOrderId = Date.now()
             tradeInstructions.push(await client.perpPlaceOrderPeggedV2Ix(
                 group,
                 mangoAccount!,
@@ -583,7 +583,7 @@ export const spotAndPerpSwap = async (
                 toFixedFloor(sellPerpSize),// size
                 undefined, //piglimit
                 undefined,//maxQuoteQuantity,
-                Date.now(),//clientOrderId,
+                clientOrderId,//clientOrderId,
                 PerpOrderType.limit,
                 PerpSelfTradeBehavior.cancelProvide,
                 false, //reduceOnly
@@ -598,8 +598,10 @@ export const spotAndPerpSwap = async (
                 error: 'Pending',
                 type: 'PERP',
                 date: new Date(),
-                market
+                market,
+                orderId: clientOrderId
             })
+            orderIds.push(clientOrderId)
         }
 
         if (numOrders > 1 && (buyPerpSize > 0 || sellPerpSize > 0)) {
@@ -612,11 +614,11 @@ export const spotAndPerpSwap = async (
         console.log(`   Oracle=`, perpPrice)
     }
 
-    return { tradeInstructions, addressLookupTables }
+    return { tradeInstructions, addressLookupTables, orderIds }
 
 }
 
-export const postTrades = async (accountName: string, tradeInstructions: any, client: MangoClient, group: Group, addressLookupTables: any, addDelay: boolean) => {
+export const postTrades = async (accountName: string, tradeInstructions: any, client: MangoClient, group: Group, addressLookupTables: any, addDelay: boolean, orderIds:Array<number>) => {
     try {
 
         if (tradeInstructions.length > 0) {
@@ -639,17 +641,9 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
             console.log(`*** ${accountName} TX COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
             console.log(`sig = ${sig.signature}`)
 
-            db.addOpenTransaction({
-                account: accountName,
-                side: Side.SELL,
-                price: 0,
-                size: 0,
-                error: 'COMPLETE',
-                type: 'PERP',
-                date: new Date(),
-                market: 'MULTIPLE'
-            })
-
+            for (let orderId of orderIds) {
+                db.updateOpenTransaction(orderId, 'COMPLETE')
+            }
 
             // sleep to allow perp trade to settle
             if (addDelay) {
@@ -658,16 +652,9 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
         }
     } catch (e: any) {
         const errorMessage = await handleError(e)
-        db.addOpenTransaction({
-            account: accountName,
-            side: Side.BUY,
-            price: 0,
-            size: 0,
-            error: errorMessage,
-            type: 'PERP',
-            date: new Date(),
-            market: 'MULTIPLE'
-        })
+        for (let orderId of orderIds) {
+            db.updateOpenTransaction(orderId, 'COMPLETE')
+        }
         postToSlackTradeError(accountName, 0, 0, 'BUY', 'SELL', 0, 0, errorMessage)
     }
 }

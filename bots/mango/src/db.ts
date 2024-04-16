@@ -37,6 +37,13 @@ export function addOpenTransaction(openTransaction: OpenTransaction) {
     }
 }
 
+export function updateOpenTransaction(orderId: number, error: string) {
+    const transaction = transactionCache.find((t) => t.orderId === orderId)
+    if (transaction) {
+        transaction.error = error
+    }
+}
+
 export function getTransactionCache() {
     return transactionCache
 }

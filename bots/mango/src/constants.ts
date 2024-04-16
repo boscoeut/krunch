@@ -16,8 +16,6 @@ export const MIN_USDC_WALLET_AMOUNT = 10
 // TRADING TRIGGERS
 export const MINUS_THRESHOLD = -75
 export const PLUS_THRESHOLD = 75
-export const MAX_SHORT_PERP = -5000
-export const MAX_LONG_PERP = 5000
 
 // TRADING PARAMS
 export const CAN_TRADE = false
