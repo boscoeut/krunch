@@ -39,7 +39,7 @@ export const MIN_HEALTH_FACTOR = 135
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
-export const FILTER_TO_ACCOUNTS: Array<String> = ["DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX"]
+export const FILTER_TO_ACCOUNTS: Array<String> = ["DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE"]
 
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 1 * 30
@@ -86,7 +86,7 @@ export const ACTIVITY_FEED_URL = 'https://api.mngo.cloud/data/v4/stats/activity-
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000
-export const DEFAULT_PRIORITY_FEE = 60_000
+export const DEFAULT_PRIORITY_FEE = 40_000
 export const FEE_MULTIPLIER = 1
 
 // JUP
