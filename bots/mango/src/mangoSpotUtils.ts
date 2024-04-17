@@ -654,7 +654,7 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
     } catch (e: any) {
         const errorMessage = await handleError(e)
         for (let orderId of orderIds) {
-            db.updateOpenTransaction(orderId, 'COMPLETE')
+            db.updateOpenTransaction(orderId, 'ERROR: '+ e.message)
         }
         postToSlackTradeError(accountName, 0, 0, 'BUY', 'SELL', 0, 0, errorMessage)
     }

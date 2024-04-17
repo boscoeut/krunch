@@ -73,7 +73,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
         maxSize = Math.min(maxSize, Math.abs(minPerp / solPrice) + solAmount)
     }
     let tradeSize = requestedTradeSize
-    if (solAmount > 0 && action === Side.BUY) {
+    if (solAmount >= 0 && action === Side.BUY) {
         tradeSize = Math.min(requestedTradeSize, maxSize)
         if (health < MIN_HEALTH_FACTOR) {
             tradeSize = 0
@@ -81,7 +81,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
     } else if (solAmount < 0 && action === Side.BUY) {
         const amt = Math.max(Math.abs(solAmount), maxSize)
         tradeSize = Math.min(requestedTradeSize, amt)
-    } else if (solAmount < 0 && action === Side.SELL) {
+    } else if (solAmount <= 0 && action === Side.SELL) {
         tradeSize = Math.min(requestedTradeSize, maxSize)
         if (health < MIN_HEALTH_FACTOR) {
             tradeSize = 0
@@ -178,6 +178,7 @@ async function performSwap(client: Client,
             perpMarket.perpMarketIndex,
             true
         )
+        db.setItem(DB_KEYS.OPEN_ORDERS, orders.length, {cacheKey: accountDefinition.name + '_' + market})
         const result = await checkForPriceMismatch(accountDefinition, oraclePrice, bestBid, bestAsk, market)
         const buyMismatch = result.buyMismatch > getBuyPriceBuffer(market) * oraclePrice
         const sellMismatch = result.sellMismatch > getSellPriceBuffer(market) * oraclePrice

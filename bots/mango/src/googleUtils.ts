@@ -38,6 +38,9 @@ export async function updateGoogleSheet(
         //  accounts
         accountDetails.sort((a, b) => a.name.localeCompare(b.name));
         const accountValues = accountDetails.map((accountDetail) => {
+            const solOrders = db.getItem(db.DB_KEYS.OPEN_ORDERS, {cacheKey: accountDetail.name + '_' + 'SOL-PERP'}) || 0
+            const btcOrders = db.getItem(db.DB_KEYS.OPEN_ORDERS, {cacheKey: accountDetail.name + '_' + 'BTC-PERP'}) || 0
+            const ethOrders = db.getItem(db.DB_KEYS.OPEN_ORDERS, {cacheKey: accountDetail.name + '_' + 'ETH-PERP'}) || 0
             return [
                 accountDetail.name,
                 accountDetail.historicalFunding,
@@ -66,7 +69,10 @@ export async function updateGoogleSheet(
                 accountDetail.btcBestBid,
                 accountDetail.btcBestAsk,
                 accountDetail.btcPrice,
-                accountDetail.ethPrice
+                accountDetail.ethPrice,
+                solOrders,
+                btcOrders,
+                ethOrders
             ]
         });
 
@@ -100,7 +106,7 @@ export async function updateGoogleSheet(
                 valueInputOption: 'USER_ENTERED',
                 data: [                    
                     {
-                        range: `Account_Data!A2:AB${accountValues.length + 1}`,
+                        range: `Account_Data!A2:AE${accountValues.length + 1}`,
                         values: accountValues.map((accountDetail) => {
                             return accountDetail
                         }),
