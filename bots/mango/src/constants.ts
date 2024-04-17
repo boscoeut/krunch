@@ -39,8 +39,7 @@ export const MIN_HEALTH_FACTOR = 125
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
-export const FILTER_TO_ACCOUNTS: Array<String> = []
-// export const FILTER_TO_ACCOUNTS = ['PRIVATE3']
+export const FILTER_TO_ACCOUNTS: Array<String> = ["DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX"]
 
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 1 * 30

@@ -14,6 +14,7 @@ import { getDefaultTradeSize,canTradeAccount, getBuyPriceBuffer, getSellPriceBuf
 import {
     ACTIVITY_FEED_URL,
     DEFAULT_PRIORITY_FEE,
+    FILTER_TO_ACCOUNTS,
     GOOGLE_UPDATE_INTERVAL,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
@@ -283,7 +284,9 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     let swapSol = 0
     let perpUsdc = 0
     let perpSol = 0
-    const feedItems = feed.data.filter((item: any) => new Date(item.block_datetime) > new Date('2024-04-15'))
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const feedItems = feed.data.filter((item: any) => new Date(item.block_datetime) > today)
     // const feedItems = feed.data.slice(2,4)
     for (const item of feedItems) {
         if (item.activity_type === 'swap') {
@@ -367,7 +370,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                 const newItems = accountDefinitions.map(async (accountDefinition) => {
                     let client = await db.getClient(accountDefinition, DEFAULT_PRIORITY_FEE)
 
-                    if (["DRIFT","SOL_FLARE","PRIVATE3","BUCKET"].includes(accountDefinition.name)) {
+                    if (FILTER_TO_ACCOUNTS.includes(accountDefinition.name)) {
                         await checkActivityFeed(accountDefinition.name, client.mangoAccount!.publicKey.toString())
                     }
 

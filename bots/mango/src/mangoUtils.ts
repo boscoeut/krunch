@@ -24,6 +24,7 @@ import {
     COMMITTMENT,
     DEFAULT_PRIORITY_FEE,
     FEE_CONNECTION_URL,
+    FILTER_TO_ACCOUNTS,
     FUNDING_RATE_API,
     GET_BLOCK_CONNECTION_URL,
     GROUP_ADDRESS_LOOKUP_TABLE_KEY,
@@ -314,7 +315,7 @@ export async function reloadClient(client: Client) {
 }
 
 export const canTradeAccount = (account: AccountDefinition) => {
-    const accounts = ["DRIFT","SOL_FLARE","PRIVATE3","BUCKET"]
+    const accounts = FILTER_TO_ACCOUNTS
     return accounts.includes(account.name)
 }
 
@@ -344,7 +345,7 @@ export const getSellPriceBuffer = (market: MarketKey) => {
 }
 
 export const getBuyPriceBuffer = (market: MarketKey) => {
-    const AMOUNT = 0.0065
+    const AMOUNT = 0.02
     switch (market) {
         case 'BTC-PERP':
             return AMOUNT
