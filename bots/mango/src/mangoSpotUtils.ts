@@ -39,6 +39,7 @@ import { getBuyPriceBuffer, sleep, toFixedFloor } from './mangoUtils';
 import { postToSlackTrade, postToSlackTradeError } from './slackUtils';
 import {
     AccountDefinition,
+    MarketKey,
     Side
 } from './types';
 
@@ -460,7 +461,7 @@ export const spotAndPerpSwap = async (
     sellPriceBuffer: number,
     buyPriceBuffer: number,
     numOrders: number,
-    market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') => {
+    market: MarketKey) => {
 
     let perpSide: PerpOrderSide = PerpOrderSide.bid
     let spotPrice = 0

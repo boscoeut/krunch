@@ -45,6 +45,7 @@ import {
     AccountDetail,
     Client,
     FundingRates,
+    MarketKey,
     TokenAccount,
     TotalAccountFundingItem,
     TotalInterestDataItem
@@ -313,11 +314,11 @@ export async function reloadClient(client: Client) {
 }
 
 export const canTradeAccount = (account: AccountDefinition) => {
-    const accounts = ["DRIFT","SOL_FLARE"]
+    const accounts = ["DRIFT","SOL_FLARE","PRIVATE3","BUCKET"]
     return accounts.includes(account.name)
 }
 
-export const getDefaultTradeSize= (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP', account: AccountDefinition) => {  
+export const getDefaultTradeSize= (market: MarketKey, account: AccountDefinition) => {  
     switch (market) {
         case 'BTC-PERP':
             return 0.002
@@ -328,7 +329,7 @@ export const getDefaultTradeSize= (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP',
     }
 }
 
-export const getBuyPriceBuffer = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') => {
+export const getSellPriceBuffer = (market: MarketKey) => {
     const AMOUNT = 0.005
     switch (market) {
         case 'BTC-PERP':
@@ -342,44 +343,46 @@ export const getBuyPriceBuffer = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') 
     }
 }
 
-export const getMaxLongPerpSize = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP', account:AccountDefinition) => {
+export const getBuyPriceBuffer = (market: MarketKey) => {
+    const AMOUNT = 0.0065
     switch (market) {
         case 'BTC-PERP':
-            return 4000
+            return AMOUNT
         case 'SOL-PERP':
-            return 4000
+            return AMOUNT
         case 'ETH-PERP':
-            return 4000
+            return AMOUNT
+        default:
+            return AMOUNT
+    }
+}
+
+export const getMaxLongPerpSize = (market: MarketKey, account:AccountDefinition) => {
+    const AMOUNT = 7000
+    switch (market) {
+        case 'BTC-PERP':
+            return AMOUNT
+        case 'SOL-PERP':
+            return AMOUNT
+        case 'ETH-PERP':
+            return AMOUNT
         default:
             return 0
     }
 }
 
 
-export const getMaxShortPerpSize = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP', account:AccountDefinition) => {
+export const getMaxShortPerpSize = (market: MarketKey, account:AccountDefinition) => {   
+    const AMOUNT = -7000
     switch (market) {
         case 'BTC-PERP':
-            return -4000
+            return AMOUNT
         case 'SOL-PERP':
-            return -4000
+            return AMOUNT
         case 'ETH-PERP':
-            return -4000
+            return AMOUNT
         default:
             return 0
-    }
-}
-
-export const getSellPriceBuffer = (market: 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP') => {
-    const AMOUNT = 0.0045
-    switch (market) {
-        case 'BTC-PERP':
-            return AMOUNT
-        case 'SOL-PERP':
-            return AMOUNT
-        case 'ETH-PERP':
-            return AMOUNT
-        default:
-            return AMOUNT
     }
 }
 

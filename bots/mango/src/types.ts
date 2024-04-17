@@ -82,6 +82,8 @@ export type AccountDetail = {
   btcPrice: number;
 };
 
+export type MarketKey = 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP'
+
 export type AccountDefinition = {
   name: string;
   key: string;

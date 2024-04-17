@@ -367,7 +367,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                 const newItems = accountDefinitions.map(async (accountDefinition) => {
                     let client = await db.getClient(accountDefinition, DEFAULT_PRIORITY_FEE)
 
-                    if (accountDefinition.name === 'DRIFT') {
+                    if (["DRIFT","SOL_FLARE","PRIVATE3","BUCKET"].includes(accountDefinition.name)) {
                         await checkActivityFeed(accountDefinition.name, client.mangoAccount!.publicKey.toString())
                     }
 
