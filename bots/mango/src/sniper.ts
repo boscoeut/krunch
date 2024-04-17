@@ -121,7 +121,7 @@ async function performSwap(client: Client,
 
     // set rates
     db.setItem(DB_KEYS.USDC_BORROW_RATE, usdcBank.getBorrowRateUi() ||0 )
-    db.setItem (DB_KEYS.USDC_DEPOSIT_RATE, solBank.getDepositRateUi() || 0)
+    db.setItem (DB_KEYS.USDC_DEPOSIT_RATE, usdcBank.getDepositRateUi() || 0)
 
     if (market === "BTC-PERP") {
         perpBank = btcBank
