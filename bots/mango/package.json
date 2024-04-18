@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node src/sniper.ts",
     "sniper": "ts-node src/sniper.ts",
+    "walletBalances": "ts-node src/getWalletBalances.ts",
     "pm2": "pm2 start -x ts-node src/pm2Test.ts",
     "pm": "pm2 start -x ts-node src/sniper.ts",
     "nodemon": "nodemon"

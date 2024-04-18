@@ -9,7 +9,8 @@ import {
 import axios from 'axios';
 import fs from 'fs';
 import { getDefaultTradeSize,canTradeAccount, getBuyPriceBuffer, getSellPriceBuffer,
-    getMaxLongPerpSize, getMaxShortPerpSize
+    getMaxLongPerpSize, getMaxShortPerpSize,
+    createKeypair
  } from './mangoUtils';
 import {
     ACTIVITY_FEED_URL,
@@ -486,6 +487,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 }
 
 try {
+    //    createKeypair();
     doubleSwapLoop(true, true, false);
 } catch (error) {
     console.log(error);

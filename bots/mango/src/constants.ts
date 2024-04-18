@@ -56,6 +56,8 @@ export const CURRENT_FUNDING_EXPIRATION = 5
 // MINTS
 export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
 export const SOL_MINT = 'So11111111111111111111111111111111111111112'
+export const W_MINT = '85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ'
+export const JUP_MINT = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN'
 export const SOL_RESERVE = 0.035
 export const USDC_DECIMALS = 6
 export const SOL_DECIMALS = 9

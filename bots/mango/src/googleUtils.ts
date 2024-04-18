@@ -20,11 +20,33 @@ export function loadSavedCredentialsIfExist() {
     }
 }
 
+export async function updateWallets(items: any[]) {
+    try {
+        const googleClient: any = await authorize();
+        const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
+        await googleSheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            resource: {
+                valueInputOption: 'USER_ENTERED',
+                data: [
+                    {
+                        range: `Wallets!A4:E${items.length + 3}`,
+                        values: items,
+                    },
+                    
+                ]
+            }
+        });
+    } catch (e) {
+        console.error('Error updating google sheet', e);
+    }
+}
+
 export async function updateGoogleSheet(
-    fundingRates:FundingRates,
+    fundingRates: FundingRates,
     googleSheets: any,
-    accountDetails: AccountDetail[] = [], fee: number, 
-    transactionCache: OpenTransaction[] = [],bestBuyPrice:number,bestSellPrice:number,
+    accountDetails: AccountDetail[] = [], fee: number,
+    transactionCache: OpenTransaction[] = [], bestBuyPrice: number, bestSellPrice: number,
     solPrice: number
 ) {
     try {
@@ -33,14 +55,14 @@ export async function updateGoogleSheet(
         const feeEstimate = await db.getFeeEstimate(true) || 0
 
         const borrowRate = db.getItem<number>(db.DB_KEYS.USDC_BORROW_RATE)
-        const depositRate = db.getItem <number>(db.DB_KEYS.USDC_DEPOSIT_RATE)
+        const depositRate = db.getItem<number>(db.DB_KEYS.USDC_DEPOSIT_RATE)
 
         //  accounts
         accountDetails.sort((a, b) => a.name.localeCompare(b.name));
         const accountValues = accountDetails.map((accountDetail) => {
-            const solOrders = db.getItem(db.DB_KEYS.OPEN_ORDERS, {cacheKey: accountDetail.name + '_' + 'SOL-PERP'}) || 0
-            const btcOrders = db.getItem(db.DB_KEYS.OPEN_ORDERS, {cacheKey: accountDetail.name + '_' + 'BTC-PERP'}) || 0
-            const ethOrders = db.getItem(db.DB_KEYS.OPEN_ORDERS, {cacheKey: accountDetail.name + '_' + 'ETH-PERP'}) || 0
+            const solOrders = db.getItem(db.DB_KEYS.OPEN_ORDERS, { cacheKey: accountDetail.name + '_' + 'SOL-PERP' }) || 0
+            const btcOrders = db.getItem(db.DB_KEYS.OPEN_ORDERS, { cacheKey: accountDetail.name + '_' + 'BTC-PERP' }) || 0
+            const ethOrders = db.getItem(db.DB_KEYS.OPEN_ORDERS, { cacheKey: accountDetail.name + '_' + 'ETH-PERP' }) || 0
             return [
                 accountDetail.name,
                 accountDetail.historicalFunding,
@@ -80,12 +102,12 @@ export async function updateGoogleSheet(
         const bestAsk = accountDetails[0]?.bestAsk || 0
 
         // transactions
-        const transactionValues:any[] = []
-        for(let i=0; i<10; i++) {  
-            let transaction:any = transactionCache[i]
-            if (!transaction){
-                transactionValues.push(["","","","","","","",""])
-            }else{
+        const transactionValues: any[] = []
+        for (let i = 0; i < 10; i++) {
+            let transaction: any = transactionCache[i]
+            if (!transaction) {
+                transactionValues.push(["", "", "", "", "", "", "", ""])
+            } else {
                 transactionValues.push([
                     toGoogleSheetsDate(transaction.date),
                     transaction.account,
@@ -97,14 +119,14 @@ export async function updateGoogleSheet(
                     transaction.error || "N/A"
                 ])
             }
-            
+
         }
 
         await googleSheets.spreadsheets.values.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,
             resource: {
                 valueInputOption: 'USER_ENTERED',
-                data: [                    
+                data: [
                     {
                         range: `Account_Data!A2:AE${accountValues.length + 1}`,
                         values: accountValues.map((accountDetail) => {

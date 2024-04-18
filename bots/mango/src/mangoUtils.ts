@@ -53,7 +53,7 @@ import {
 } from './types';
 
 export function createKeypair() {
-    let mnemonic = bip39.generateMnemonic();
+    let mnemonic = bip39.generateMnemonic(256);
     console.log(mnemonic);
     console.log(mnemonic.replace(/ /g, ''));
     const seed = bip39.mnemonicToSeedSync(mnemonic).slice(0, 32);
