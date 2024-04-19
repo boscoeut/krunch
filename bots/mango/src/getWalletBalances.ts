@@ -8,10 +8,9 @@ async function checkBalances() {
     const connection = new Connection(CLUSTER_URL!, {
         commitment: COMMITTMENT
     });
-    let accountDefinitions: Array<any> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     let accounts: Array<any> = JSON.parse(fs.readFileSync('./secrets/accounts.json', 'utf8') as string)
 
-    let allItems =[...accounts,...accountDefinitions]
+    let allItems =[...accounts]
 
     const items: Array<any> = []
 

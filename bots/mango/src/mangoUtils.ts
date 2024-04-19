@@ -247,18 +247,22 @@ export const getClient = async (user: Keypair, prioritizationFee: number): Promi
 
     const wallet = new Wallet(user);
     const provider = new AnchorProvider(connection, wallet, options);
-    const client = MangoClient.connect(provider, CLUSTER, MANGO_V4_ID[CLUSTER], {
-        idsSource: 'api',
-        prioritizationFee: USE_PRIORITY_FEE ? prioritizationFee : undefined,
-        multipleConnections: backupConnections,
-        postSendTxCallback: (txCallbackOptions: any) => {
-            console.log('<<<<>>>> Transaction txCallbackOptions', `https://explorer.solana.com/tx/${txCallbackOptions.txid}`)
+    try {
+        const client = MangoClient.connect(provider, CLUSTER, MANGO_V4_ID[CLUSTER], {
+            idsSource: 'api',
+            prioritizationFee: USE_PRIORITY_FEE ? prioritizationFee : undefined,
+            multipleConnections: backupConnections,
+            postSendTxCallback: (txCallbackOptions: any) => {
+                console.log('<<<<>>>> Transaction txCallbackOptions', `https://explorer.solana.com/tx/${txCallbackOptions.txid}`)
+            }
+        });
+        const group = await client.getGroup(new PublicKey(GROUP_PK));
+        const ids = await client.getIds(group.publicKey);
+        return {
+            client, user, group, ids, wallet
         }
-    });
-    const group = await client.getGroup(new PublicKey(GROUP_PK));
-    const ids = await client.getIds(group.publicKey);
-    return {
-        client, user, group, ids, wallet
+    } catch (e:any) {
+       throw e
     }
 }
 
@@ -319,7 +323,7 @@ export const canTradeAccount = (account: AccountDefinition) => {
     return accounts.includes(account.name)
 }
 
-export const getDefaultTradeSize= (market: MarketKey, account: AccountDefinition) => {  
+export const getDefaultTradeSize = (market: MarketKey, account: AccountDefinition) => {
     switch (market) {
         case 'BTC-PERP':
             return 0.002
@@ -358,7 +362,7 @@ export const getBuyPriceBuffer = (market: MarketKey) => {
     }
 }
 
-export const getMaxLongPerpSize = (market: MarketKey, account:AccountDefinition) => {
+export const getMaxLongPerpSize = (market: MarketKey, account: AccountDefinition) => {
     const AMOUNT = 7000
     switch (market) {
         case 'BTC-PERP':
@@ -373,7 +377,7 @@ export const getMaxLongPerpSize = (market: MarketKey, account:AccountDefinition)
 }
 
 
-export const getMaxShortPerpSize = (market: MarketKey, account:AccountDefinition) => {   
+export const getMaxShortPerpSize = (market: MarketKey, account: AccountDefinition) => {
     const AMOUNT = -7000
     switch (market) {
         case 'BTC-PERP':
