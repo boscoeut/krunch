@@ -15,6 +15,7 @@ import {
     getBidsAndAsks as utilGetBidsAndAsks
 } from './mangoUtils';
 import { AccountDefinition, AccountDetail, CacheItem, OpenTransaction } from "./types";
+import { postToSlackTrade, postToSlackTradeError } from "./slackUtils";
 
 const transactionCache: OpenTransaction[] = []
 let openTransactions = 0
@@ -41,6 +42,14 @@ export function updateOpenTransaction(orderId: number, error: string) {
     const transaction = transactionCache.find((t) => t.orderId === orderId)
     if (transaction) {
         transaction.error = error
+        let spotSize = transaction.type === "PERP" ? 0:transaction.size
+        let perpSize = transaction.type === "PERP" ? transaction.size:0
+       
+        if (error?.toUpperCase().indexOf("ERROR")>-1){
+            postToSlackTradeError(transaction.account,perpSize,transaction.price,transaction.side as "BUY"|"SELL",transaction.side  as "BUY"|"SELL",transaction.price,spotSize,error)
+        }else{
+            postToSlackTrade(transaction.account,transaction.price,perpSize,transaction.price,transaction.side as "BUY"|"SELL",transaction.side  as "BUY"|"SELL",transaction.price,spotSize,0)
+        }
     }
 }
 

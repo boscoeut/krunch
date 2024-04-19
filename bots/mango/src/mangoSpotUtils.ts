@@ -527,8 +527,7 @@ export const spotAndPerpSwap = async (
                 date: new Date(),
                 market,
                 orderId: clientOrderId
-            })
-            postToSlackTradeError(accountDefinition.name, amountOut, spotPrice, spotSide, spotSide, spotPrice, amountOut, 'Pending')
+            })            
         } catch (e: any) {
             db.updateOpenTransaction(clientOrderId, 'ERROR: ' + e.message)
         }
@@ -624,8 +623,7 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
 
         if (tradeInstructions.length > 0) {
             db.incrementOpenTransactions()
-            postToSlackTrade(accountName, 0, 0, 0, 'BUY', 'SELL', 0, 0, 0)
-
+            
             const request = client.sendAndConfirmTransactionForGroup(
                 group,
                 tradeInstructions,
@@ -654,8 +652,7 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
     } catch (e: any) {
         const errorMessage = await handleError(e)
         for (let orderId of orderIds) {
-            db.updateOpenTransaction(orderId, 'ERROR: '+ e.message)
+            db.updateOpenTransaction(orderId, 'ERROR: '+ errorMessage)
         }
-        postToSlackTradeError(accountName, 0, 0, 'BUY', 'SELL', 0, 0, errorMessage)
     }
 }

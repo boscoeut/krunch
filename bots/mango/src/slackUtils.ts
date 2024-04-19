@@ -1,6 +1,5 @@
 import axios from "axios"
 import { PERP_BUY_PRICE_BUFFER, PERP_SELL_PRICE_BUFFER } from "./constants"
-import * as db from "./db"
 
 const FUNDING_CHANNEL_ID = "C06S9MMH57B"
 const TRADE_CHANNEL_ID = "C06S9L6EXDX"
@@ -259,8 +258,8 @@ export const postToSlack = async (data: any) => {
         'Authorization': `Bearer ${token}`
     }
     try {
-        const SLACK_ARELRTS_ON = false
-        if (SLACK_ARELRTS_ON) {
+        const SLACK_ARELRTS_ON = true
+        if (SLACK_ARELRTS_ON && data.channel === TRADE_CHANNEL_ID) {
             const result = await axios.post(url, data, { headers })
             console.log('posted to slack    ', result)
         }
