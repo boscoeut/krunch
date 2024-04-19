@@ -327,7 +327,7 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     console.log(`${accountName} SWAP: ${swapUsdcTotal} USDC`)
     console.log(`${accountName} PERP: ${perpUsdcTotal} USDC`)
     console.log(`${accountName} TOTAL: ${(swapUsdcTotal + perpUsdcTotal)} USDC`)
-    db.tradeHistory.set(accountName, swapUsdcTotal + perpUsdcTotal)
+    db.tradeHistory.set(accountName, perpUsdc + swapUsdc)
 }
 
 async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
@@ -488,7 +488,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 
 try {
     //    createKeypair();
-    doubleSwapLoop(false, true, false);
+    doubleSwapLoop(true, true, false);
 } catch (error) {
     console.log(error);
 }

@@ -338,7 +338,7 @@ export const getSellPriceBuffer = (market: MarketKey) => {
     const AMOUNT = 0.005
     switch (market) {
         case 'BTC-PERP':
-            return AMOUNT
+            return 0.0035
         case 'SOL-PERP':
             return AMOUNT
         case 'ETH-PERP':
