@@ -48,7 +48,9 @@ export function updateOpenTransaction(orderId: number, error: string) {
         if (error?.toUpperCase().indexOf("ERROR")>-1){
             postToSlackTradeError(transaction.account,perpSize,transaction.price,transaction.side as "BUY"|"SELL",transaction.side  as "BUY"|"SELL",transaction.price,spotSize,error)
         }else{
-            postToSlackTrade(transaction.account,transaction.price,perpSize,transaction.price,transaction.side as "BUY"|"SELL",transaction.side  as "BUY"|"SELL",transaction.price,spotSize,0)
+            postToSlackTrade(transaction.account,transaction.price,perpSize,
+                transaction.price,transaction.side as "BUY"|"SELL",transaction.side  as "BUY"|"SELL",
+                transaction.price,spotSize,0, transaction.market, transaction.type)
         }
     }
 }

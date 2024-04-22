@@ -261,8 +261,8 @@ export const getClient = async (user: Keypair, prioritizationFee: number): Promi
         return {
             client, user, group, ids, wallet
         }
-    } catch (e:any) {
-       throw e
+    } catch (e: any) {
+        throw e
     }
 }
 
@@ -328,37 +328,29 @@ export const getDefaultTradeSize = (market: MarketKey, account: AccountDefinitio
         case 'BTC-PERP':
             return 0.002
         case 'SOL-PERP':
-            return 0.50
+            return 3
         case 'ETH-PERP':
             return 0.03
     }
 }
 
-export const getSellPriceBuffer = (market: MarketKey) => {
+export const getSellPriceBuffer = (market: MarketKey, account: string) => {
     const AMOUNT = 0.005
-    switch (market) {
-        case 'BTC-PERP':
-            return 0.0035
-        case 'SOL-PERP':
-            return 0.004
-        case 'ETH-PERP':
-            return AMOUNT
-        default:
-            return AMOUNT
+    // return AMOUNT
+    if (market === 'SOL-PERP') {
+        return 0.0025
+    } else {
+        return AMOUNT
     }
 }
 
-export const getBuyPriceBuffer = (market: MarketKey) => {
+export const getBuyPriceBuffer = (market: MarketKey, account: string) => {
     const AMOUNT = 0.02
-    switch (market) {
-        case 'BTC-PERP':
-            return AMOUNT
-        case 'SOL-PERP':
-            return AMOUNT
-        case 'ETH-PERP':
-            return AMOUNT
-        default:
-            return AMOUNT
+    // return AMOUNT
+    if (market === 'SOL-PERP') {
+        return 0.002
+    } else {
+        return AMOUNT
     }
 }
 

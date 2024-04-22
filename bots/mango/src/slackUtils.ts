@@ -93,24 +93,26 @@ export const postToSlackTrade = async (
     spotSide: 'BUY' | 'SELL',
     spotPrice: any,
     spotSize: number,
-    diffAmount: number) => {
+    diffAmount: number,
+    market:string,
+    type:string) => {
 
     let tradeBlocks: any = []
-    if (perpSize > 0) {
+    if (type === "PERP") {
         tradeBlocks.push({
             type: "section",
             text: {
                 type: "mrkdwn",
-                text: `*${perpSide} PERP: ${perpSize} Price: ${perpPrice.toFixed(3)}*`,
+                text: `*${market} ${perpSide} PERP: ${perpSize} Price: ${perpPrice.toFixed(3)}*`,
             },
         })
     }
-    if (spotSize > 0) {
+    if (type==="SPOT") {
         tradeBlocks.push({
             type: "section",
             text: {
                 type: "mrkdwn",
-                text: `*${spotSide} SPOT: ${spotSize} Price: ${spotPrice.toFixed(3)}*`,
+                text: `*${market} ${spotSide} SPOT: ${spotSize} Price: ${spotPrice.toFixed(3)}*`,
             },
         })
     }
@@ -123,7 +125,7 @@ export const postToSlackTrade = async (
                 type: "section",
                 text: {
                     type: "mrkdwn",
-                    text: `*${account} ${solPrice.toFixed(3)}*`,
+                    text: `*${market} ${account} ${solPrice.toFixed(3)}*`,
                 },
             },
             ...tradeBlocks,

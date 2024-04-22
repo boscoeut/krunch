@@ -159,16 +159,17 @@ async function performSwap(client: Client,
 
     let spotAmount = 0
     if (spotUnbalanced) {
+        const MAX_TRADE = MAX_PERP_TRADE_SIZE / oraclePrice
         if (spotVsPerpDiff > 0) {
             spotSide = Side.SELL
             buyPerpTradeSize = 0
             sellPerpTradeSize = 0
-            spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+            spotAmount = Math.min(MAX_TRADE, Math.abs(spotVsPerpDiff))
         } else {
             spotSide = Side.BUY
             buyPerpTradeSize = 0
             sellPerpTradeSize = 0
-            spotAmount = Math.min(MAX_PERP_TRADE_SIZE, Math.abs(spotVsPerpDiff))
+            spotAmount = Math.min(MAX_TRADE, Math.abs(spotVsPerpDiff))
         }
     }
 
@@ -181,8 +182,8 @@ async function performSwap(client: Client,
         )
         db.setItem(DB_KEYS.OPEN_ORDERS, orders.length, {cacheKey: accountDefinition.name + '_' + market})
         const result = await checkForPriceMismatch(accountDefinition, oraclePrice, bestBid, bestAsk, market)
-        const buyMismatch = result.buyMismatch > getBuyPriceBuffer(market) * oraclePrice
-        const sellMismatch = result.sellMismatch > getSellPriceBuffer(market) * oraclePrice
+        const buyMismatch = result.buyMismatch > getBuyPriceBuffer(market, accountDefinition.name) * oraclePrice
+        const sellMismatch = result.sellMismatch > getSellPriceBuffer(market, accountDefinition.name) * oraclePrice
 
         let shouldExecuteImmediately = false
         let perpSize = 0
@@ -192,7 +193,7 @@ async function performSwap(client: Client,
             // If balanced and there is a price mismatch, place a perp trade
             const side = result.buyMismatch > result.sellMismatch ? PerpOrderSide.bid : PerpOrderSide.ask
             let size = side === PerpOrderSide.bid ? buyPerpTradeSize : sellPerpTradeSize
-            const price = side === PerpOrderSide.bid ? perpPrice - (getBuyPriceBuffer(market) * perpPrice) : perpPrice + (getSellPriceBuffer(market) * perpPrice)
+            const price = side === PerpOrderSide.bid ? perpPrice - (getBuyPriceBuffer(market, accountDefinition.name) * perpPrice) : perpPrice + (getSellPriceBuffer(market, accountDefinition.name) * perpPrice)
             if (side === PerpOrderSide.bid && orders.find(o => o.side === PerpOrderSide.bid && !o.isOraclePegged)) {
                 size = 0
             }
@@ -243,8 +244,8 @@ async function performSwap(client: Client,
                 perpPrice,
                 buyPerpTradeSize,
                 sellPerpTradeSize,
-                spotUnbalanced ? 0 : (perpPrice * getSellPriceBuffer(market)),
-                spotUnbalanced ? 0 : (perpPrice * getBuyPriceBuffer(market)),
+                spotUnbalanced ? 0 : (perpPrice * getSellPriceBuffer(market, accountDefinition.name)),
+                spotUnbalanced ? 0 : (perpPrice * getBuyPriceBuffer(market, accountDefinition.name)),
                 orders.length,
                 market)
             tradeInstructions.push(...result.tradeInstructions)
@@ -261,8 +262,8 @@ async function checkForPriceMismatch(
     bestBid: number,
     bestAsk: number,
     market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP") {
-    const buyPriceBuffer = getBuyPriceBuffer(market) * perpPrice
-    const sellPriceBuffer = getSellPriceBuffer(market) * perpPrice
+    const buyPriceBuffer = getBuyPriceBuffer(market,accountDefinition.name) * perpPrice
+    const sellPriceBuffer = getSellPriceBuffer(market, accountDefinition.name) * perpPrice
 
     const buySpread = perpPrice - bestAsk
     const sellSpread = bestBid - perpPrice

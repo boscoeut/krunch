@@ -36,7 +36,6 @@ import {
 } from './constants';
 import * as db from './db';
 import { getBuyPriceBuffer, sleep, toFixedFloor } from './mangoUtils';
-import { postToSlackTrade, postToSlackTradeError } from './slackUtils';
 import {
     AccountDefinition,
     MarketKey,
@@ -561,7 +560,7 @@ export const spotAndPerpSwap = async (
             db.addOpenTransaction({
                 account: accountDefinition.name,
                 side: Side.BUY,
-                price: perpPrice - 1 * getBuyPriceBuffer(market),
+                price: perpPrice - 1 * getBuyPriceBuffer(market, accountDefinition.name),
                 size: toFixedFloor(buyPerpSize),
                 error: 'Pending',
                 type: 'PERP',
@@ -593,7 +592,7 @@ export const spotAndPerpSwap = async (
             db.addOpenTransaction({
                 account: accountDefinition.name,
                 side: Side.SELL,
-                price: perpPrice + 1 * getBuyPriceBuffer(market),
+                price: perpPrice + 1 * getBuyPriceBuffer(market, accountDefinition.name),
                 size: toFixedFloor(sellPerpSize),
                 error: 'Pending',
                 type: 'PERP',

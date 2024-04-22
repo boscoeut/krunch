@@ -2,8 +2,7 @@ import { PerpOrderType } from '@blockworks-foundation/mango-v4';
 import { Cluster, PublicKey } from '@solana/web3.js';
 
 // THRESHOLDS
-export const MAX_SPOT_TRADE_SIZE = 4
-export const MAX_PERP_TRADE_SIZE = 4
+export const MAX_PERP_TRADE_SIZE = 1000
 export const EXTRA_USDC_AMOUNT = 0.02
 export const MIN_DIFF_SIZE = 0.1
 export const MIN_SPOT_USDC_DIFF = 0.15
@@ -39,7 +38,8 @@ export const MIN_HEALTH_FACTOR = 135
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
-export const FILTER_TO_ACCOUNTS: Array<String> = ["DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2"]
+// export const FILTER_TO_ACCOUNTS: Array<String> = [  "SEVEN", "SIX", "FIVE", "DRIFT", "SOL_FLARE"]
+export const FILTER_TO_ACCOUNTS: Array<String> = ["DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
 
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 1 * 30
