@@ -5,6 +5,7 @@ import {
     DEFAULT_CACHE_EXPIRATION,
     FEE_CACHE_EXPIRATION,
     FUNDING_CACHE_EXPIRATION,
+    TRANSACTION_CACHE_SIZE,
     INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION
 } from "./constants";
 import {
@@ -33,7 +34,7 @@ export const tradeHistory = new Map<string, number>()
 
 export function addOpenTransaction(openTransaction: OpenTransaction) {
     transactionCache.unshift(openTransaction)
-    if (transactionCache.length > 10) {
+    if (transactionCache.length > TRANSACTION_CACHE_SIZE) {
         transactionCache.pop()
     }
 }

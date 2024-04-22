@@ -328,7 +328,7 @@ export const getDefaultTradeSize = (market: MarketKey, account: AccountDefinitio
         case 'BTC-PERP':
             return 0.002
         case 'SOL-PERP':
-            return 3
+            return 2
         case 'ETH-PERP':
             return 0.03
     }
@@ -338,7 +338,7 @@ export const getSellPriceBuffer = (market: MarketKey, account: string) => {
     const AMOUNT = 0.005
     // return AMOUNT
     if (market === 'SOL-PERP') {
-        return 0.0025
+        return 0.002
     } else {
         return AMOUNT
     }

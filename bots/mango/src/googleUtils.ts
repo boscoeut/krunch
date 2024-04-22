@@ -3,7 +3,7 @@ import path from 'path';
 import * as db from './db';
 import { AccountDetail, FundingRates, OpenTransaction } from './types';
 
-import { SPREADSHEET_ID } from './constants';
+import { SPREADSHEET_ID, TRANSACTION_CACHE_SIZE } from './constants';
 const { authenticate } = require('@google-cloud/local-auth');
 const { google } = require('googleapis');
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
@@ -103,7 +103,7 @@ export async function updateGoogleSheet(
 
         // transactions
         const transactionValues: any[] = []
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < TRANSACTION_CACHE_SIZE; i++) {
             let transaction: any = transactionCache[i]
             if (!transaction) {
                 transactionValues.push(["", "", "", "", "", "", "", ""])
@@ -158,7 +158,7 @@ export async function updateGoogleSheet(
                         ],
                     },
                     {
-                        range: `Transaction_Cache!A2:H11`,
+                        range: `Transaction_Cache!A2:H${TRANSACTION_CACHE_SIZE+1}`,
                         values: transactionValues
                     }
                 ]
