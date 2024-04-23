@@ -8,10 +8,6 @@ import {
 } from '@solana/web3.js';
 import axios from 'axios';
 import fs from 'fs';
-import { getDefaultTradeSize,canTradeAccount, getBuyPriceBuffer, getSellPriceBuffer,
-    getMaxLongPerpSize, getMaxShortPerpSize,
-    createKeypair
- } from './mangoUtils';
 import {
     ACTIVITY_FEED_URL,
     DEFAULT_PRIORITY_FEE,
@@ -36,7 +32,11 @@ import {
     spotAndPerpSwap
 } from './mangoSpotUtils';
 import {
+    canTradeAccount, getBuyPriceBuffer,
+    getDefaultTradeSize,
     getFundingRate,
+    getMaxLongPerpSize, getMaxShortPerpSize,
+    getSellPriceBuffer,
     sleep
 } from './mangoUtils';
 import { postToSlackFunding, postToSlackPriceAlert } from './slackUtils';
@@ -185,6 +185,7 @@ async function performSwap(client: Client,
         const buyMismatch = result.buyMismatch > getBuyPriceBuffer(market, accountDefinition.name) * oraclePrice
         const sellMismatch = result.sellMismatch > getSellPriceBuffer(market, accountDefinition.name) * oraclePrice
 
+        const IMMEDIATE_EXECUTION = false //  set to true when you want to place a trade immediately if there is a price mismatch
         let shouldExecuteImmediately = false
         let perpSize = 0
         let perpSide: PerpOrderSide = PerpOrderSide.bid
@@ -209,7 +210,7 @@ async function performSwap(client: Client,
             }
         }
 
-        if (shouldExecuteImmediately) {
+        if (shouldExecuteImmediately && IMMEDIATE_EXECUTION) {
             const result = await perpTrade(
                 accountDefinition,
                 client.client,
@@ -228,7 +229,13 @@ async function performSwap(client: Client,
             if (orders.find(o => o.side === PerpOrderSide.bid)) {
                 buyPerpTradeSize = 0
             }
+            if (fundingRate > 0){
+                buyPerpTradeSize = 0
+            }
             if (orders.find(o => o.side === PerpOrderSide.ask)) {
+                sellPerpTradeSize = 0
+            }
+            if (fundingRate <= 0){
                 sellPerpTradeSize = 0
             }
             const result = await spotAndPerpSwap(

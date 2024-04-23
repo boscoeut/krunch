@@ -324,14 +324,26 @@ export const canTradeAccount = (account: AccountDefinition) => {
 }
 
 export const getDefaultTradeSize = (market: MarketKey, account: AccountDefinition) => {
-    switch (market) {
-        case 'BTC-PERP':
-            return 0.002
-        case 'SOL-PERP':
-            return 2
-        case 'ETH-PERP':
-            return 0.03
+    if (account.name ==="ACCOUNT2"){
+        switch (market) {
+            case 'BTC-PERP':
+                return 0.001
+            case 'SOL-PERP':
+                return 0.25
+            case 'ETH-PERP':
+                return 0.01
+        }
+    }else{
+        switch (market) {
+            case 'BTC-PERP':
+                return 0.002
+            case 'SOL-PERP':
+                return 2
+            case 'ETH-PERP':
+                return 0.03
+        }
     }
+    
 }
 
 export const getSellPriceBuffer = (market: MarketKey, account: string) => {
