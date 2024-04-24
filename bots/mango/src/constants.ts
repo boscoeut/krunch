@@ -28,18 +28,19 @@ export const SOL_BUFFER = 0.005
 export const SWAP_ONLY_DIRECT_ROUTES = false
 export const JUP_ONLY_DIRECT_ROUTES = false
 export const CHECK_OPEN_ORDERS = false
-export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.2
-export const JUPITER_SPOT_SLIPPAGE = 25
+export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.1
+export const JUPITER_SPOT_SLIPPAGE = 10
 export const PERP_BUY_PRICE_BUFFER = 0.55
 export const PERP_SELL_PRICE_BUFFER = 0.75
 export const FUNDING_RATE_PRICE_RATIO = 600
 export const POST_TRADE_TIMEOUT = 45
 export const MIN_HEALTH_FACTOR = 135
+export const FUNDING_RATE_THRESHOLD = 15
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
 // export const FILTER_TO_ACCOUNTS: Array<String> = [  "SEVEN", "SIX", "FIVE", "DRIFT", "SOL_FLARE"]
-export const FILTER_TO_ACCOUNTS: Array<String> = ["DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
+export const FILTER_TO_ACCOUNTS: Array<String> = ["SEVEN","DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
 
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 1 * 30
@@ -69,8 +70,8 @@ export const FUNDING_HOURLY = 'https://api.mngo.cloud/data/v4/one-hour-funding-r
 export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
 export const SOL_GROUP_PK = '78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
 export const COMMITTMENT = 'processed'
-// export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy robo
-export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/TwEGOh2Jxfb6fiqCCsZ9k3urgbjOtRSH'; // alchemy boscoe
+export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy robo
+// export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/TwEGOh2Jxfb6fiqCCsZ9k3urgbjOtRSH'; // alchemy boscoe
 
 export const ALCHEMY_WS_URL = "wss://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0"
 export const LITE_RPC_URL = "https://api.mngo.cloud/lite-rpc/v1/"

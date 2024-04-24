@@ -19,7 +19,8 @@ import {
     MIN_SOL_WALLET_BALANCE,
     SLEEP_MAIN_LOOP_IN_MINUTES,
     SOL_MINT,
-    SOL_RESERVE
+    SOL_RESERVE,
+    FUNDING_RATE_THRESHOLD
 } from './constants';
 import * as db from './db';
 import { DB_KEYS } from './db';
@@ -226,17 +227,20 @@ async function performSwap(client: Client,
         } else {
             // place spot and perp trade.  perp trades are oracle pegged
             // spot trades attempt to balance the wallet
+            const cancelOrders:Array<any> = []
             if (orders.find(o => o.side === PerpOrderSide.bid)) {
                 buyPerpTradeSize = 0
             }
-            if (fundingRate > 0){
+            if (fundingRate > FUNDING_RATE_THRESHOLD){
                 buyPerpTradeSize = 0
+                cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.bid)))
             }
             if (orders.find(o => o.side === PerpOrderSide.ask)) {
                 sellPerpTradeSize = 0
             }
-            if (fundingRate <= 0){
+            if (fundingRate <= FUNDING_RATE_THRESHOLD*-1){
                 sellPerpTradeSize = 0
+                cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.ask)))
             }
             const result = await spotAndPerpSwap(
                 spotAmount,
@@ -255,6 +259,17 @@ async function performSwap(client: Client,
                 spotUnbalanced ? 0 : (perpPrice * getBuyPriceBuffer(market, accountDefinition.name)),
                 orders.length,
                 market)
+
+            for (const c of cancelOrders){
+                try{
+                tradeInstructions.push(await client.client.perpCancelOrderIx(group, 
+                    client.mangoAccount!, 
+                    perpMarket.perpMarketIndex, 
+                    c.orderId))  
+                }catch(x:any){
+                    console.log(x.message)
+                }   
+            }
             tradeInstructions.push(...result.tradeInstructions)
             orderIds.push(...result.orderIds)
             addressLookupTables.push(...result.addressLookupTables)
@@ -496,7 +511,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 
 try {
     //    createKeypair();
-    doubleSwapLoop(true, true, false);
+    doubleSwapLoop(false, true, false);
 } catch (error) {
     console.log(error);
 }
