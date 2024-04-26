@@ -39,7 +39,7 @@ export const FUNDING_RATE_THRESHOLD = 15
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
-// export const FILTER_TO_ACCOUNTS: Array<String> = [  "SEVEN", "SIX", "FIVE", "DRIFT", "SOL_FLARE"]
+// export const FILTER_TO_ACCOUNTS: Array<String> = [  "DRIFT", "ACCOUNT2", "BUCKET", "FIVE"]
 export const FILTER_TO_ACCOUNTS: Array<String> = ["SEVEN","DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
 
 // CACHE EXPIRATIONS

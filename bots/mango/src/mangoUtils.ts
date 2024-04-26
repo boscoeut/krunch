@@ -34,6 +34,7 @@ import {
     LITE_RPC_URL,
     MANGO_DATA_API_URL,
     MAX_PRIORITY_FEE_KEYS,
+    MIN_HEALTH_FACTOR,
     QUICKNODE_CONNECTION_URL,
     SOL_MINT,
     SOL_RESERVE,
@@ -324,26 +325,22 @@ export const canTradeAccount = (account: AccountDefinition) => {
 }
 
 export const getDefaultTradeSize = (market: MarketKey, account: AccountDefinition) => {
-    if (account.name ==="ACCOUNT2"){
-        switch (market) {
-            case 'BTC-PERP':
-                return 0.0
-            case 'SOL-PERP':
-                return 0.5
-            case 'ETH-PERP':
-                return 0.0
-        }
-    }else{
-        switch (market) {
-            case 'BTC-PERP':
-                return 0.0
-            case 'SOL-PERP':
-                return 3
-            case 'ETH-PERP':
-                return 0.0
-        }
+    switch (market) {
+        case 'BTC-PERP':
+            return 0.0
+        case 'SOL-PERP':
+            return 3
+        case 'ETH-PERP':
+            return 0.0
     }
-    
+}
+
+export const getMinHealth = (account: string) => {
+    if (account === 'DRIFT') {
+        return 175
+    } else {
+        return MIN_HEALTH_FACTOR
+    }
 }
 
 export const getSellPriceBuffer = (market: MarketKey, account: string) => {
@@ -367,7 +364,7 @@ export const getBuyPriceBuffer = (market: MarketKey, account: string) => {
 }
 
 export const getMaxLongPerpSize = (market: MarketKey, account: AccountDefinition) => {
-    const AMOUNT = 8000
+    const AMOUNT = 15000
     switch (market) {
         case 'BTC-PERP':
             return AMOUNT
@@ -382,7 +379,7 @@ export const getMaxLongPerpSize = (market: MarketKey, account: AccountDefinition
 
 
 export const getMaxShortPerpSize = (market: MarketKey, account: AccountDefinition) => {
-    const AMOUNT = -8000
+    const AMOUNT = -15000
     switch (market) {
         case 'BTC-PERP':
             return AMOUNT

@@ -15,7 +15,6 @@ import {
     GOOGLE_UPDATE_INTERVAL,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
-    MIN_HEALTH_FACTOR,
     MIN_SOL_WALLET_BALANCE,
     SLEEP_MAIN_LOOP_IN_MINUTES,
     SOL_MINT,
@@ -38,7 +37,8 @@ import {
     getFundingRate,
     getMaxLongPerpSize, getMaxShortPerpSize,
     getSellPriceBuffer,
-    sleep
+    sleep,
+    getMinHealth
 } from './mangoUtils';
 import { postToSlackFunding, postToSlackPriceAlert } from './slackUtils';
 import {
@@ -54,12 +54,14 @@ function roundToNearestFloor(num: number, nearest: number = 2) {
     return Math.floor(num * nearest) / nearest;
 }
 
+
 function getTradeSize(requestedTradeSize: number, solAmount: number, action: Side,
-    borrow: number, solPrice: number,
-    minPerp: number, maxPerp: number, health: number, market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP"
+    borrow: number, oraclePrice: number,
+    minPerp: number, maxPerp: number, health: number, market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP",
+    account:string
 ) {
-    const freeCash = borrow 
-    let maxSize = freeCash > 0 ? (freeCash / solPrice) / 2.1 : 0 // 2.1 to account for other side of trade
+    const freeCash = borrow * 0.09
+    let maxSize = freeCash > 0 ? (freeCash / oraclePrice) : 0
     let tickSize = 0.01
     if (market === "BTC-PERP") {
         tickSize = 0.0001
@@ -69,15 +71,15 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
     maxSize = roundToNearestFloor(maxSize, 1 / tickSize)
 
     if (action === Side.BUY) {
-        maxSize = Math.min(maxSize, (maxPerp / solPrice) - solAmount)
+        maxSize = Math.min(maxSize, (maxPerp / oraclePrice) - solAmount)
     }
     if (action === Side.SELL) {
-        maxSize = Math.min(maxSize, Math.abs(minPerp / solPrice) + solAmount)
+        maxSize = Math.min(maxSize, Math.abs(minPerp / oraclePrice) + solAmount)
     }
     let tradeSize = requestedTradeSize
     if (solAmount >= 0 && action === Side.BUY) {
         tradeSize = Math.min(requestedTradeSize, maxSize)
-        if (health < MIN_HEALTH_FACTOR) {
+        if (health < getMinHealth(account)) {
             tradeSize = 0
         }
     } else if (solAmount < 0 && action === Side.BUY) {
@@ -85,7 +87,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
         tradeSize = Math.min(requestedTradeSize, amt)
     } else if (solAmount <= 0 && action === Side.SELL) {
         tradeSize = Math.min(requestedTradeSize, maxSize)
-        if (health < MIN_HEALTH_FACTOR) {
+        if (health < getMinHealth(account)) {
             tradeSize = 0
         }
     } else if (solAmount > 0 && action === Side.SELL) {
@@ -152,11 +154,13 @@ async function performSwap(client: Client,
     let buyPerpTradeSize = getTradeSize(
         tradeSize, perpAmount,
         Side.BUY, accountDetails.borrow,
-        oraclePrice, getMaxShortPerpSize(market,accountDefinition), getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market)
+        oraclePrice, getMaxShortPerpSize(market,accountDefinition), getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market,
+        accountDefinition.name)
     let sellPerpTradeSize = getTradeSize(
         tradeSize, perpAmount,
         Side.SELL, accountDetails.borrow,
-        oraclePrice, getMaxShortPerpSize(market,accountDefinition),  getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market)
+        oraclePrice, getMaxShortPerpSize(market,accountDefinition),  getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market,
+        accountDefinition.name)
 
     let spotAmount = 0
     if (spotUnbalanced) {
@@ -360,8 +364,6 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
     const accountDetailList: AccountDetail[] = []
     let lastGoogleUpdate = 0
     let lastFundingRate = 0
-    let buyMismatch = 0
-    let sellMismatch = 0
     const FUNDING_DIFF = 50
     const CHECK_FEES = false
     let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
@@ -511,7 +513,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 
 try {
     //    createKeypair();
-    doubleSwapLoop(false, true, false);
+    doubleSwapLoop(true, true, false);
 } catch (error) {
     console.log(error);
 }
