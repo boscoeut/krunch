@@ -35,12 +35,13 @@ export const PERP_SELL_PRICE_BUFFER = 0.75
 export const FUNDING_RATE_PRICE_RATIO = 600
 export const POST_TRADE_TIMEOUT = 45
 export const MIN_HEALTH_FACTOR = 135
-export const FUNDING_RATE_THRESHOLD = 15
+export const SHORT_FUNDING_RATE_THRESHOLD = 20
+export const LONG_FUNDING_RATE_THRESHOLD = -20
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
-// export const FILTER_TO_ACCOUNTS: Array<String> = [  "DRIFT", "ACCOUNT2", "BUCKET", "FIVE"]
-export const FILTER_TO_ACCOUNTS: Array<String> = ["SEVEN","DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
+export const FILTER_TO_ACCOUNTS: Array<String> = [  "SEVEN"]
+// export const FILTER_TO_ACCOUNTS: Array<String> = ["SEVEN","DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
 
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 1 * 30

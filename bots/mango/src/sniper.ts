@@ -19,7 +19,8 @@ import {
     SLEEP_MAIN_LOOP_IN_MINUTES,
     SOL_MINT,
     SOL_RESERVE,
-    FUNDING_RATE_THRESHOLD
+    SHORT_FUNDING_RATE_THRESHOLD,
+    LONG_FUNDING_RATE_THRESHOLD
 } from './constants';
 import * as db from './db';
 import { DB_KEYS } from './db';
@@ -235,14 +236,14 @@ async function performSwap(client: Client,
             if (orders.find(o => o.side === PerpOrderSide.bid)) {
                 buyPerpTradeSize = 0
             }
-            if (fundingRate > FUNDING_RATE_THRESHOLD){
+            if (fundingRate > SHORT_FUNDING_RATE_THRESHOLD){
                 buyPerpTradeSize = 0
                 cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.bid)))
             }
             if (orders.find(o => o.side === PerpOrderSide.ask)) {
                 sellPerpTradeSize = 0
             }
-            if (fundingRate <= FUNDING_RATE_THRESHOLD*-1){
+            if (fundingRate <= LONG_FUNDING_RATE_THRESHOLD){
                 sellPerpTradeSize = 0
                 cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.ask)))
             }
