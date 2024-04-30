@@ -34,13 +34,16 @@ export const PERP_BUY_PRICE_BUFFER = 0.55
 export const PERP_SELL_PRICE_BUFFER = 0.75
 export const FUNDING_RATE_PRICE_RATIO = 600
 export const POST_TRADE_TIMEOUT = 45
+export const TRADE_TIMEOUT = 90
 export const MIN_HEALTH_FACTOR = 135
+export const DRIFT_HEALTH_FACTOR = 175
 export const SHORT_FUNDING_RATE_THRESHOLD = 20
 export const LONG_FUNDING_RATE_THRESHOLD = -20
+export const FREE_CASH_LIMIT = 0.075
 // MAIN LOOP
 export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
-export const FILTER_TO_ACCOUNTS: Array<String> = [  "SEVEN"]
+export const FILTER_TO_ACCOUNTS: Array<String> = [  "ACCOUNT2"]
 // export const FILTER_TO_ACCOUNTS: Array<String> = ["SEVEN","DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
 
 // CACHE EXPIRATIONS
@@ -54,6 +57,7 @@ export const DEFAULT_CACHE_EXPIRATION = 15
 export const BID_ASK_CACHE_EXPIRATION = 1
 export const ACCOUNT_REFRESH_EXPIRATION = 1
 export const FEE_CACHE_EXPIRATION = 1
+export const FUNDING_RATE_EXPIRATION = 1
 export const CURRENT_FUNDING_EXPIRATION = 5
 
 // MINTS
@@ -91,7 +95,7 @@ export const ACTIVITY_FEED_URL = 'https://api.mngo.cloud/data/v4/stats/activity-
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000
-export const DEFAULT_PRIORITY_FEE = 40_000
+export const DEFAULT_PRIORITY_FEE = 50_000
 export const FEE_MULTIPLIER = 1
 
 // JUP

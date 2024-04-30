@@ -6,16 +6,18 @@ import {
     FEE_CACHE_EXPIRATION,
     FUNDING_CACHE_EXPIRATION,
     TRANSACTION_CACHE_SIZE,
-    INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION
+    INTEREST_CACHE_EXPIRATION, JUP_PRICE_EXPIRATION,
+    FUNDING_RATE_EXPIRATION
 } from "./constants";
 import {
+    getFundingRate,
     handleEstimateFeeWithAddressLookup,
     setupClient,
     fetchFundingData as utilFetchFundingData, fetchInterestData as utilFetchInterestData, fetchJupPrice as utilFetchJupPrice,
     getAccountData as utilGetAccountData,
     getBidsAndAsks as utilGetBidsAndAsks
 } from './mangoUtils';
-import { AccountDefinition, AccountDetail, CacheItem, OpenTransaction } from "./types";
+import { AccountDefinition, AccountDetail, CacheItem, FundingRates, OpenTransaction } from "./types";
 import { postToSlackTrade, postToSlackTradeError } from "./slackUtils";
 
 const transactionCache: OpenTransaction[] = []
@@ -65,6 +67,7 @@ export function getTransactionCache() {
 export enum DB_KEYS {
     HISTORICAL_FUNDING_DATA = "HISTORICAL_FUNDING_DATA",
     INTEREST_DATA = "INTEREST_DATA",
+    FUNDING_RATE = "FUNDING_RATE",
     JUP_PRICE = "JUP_PRICE",
     BIDS_AND_ASKS = "BIDS_AND_ASKS",
     SOL_PRICE = "SOL_PRICE",
@@ -115,6 +118,11 @@ export function getModifier(key: DB_KEYS) {
         return {
             expiration: FEE_CACHE_EXPIRATION,
             modifier: handleEstimateFeeWithAddressLookup
+        }
+    }else if (key === DB_KEYS.FUNDING_RATE) {
+        return {
+            expiration: FUNDING_RATE_EXPIRATION,
+            modifier: getFundingRate
         }
     }
     return null
@@ -200,6 +208,13 @@ export const fetchHistoricalFundingData = async (mangoAccountPk: string, force: 
 
 export const fetchInterestData = async (mangoAccountPk: string, force: boolean = false) => {
     return await get<any[]>(DB_KEYS.INTEREST_DATA, { cacheKey: mangoAccountPk, force, params: [mangoAccountPk] })
+}
+export const fetchFundingRate = async (force:boolean=false) => {
+    let rates = await  get<FundingRates>(DB_KEYS.FUNDING_RATE, { cacheKey: DB_KEYS.FUNDING_RATE.toString(), force, params: [] })
+    if (rates.solFundingRate === 0){
+        rates = await  get<FundingRates>(DB_KEYS.FUNDING_RATE, { cacheKey: DB_KEYS.FUNDING_RATE.toString(), force:true, params: [] })
+    }
+    return rates
 }
 
 

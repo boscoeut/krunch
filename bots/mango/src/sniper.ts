@@ -12,15 +12,16 @@ import {
     ACTIVITY_FEED_URL,
     DEFAULT_PRIORITY_FEE,
     FILTER_TO_ACCOUNTS,
+    FREE_CASH_LIMIT,
     GOOGLE_UPDATE_INTERVAL,
+    LONG_FUNDING_RATE_THRESHOLD,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
     MIN_SOL_WALLET_BALANCE,
+    SHORT_FUNDING_RATE_THRESHOLD,
     SLEEP_MAIN_LOOP_IN_MINUTES,
     SOL_MINT,
-    SOL_RESERVE,
-    SHORT_FUNDING_RATE_THRESHOLD,
-    LONG_FUNDING_RATE_THRESHOLD
+    SOL_RESERVE
 } from './constants';
 import * as db from './db';
 import { DB_KEYS } from './db';
@@ -35,11 +36,10 @@ import {
 import {
     canTradeAccount, getBuyPriceBuffer,
     getDefaultTradeSize,
-    getFundingRate,
     getMaxLongPerpSize, getMaxShortPerpSize,
+    getMinHealth,
     getSellPriceBuffer,
-    sleep,
-    getMinHealth
+    sleep
 } from './mangoUtils';
 import { postToSlackFunding, postToSlackPriceAlert } from './slackUtils';
 import {
@@ -61,7 +61,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
     minPerp: number, maxPerp: number, health: number, market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP",
     account:string
 ) {
-    const freeCash = borrow * 0.09
+    const freeCash = borrow * FREE_CASH_LIMIT
     let maxSize = freeCash > 0 ? (freeCash / oraclePrice) : 0
     let tickSize = 0.01
     if (market === "BTC-PERP") {
@@ -385,7 +385,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
             // check for best route
             db.clearOpenTransactions()
 
-            const fundingRates = await getFundingRate()
+            const fundingRates = await db.fetchFundingRate()
             if (Math.abs(fundingRates.solFundingRate - lastFundingRate) > FUNDING_DIFF) {
                 postToSlackFunding(fundingRates.solFundingRate)
                 lastFundingRate = fundingRates.solFundingRate

@@ -30,6 +30,7 @@ import {
     JUPITER_SPOT_SLIPPAGE,
     JUPITER_V6_QUOTE_API_MAINNET,
     ORDER_EXPIRATION,
+    TRADE_TIMEOUT,
     POST_TRADE_TIMEOUT,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
     SWAP_ONLY_DIRECT_ROUTES
@@ -633,7 +634,7 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
                 const id = setTimeout(() => {
                     clearTimeout(id);
                     reject(new Error('Timed out'));
-                }, 60 * 1000); // 60 seconds timeout
+                }, TRADE_TIMEOUT * 1000); // 75 seconds timeout
             });
             const sig: any = await Promise.race([timeout, request])
             console.log(`*** ${accountName} TX COMPLETE:`, `https://explorer.solana.com/tx/${sig.signature}`);
