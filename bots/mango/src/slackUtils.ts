@@ -1,5 +1,4 @@
 import axios from "axios"
-import { PERP_BUY_PRICE_BUFFER, PERP_SELL_PRICE_BUFFER } from "./constants"
 
 const FUNDING_CHANNEL_ID = "C06S9MMH57B"
 const TRADE_CHANNEL_ID = "C06S9L6EXDX"
@@ -155,7 +154,7 @@ export const postToSlackTrade = async (
 
 export const postToSlackAlert = async (account: string, side: "BUY" | "SELL",
     diff: number, spotPrice: number, perpPrice: number, oraclePrice: number, fundingRate: number) => {
-    const message = `${account} ${side} Perp: ${(diff + PERP_BUY_PRICE_BUFFER).toFixed(3)}`
+    const message = `${account} ${side} Perp: ${(diff).toFixed(3)}`
     const data = {
         "channel": ALERT_CHANNEL_ID,
         text: message,
@@ -164,7 +163,7 @@ export const postToSlackAlert = async (account: string, side: "BUY" | "SELL",
                 type: "section",
                 text: {
                     type: "mrkdwn",
-                    text: `*${account}: ${side} Perp: ${(diff + PERP_BUY_PRICE_BUFFER).toFixed(3)}*`,
+                    text: `*${account}: ${side} Perp: ${(diff).toFixed(3)}*`,
                 },
             },
             {
@@ -195,14 +194,7 @@ export const postToSlackAlert = async (account: string, side: "BUY" | "SELL",
                     type: "mrkdwn",
                     text: `Oracle Price: ${oraclePrice.toFixed(3)}`,
                 },
-            },
-            {
-                type: "section",
-                text: {
-                    type: "mrkdwn",
-                    text: `Buffer: ${side === "SELL" ? PERP_SELL_PRICE_BUFFER : PERP_BUY_PRICE_BUFFER} : ${new Date().toLocaleTimeString()}`,
-                },
-            },
+            },           
             {
                 "type": "divider"
             }, {

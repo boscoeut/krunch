@@ -3,59 +3,33 @@ import { Cluster, PublicKey } from '@solana/web3.js';
 
 // THRESHOLDS
 export const MAX_PERP_TRADE_SIZE = 1000
-export const EXTRA_USDC_AMOUNT = 0.02
 export const MIN_DIFF_SIZE = 0.1
-export const MIN_SPOT_USDC_DIFF = 0.15
-export const MIN_SOL_BORROW = 0.02
-export const MIN_USDC_BORROW = 1
-export const MIN_SOL_WALLET_AMOUNT = 0.1
 export const MIN_SOL_WALLET_BALANCE = 0.02
-export const MIN_USDC_WALLET_AMOUNT = 10
-
-// TRADING TRIGGERS
-export const MINUS_THRESHOLD = -75
-export const PLUS_THRESHOLD = 75
 
 // TRADING PARAMS
-export const CAN_TRADE = false
-export const MIN_SIZE = 0.1
-export const QUOTE_BUFFER = 0.12
-export const TRADE_SIZE = 3
-export const ORDER_TYPE = PerpOrderType.limit
-export const ENFORCE_BEST_PRICE = false
-export const USDC_BUFFER = 1
-export const SOL_BUFFER = 0.005
 export const SWAP_ONLY_DIRECT_ROUTES = false
-export const JUP_ONLY_DIRECT_ROUTES = false
-export const CHECK_OPEN_ORDERS = false
 export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.1
 export const JUPITER_SPOT_SLIPPAGE = 10
-export const PERP_BUY_PRICE_BUFFER = 0.55
-export const PERP_SELL_PRICE_BUFFER = 0.75
-export const FUNDING_RATE_PRICE_RATIO = 600
 export const POST_TRADE_TIMEOUT = 45
 export const TRADE_TIMEOUT = 90
 export const MIN_HEALTH_FACTOR = 135
 export const DRIFT_HEALTH_FACTOR = 175
-export const SHORT_FUNDING_RATE_THRESHOLD = 20
-export const LONG_FUNDING_RATE_THRESHOLD = -20
+export const SHORT_FUNDING_RATE_THRESHOLD = 25
+export const LONG_FUNDING_RATE_THRESHOLD = -25
 export const FREE_CASH_LIMIT = 0.075
 // MAIN LOOP
-export const NO_TRADE_TIMEOUT = 5
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
-export const FILTER_TO_ACCOUNTS: Array<String> = [  "ACCOUNT2"]
-// export const FILTER_TO_ACCOUNTS: Array<String> = ["SEVEN","DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
+// export const FILTER_TO_ACCOUNTS: Array<String> = [  "ACCOUNT2"]
+export const FILTER_TO_ACCOUNTS: Array<String> = ["SEVEN","DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
 
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 1 * 30
-export const TRANSACTION_EXPIRATION = 1.5 * 60 * 1000
 export const INTEREST_CACHE_EXPIRATION = 5
 export const FUNDING_CACHE_EXPIRATION = 5
 export const TRANSACTION_CACHE_SIZE = 30
 export const JUP_PRICE_EXPIRATION = 1
 export const DEFAULT_CACHE_EXPIRATION = 15
 export const BID_ASK_CACHE_EXPIRATION = 1
-export const ACCOUNT_REFRESH_EXPIRATION = 1
 export const FEE_CACHE_EXPIRATION = 1
 export const FUNDING_RATE_EXPIRATION = 1
 export const CURRENT_FUNDING_EXPIRATION = 5
