@@ -40,7 +40,8 @@ import {
     SOL_MINT,
     SOL_RESERVE,
     USDC_MINT,
-    USE_PRIORITY_FEE
+    USE_PRIORITY_FEE,
+    SOL_GROUP_PK
 } from './constants';
 import * as db from './db';
 import {
@@ -103,6 +104,27 @@ export const fetchJupPrice = async () => {
     }
 }
 
+export const getCurrentFundingRate = async () => {
+    try {
+        const url = `${MANGO_DATA_API_URL}/perp-historical-stats?mango-group=${SOL_GROUP_PK}`
+        const response = await axios.get(url, { timeout: 10000 })
+        const res: any = response.data
+        const numHours = 1
+        if (res) {
+            const funding = res
+                .filter((item: any) => item.perp_market === "SOL-PERP")
+                .slice(0, numHours)
+                .reduce((sum: number, item: any) => {
+                    return (item.instantaneous_funding_rate + sum)
+                }, 0)
+            return funding / numHours
+        } else return 0
+    } catch (e: any) {
+        console.log('Failed to fetch account funding', e.message)
+        return 0
+    }
+}
+
 export const fetchFundingData = async (mangoAccountPk: string) => {
     try {
         const url = `${MANGO_DATA_API_URL}/stats/funding-account-total?mango-account=${mangoAccountPk}`
@@ -149,7 +171,7 @@ export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient
 }
 
 export async function getFundingRate(): Promise<FundingRates> {
-    try {
+    try {        
         const fundingRate = await axios.get(FUNDING_RATE_API, { timeout: 15000 })
         const data: any = fundingRate.data
         if (data?.find) {
@@ -330,7 +352,7 @@ export const getDefaultTradeSize = (market: MarketKey, account: AccountDefinitio
         case 'BTC-PERP':
             return 0.0
         case 'SOL-PERP':
-            return 3
+            return 1
         case 'ETH-PERP':
             return 0.0
     }
@@ -355,10 +377,10 @@ export const getSellPriceBuffer = (market: MarketKey, account: string) => {
 }
 
 export const getBuyPriceBuffer = (market: MarketKey, account: string) => {
-    const AMOUNT = 0.0015
-    // return AMOUNT
+    // const AMOUNT = 0.00275
+    const AMOUNT = 0.002
     if (market === 'SOL-PERP') {
-        return 0.0015
+        return AMOUNT
     } else {
         return AMOUNT
     }

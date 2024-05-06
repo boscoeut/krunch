@@ -9,6 +9,7 @@ import {
 import axios from 'axios';
 import fs from 'fs';
 import {
+    CAN_TRADE,
     ACTIVITY_FEED_URL,
     DEFAULT_PRIORITY_FEE,
     FILTER_TO_ACCOUNTS,
@@ -59,7 +60,7 @@ function roundToNearestFloor(num: number, nearest: number = 2) {
 function getTradeSize(requestedTradeSize: number, solAmount: number, action: Side,
     borrow: number, oraclePrice: number,
     minPerp: number, maxPerp: number, health: number, market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP",
-    account:string
+    account: string
 ) {
     const freeCash = borrow * FREE_CASH_LIMIT
     let maxSize = freeCash > 0 ? (freeCash / oraclePrice) : 0
@@ -125,8 +126,8 @@ async function performSwap(client: Client,
     const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
 
     // set rates
-    db.setItem(DB_KEYS.USDC_BORROW_RATE, usdcBank.getBorrowRateUi() ||0 )
-    db.setItem (DB_KEYS.USDC_DEPOSIT_RATE, usdcBank.getDepositRateUi() || 0)
+    db.setItem(DB_KEYS.USDC_BORROW_RATE, usdcBank.getBorrowRateUi() || 0)
+    db.setItem(DB_KEYS.USDC_DEPOSIT_RATE, usdcBank.getDepositRateUi() || 0)
 
     if (market === "BTC-PERP") {
         perpBank = btcBank
@@ -149,18 +150,18 @@ async function performSwap(client: Client,
 
     const spotVsPerpDiff = perpBalance + perpAmount + (INCLUDE_WALLET ? walletSol : 0)
     const spotUnbalanced = Math.abs(spotVsPerpDiff) > MIN_DIFF_SIZE
-    const orderIds:Array<number> = []
+    const orderIds: Array<number> = []
 
     let spotSide: Side = Side.BUY
     let buyPerpTradeSize = getTradeSize(
         tradeSize, perpAmount,
         Side.BUY, accountDetails.borrow,
-        oraclePrice, getMaxShortPerpSize(market,accountDefinition), getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market,
+        oraclePrice, getMaxShortPerpSize(market, accountDefinition), getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market,
         accountDefinition.name)
     let sellPerpTradeSize = getTradeSize(
         tradeSize, perpAmount,
         Side.SELL, accountDetails.borrow,
-        oraclePrice, getMaxShortPerpSize(market,accountDefinition),  getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market,
+        oraclePrice, getMaxShortPerpSize(market, accountDefinition), getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market,
         accountDefinition.name)
 
     let spotAmount = 0
@@ -186,7 +187,7 @@ async function performSwap(client: Client,
             perpMarket.perpMarketIndex,
             true
         )
-        db.setItem(DB_KEYS.OPEN_ORDERS, orders.length, {cacheKey: accountDefinition.name + '_' + market})
+        db.setItem(DB_KEYS.OPEN_ORDERS, orders.length, { cacheKey: accountDefinition.name + '_' + market })
         const result = await checkForPriceMismatch(accountDefinition, oraclePrice, bestBid, bestAsk, market)
         const buyMismatch = result.buyMismatch > getBuyPriceBuffer(market, accountDefinition.name) * oraclePrice
         const sellMismatch = result.sellMismatch > getSellPriceBuffer(market, accountDefinition.name) * oraclePrice
@@ -232,20 +233,24 @@ async function performSwap(client: Client,
         } else {
             // place spot and perp trade.  perp trades are oracle pegged
             // spot trades attempt to balance the wallet
-            const cancelOrders:Array<any> = []
+            const cancelOrders: Array<any> = []
             if (orders.find(o => o.side === PerpOrderSide.bid)) {
                 buyPerpTradeSize = 0
             }
-            if (fundingRate > SHORT_FUNDING_RATE_THRESHOLD){
+            if (fundingRate >= LONG_FUNDING_RATE_THRESHOLD) {
                 buyPerpTradeSize = 0
-                cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.bid)))
+                if (fundingRate > 0) {
+                    cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.bid)))
+                }
             }
             if (orders.find(o => o.side === PerpOrderSide.ask)) {
                 sellPerpTradeSize = 0
             }
-            if (fundingRate <= LONG_FUNDING_RATE_THRESHOLD){
+            if (fundingRate <= SHORT_FUNDING_RATE_THRESHOLD) {
                 sellPerpTradeSize = 0
-                cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.ask)))
+                if (fundingRate < 0) {
+                    cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.ask)))
+                }
             }
             const result = await spotAndPerpSwap(
                 spotAmount,
@@ -265,15 +270,15 @@ async function performSwap(client: Client,
                 orders.length,
                 market)
 
-            for (const c of cancelOrders){
-                try{
-                tradeInstructions.push(await client.client.perpCancelOrderIx(group, 
-                    client.mangoAccount!, 
-                    perpMarket.perpMarketIndex, 
-                    c.orderId))  
-                }catch(x:any){
+            for (const c of cancelOrders) {
+                try {
+                    tradeInstructions.push(await client.client.perpCancelOrderIx(group,
+                        client.mangoAccount!,
+                        perpMarket.perpMarketIndex,
+                        c.orderId))
+                } catch (x: any) {
                     console.log(x.message)
-                }   
+                }
             }
             tradeInstructions.push(...result.tradeInstructions)
             orderIds.push(...result.orderIds)
@@ -289,7 +294,7 @@ async function checkForPriceMismatch(
     bestBid: number,
     bestAsk: number,
     market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP") {
-    const buyPriceBuffer = getBuyPriceBuffer(market,accountDefinition.name) * perpPrice
+    const buyPriceBuffer = getBuyPriceBuffer(market, accountDefinition.name) * perpPrice
     const sellPriceBuffer = getSellPriceBuffer(market, accountDefinition.name) * perpPrice
 
     const buySpread = perpPrice - bestAsk
@@ -315,7 +320,7 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     let perpUsdc = 0
     let perpSol = 0
     const today = new Date();
-    today.setHours(0,0,0,0);
+    today.setHours(0, 0, 0, 0);
     const feedItems = feed.data.filter((item: any) => new Date(item.block_datetime) > today)
     // const feedItems = feed.data.slice(2,4)
     for (const item of feedItems) {
@@ -411,7 +416,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                     )
                     let tradeInstructions: Array<any> = []
                     let addressLookupTables: Array<any> = []
-                    let orderIds:Array<number> = []
+                    let orderIds: Array<number> = []
 
                     if (canTradeAccount(accountDefinition) && CAN_TRADE_NOW) {
                         if (accountDetails.walletSol < MIN_SOL_WALLET_BALANCE) {
@@ -430,7 +435,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)
-                            }                           
+                            }
                             if (btcTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
                                     accountDetails, btcTradeSize, fundingRates.btcFundingRate, client.group, "BTC-PERP")
@@ -447,10 +452,16 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                             }
                         }
                     } else {
+                        const { usdcBank } = accountDetails;
+                        db.setItem(DB_KEYS.USDC_BORROW_RATE, usdcBank.getBorrowRateUi() || 0)
+                        db.setItem(DB_KEYS.USDC_DEPOSIT_RATE, usdcBank.getDepositRateUi() || 0)
+
                         console.log('CANNOT TRADE NOW: ', accountDefinition.name)
                         await cancelOpenOrders(client.client, client.mangoAccount!, client.group, "ETH-PERP", accountDefinition.name)
                         await cancelOpenOrders(client.client, client.mangoAccount!, client.group, "SOL-PERP", accountDefinition.name)
                         await cancelOpenOrders(client.client, client.mangoAccount!, client.group, "BTC-PERP", accountDefinition.name)
+
+
                     }
 
                     if (!SIMULATE_TRADES && tradeInstructions.length > 0) {
@@ -459,7 +470,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                             client.client,
                             client.group,
                             addressLookupTables,
-                            false, 
+                            false,
                             orderIds)
                     }
                     return accountDetails
@@ -514,7 +525,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 
 try {
     //    createKeypair();
-    doubleSwapLoop(false, true, false);
+    doubleSwapLoop(CAN_TRADE, true, false);
 } catch (error) {
     console.log(error);
 }
