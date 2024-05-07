@@ -352,7 +352,7 @@ export const getDefaultTradeSize = (market: MarketKey, account: AccountDefinitio
         case 'BTC-PERP':
             return 0.0
         case 'SOL-PERP':
-            return 1
+            return 2
         case 'ETH-PERP':
             return 0.0
     }
@@ -367,23 +367,13 @@ export const getMinHealth = (account: string) => {
 }
 
 export const getSellPriceBuffer = (market: MarketKey, account: string) => {
-    const AMOUNT = 0.0015
-    // return AMOUNT
-    if (market === 'SOL-PERP') {
-        return 0.0015
-    } else {
-        return AMOUNT
-    }
+    const AMOUNT = 0.002
+    return AMOUNT
 }
 
 export const getBuyPriceBuffer = (market: MarketKey, account: string) => {
-    // const AMOUNT = 0.00275
-    const AMOUNT = 0.002
-    if (market === 'SOL-PERP') {
-        return AMOUNT
-    } else {
-        return AMOUNT
-    }
+    const AMOUNT = 0.00275
+    return AMOUNT    
 }
 
 export const getMaxLongPerpSize = (market: MarketKey, account: AccountDefinition) => {

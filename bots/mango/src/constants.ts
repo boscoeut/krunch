@@ -20,7 +20,7 @@ export const FREE_CASH_LIMIT = 0.075
 // MAIN LOOP
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
 export const CAN_TRADE = true
-export const FILTER_TO_ACCOUNTS: Array<String> = ["ACCOUNT2","BIRD"]
+export const FILTER_TO_ACCOUNTS: Array<String> = ["ACCOUNT2"]
 // export const FILTER_TO_ACCOUNTS: Array<String> = ["SEVEN","DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
 
 // CACHE EXPIRATIONS
