@@ -13,12 +13,12 @@ import {
     DEFAULT_PRIORITY_FEE,
     FREE_CASH_LIMIT,
     GOOGLE_UPDATE_INTERVAL,
-    LONG_FUNDING_RATE_THRESHOLD,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
     MIN_SOL_WALLET_BALANCE,
-    SHORT_FUNDING_RATE_THRESHOLD,
     SLEEP_MAIN_LOOP_IN_MINUTES,
+    SHORT_FUNDING_RATE_THRESHOLD,
+    LONG_FUNDING_RATE_THRESHOLD,
     SOL_MINT,
     SOL_RESERVE
 } from './constants';
@@ -33,11 +33,9 @@ import {
     spotAndPerpSwap
 } from './mangoSpotUtils';
 import {
-    getBuyPriceBuffer,
     getDefaultTradeSize,
     getMaxLongPerpSize, getMaxShortPerpSize,
     getMinHealth,
-    getSellPriceBuffer,
     sleep
 } from './mangoUtils';
 import { postToSlackFunding, postToSlackPriceAlert } from './slackUtils';
@@ -103,7 +101,12 @@ async function performSwap(client: Client,
     tradeSize: number,
     fundingRate: number,
     group: Group,
-    market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP") {
+    market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP",
+    shortRateThreshold:number,
+    longRateThreshold:number,
+    sellPriceBuffer:number,
+    buyPriceBuffer:number
+) {
 
     let tradeInstructions: Array<any> = []
     let addressLookupTables: Array<any> = []
@@ -186,9 +189,9 @@ async function performSwap(client: Client,
             true
         )
         db.setItem(DB_KEYS.OPEN_ORDERS, orders.length, { cacheKey: accountDefinition.name + '_' + market })
-        const result = await checkForPriceMismatch(accountDefinition, oraclePrice, bestBid, bestAsk, market)
-        const buyMismatch = result.buyMismatch > getBuyPriceBuffer(market, accountDefinition.name) * oraclePrice
-        const sellMismatch = result.sellMismatch > getSellPriceBuffer(market, accountDefinition.name) * oraclePrice
+        const result = await checkForPriceMismatch(accountDefinition, oraclePrice, bestBid, bestAsk, market,buyPriceBuffer, sellPriceBuffer)
+        const buyMismatch = result.buyMismatch > buyPriceBuffer * oraclePrice
+        const sellMismatch = result.sellMismatch > sellPriceBuffer * oraclePrice
 
         const IMMEDIATE_EXECUTION = false //  set to true when you want to place a trade immediately if there is a price mismatch
         let shouldExecuteImmediately = false
@@ -199,7 +202,7 @@ async function performSwap(client: Client,
             // If balanced and there is a price mismatch, place a perp trade
             const side = result.buyMismatch > result.sellMismatch ? PerpOrderSide.bid : PerpOrderSide.ask
             let size = side === PerpOrderSide.bid ? buyPerpTradeSize : sellPerpTradeSize
-            const price = side === PerpOrderSide.bid ? perpPrice - (getBuyPriceBuffer(market, accountDefinition.name) * perpPrice) : perpPrice + (getSellPriceBuffer(market, accountDefinition.name) * perpPrice)
+            const price = side === PerpOrderSide.bid ? perpPrice - (buyPriceBuffer * perpPrice) : perpPrice + (sellPriceBuffer * perpPrice)
             if (side === PerpOrderSide.bid && orders.find(o => o.side === PerpOrderSide.bid && !o.isOraclePegged)) {
                 size = 0
             }
@@ -235,18 +238,18 @@ async function performSwap(client: Client,
             if (orders.find(o => o.side === PerpOrderSide.bid)) {
                 buyPerpTradeSize = 0
             }
-            if (fundingRate >= LONG_FUNDING_RATE_THRESHOLD) {
+            if (fundingRate >= longRateThreshold) {
                 buyPerpTradeSize = 0
-                if (fundingRate >= SHORT_FUNDING_RATE_THRESHOLD) {
+                if (fundingRate >= shortRateThreshold) {
                     cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.bid)))
                 }
             }
             if (orders.find(o => o.side === PerpOrderSide.ask)) {
                 sellPerpTradeSize = 0
             }
-            if (fundingRate <= SHORT_FUNDING_RATE_THRESHOLD) {
+            if (fundingRate <= shortRateThreshold) {
                 sellPerpTradeSize = 0
-                if (fundingRate <= LONG_FUNDING_RATE_THRESHOLD) {
+                if (fundingRate <= longRateThreshold) {
                     cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.ask)))
                 }
             }
@@ -263,8 +266,8 @@ async function performSwap(client: Client,
                 perpPrice,
                 buyPerpTradeSize,
                 sellPerpTradeSize,
-                spotUnbalanced ? 0 : (perpPrice * getSellPriceBuffer(market, accountDefinition.name)),
-                spotUnbalanced ? 0 : (perpPrice * getBuyPriceBuffer(market, accountDefinition.name)),
+                spotUnbalanced ? 0 : (perpPrice * sellPriceBuffer),
+                spotUnbalanced ? 0 : (perpPrice * buyPriceBuffer),
                 orders.length,
                 market)
 
@@ -291,9 +294,11 @@ async function checkForPriceMismatch(
     perpPrice: number,
     bestBid: number,
     bestAsk: number,
-    market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP") {
-    const buyPriceBuffer = getBuyPriceBuffer(market, accountDefinition.name) * perpPrice
-    const sellPriceBuffer = getSellPriceBuffer(market, accountDefinition.name) * perpPrice
+    market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP",
+    _buyPriceBuffer:number,
+    _sellPriceBuffer:number) {
+    const buyPriceBuffer = _buyPriceBuffer * perpPrice
+    const sellPriceBuffer = _sellPriceBuffer * perpPrice
 
     const buySpread = perpPrice - bestAsk
     const sellSpread = bestBid - perpPrice
@@ -377,6 +382,10 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
             const tradingParameters = await getTradeData(googleSheets)
             const shouldTradeNow = tradingParameters?.tradingStatus || false
             const accountList = tradingParameters?.accountList
+            const shortRateThreshold = tradingParameters?.shortRateThreshold || SHORT_FUNDING_RATE_THRESHOLD
+            const longRateThreshold = tradingParameters?.longRateThreshold || LONG_FUNDING_RATE_THRESHOLD
+            const sellPriceBuffer = tradingParameters?.sellPriceBuffer || 0.0027
+            const buyPriceBuffer = tradingParameters?.buyPriceBuffer || 0.0027
     
             accountDetailList.length = 0
             if (CHECK_FEES) {
@@ -429,25 +438,28 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                         } else {
                             const ethTradeSize = getDefaultTradeSize('ETH-PERP', accountDefinition)
                             const btcTradeSize = getDefaultTradeSize('BTC-PERP', accountDefinition)
-                            const solTradeSize = getDefaultTradeSize('SOL-PERP', accountDefinition)
+                            const solTradeSize = tradingParameters?.solTradeSize || getDefaultTradeSize('SOL-PERP', accountDefinition)
 
                             if (ethTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
-                                    accountDetails, ethTradeSize, fundingRates.ethFundingRate, client.group, "ETH-PERP")
+                                    accountDetails, ethTradeSize, fundingRates.ethFundingRate, client.group, "ETH-PERP", shortRateThreshold, longRateThreshold,
+                                    sellPriceBuffer, buyPriceBuffer)
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)
                             }
                             if (btcTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
-                                    accountDetails, btcTradeSize, fundingRates.btcFundingRate, client.group, "BTC-PERP")
+                                    accountDetails, btcTradeSize, fundingRates.btcFundingRate, client.group, "BTC-PERP", shortRateThreshold, longRateThreshold,
+                                    sellPriceBuffer, buyPriceBuffer)
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)
                             }
                             if (solTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
-                                    accountDetails, solTradeSize, fundingRates.solFundingRate, client.group, "SOL-PERP")
+                                    accountDetails, solTradeSize, fundingRates.solFundingRate, client.group, "SOL-PERP", shortRateThreshold, longRateThreshold,
+                                sellPriceBuffer, buyPriceBuffer)
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)

@@ -361,16 +361,6 @@ export const getMinHealth = (account: string) => {
     }
 }
 
-export const getSellPriceBuffer = (market: MarketKey, account: string) => {
-    const AMOUNT = 0.0025  // approximately .37
-    return AMOUNT
-}
-
-export const getBuyPriceBuffer = (market: MarketKey, account: string) => {
-    const AMOUNT = 0.00275  // approximatley .41
-    return AMOUNT    
-}
-
 export const getMaxLongPerpSize = (market: MarketKey, account: AccountDefinition) => {
     const AMOUNT = 15000
     switch (market) {

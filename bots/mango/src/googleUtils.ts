@@ -211,7 +211,7 @@ export async function getTradeData(
         const sheetName = "MARKET_DATA"
         const response = await googleSheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,        
-            range:`${sheetName}!H18:H19`,
+            range:`${sheetName}!H18:H24`,
         });
 
         const cellValues = response.data.values.flat();
@@ -220,7 +220,12 @@ export async function getTradeData(
         const accountList:Array<string> = response.data.values?.[1]?.[0].split(",") || []
         return {
             tradingStatus:response.data.values?.[0]?.[0] === "TRUE",
-            accountList
+            accountList,
+            shortRateThreshold:Number(response.data.values?.[2]?.[0]),
+            longRateThreshold:Number(response.data.values?.[3]?.[0]),
+            solTradeSize:Number(response.data.values?.[4]?.[0]),
+            buyPriceBuffer:Number(response.data.values?.[5]?.[0]),
+            sellPriceBuffer:Number(response.data.values?.[6]?.[0])
         }
     } catch (e) {
         console.error('Error reading google sheet', e);

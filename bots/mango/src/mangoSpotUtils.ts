@@ -26,6 +26,7 @@ import {
     VersionedTransaction
 } from '@solana/web3.js';
 import axios from 'axios';
+import { toFixedFloor, sleep } from './mangoUtils';
 import {
     JUPITER_SPOT_SLIPPAGE,
     JUPITER_V6_QUOTE_API_MAINNET,
@@ -36,7 +37,6 @@ import {
     SWAP_ONLY_DIRECT_ROUTES
 } from './constants';
 import * as db from './db';
-import { getBuyPriceBuffer, sleep, toFixedFloor } from './mangoUtils';
 import {
     AccountDefinition,
     MarketKey,
@@ -561,7 +561,7 @@ export const spotAndPerpSwap = async (
             db.addOpenTransaction({
                 account: accountDefinition.name,
                 side: Side.BUY,
-                price: perpPrice - 1 * getBuyPriceBuffer(market, accountDefinition.name),
+                price: perpPrice - 1 * buyPriceBuffer,
                 size: toFixedFloor(buyPerpSize),
                 error: 'Pending',
                 type: 'PERP',
@@ -593,7 +593,7 @@ export const spotAndPerpSwap = async (
             db.addOpenTransaction({
                 account: accountDefinition.name,
                 side: Side.SELL,
-                price: perpPrice + 1 * getBuyPriceBuffer(market, accountDefinition.name),
+                price: perpPrice + 1 * buyPriceBuffer,
                 size: toFixedFloor(sellPerpSize),
                 error: 'Pending',
                 type: 'PERP',
