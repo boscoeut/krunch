@@ -9,10 +9,8 @@ import {
 import axios from 'axios';
 import fs from 'fs';
 import {
-    CAN_TRADE,
     ACTIVITY_FEED_URL,
     DEFAULT_PRIORITY_FEE,
-    FILTER_TO_ACCOUNTS,
     FREE_CASH_LIMIT,
     GOOGLE_UPDATE_INTERVAL,
     LONG_FUNDING_RATE_THRESHOLD,
@@ -26,7 +24,7 @@ import {
 } from './constants';
 import * as db from './db';
 import { DB_KEYS } from './db';
-import { authorize, updateGoogleSheet } from './googleUtils';
+import { authorize, getTradeData, updateGoogleSheet } from './googleUtils';
 import {
     cancelOpenOrders,
     getBestPrice,
@@ -35,7 +33,7 @@ import {
     spotAndPerpSwap
 } from './mangoSpotUtils';
 import {
-    canTradeAccount, getBuyPriceBuffer,
+    getBuyPriceBuffer,
     getDefaultTradeSize,
     getMaxLongPerpSize, getMaxShortPerpSize,
     getMinHealth,
@@ -239,7 +237,7 @@ async function performSwap(client: Client,
             }
             if (fundingRate >= LONG_FUNDING_RATE_THRESHOLD) {
                 buyPerpTradeSize = 0
-                if (fundingRate > 0) {
+                if (fundingRate >= SHORT_FUNDING_RATE_THRESHOLD) {
                     cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.bid)))
                 }
             }
@@ -248,7 +246,7 @@ async function performSwap(client: Client,
             }
             if (fundingRate <= SHORT_FUNDING_RATE_THRESHOLD) {
                 sellPerpTradeSize = 0
-                if (fundingRate < 0) {
+                if (fundingRate <= LONG_FUNDING_RATE_THRESHOLD) {
                     cancelOrders.push(...(orders.filter(o => o.side === PerpOrderSide.ask)))
                 }
             }
@@ -363,7 +361,7 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     db.tradeHistory.set(accountName, perpUsdc + swapUsdc)
 }
 
-async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
+async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
     let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
@@ -376,6 +374,10 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 
     while (true) {
         try {
+            const tradingParameters = await getTradeData(googleSheets)
+            const shouldTradeNow = tradingParameters?.tradingStatus || false
+            const accountList = tradingParameters?.accountList
+    
             accountDetailList.length = 0
             if (CHECK_FEES) {
                 let newFeeEstimate = DEFAULT_PRIORITY_FEE
@@ -403,7 +405,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                 const newItems = accountDefinitions.map(async (accountDefinition) => {
                     let client = await db.getClient(accountDefinition, DEFAULT_PRIORITY_FEE)
 
-                    if (FILTER_TO_ACCOUNTS.includes(accountDefinition.name)) {
+                    if (accountList?.includes(accountDefinition.name)) {
                         await checkActivityFeed(accountDefinition.name, client.mangoAccount!.publicKey.toString())
                     }
 
@@ -418,7 +420,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                     let addressLookupTables: Array<any> = []
                     let orderIds: Array<number> = []
 
-                    if (canTradeAccount(accountDefinition) && CAN_TRADE_NOW) {
+                    if (accountList?.includes(accountDefinition.name) && shouldTradeNow) {
                         if (accountDetails.walletSol < MIN_SOL_WALLET_BALANCE) {
                             const borrowAmount = SOL_RESERVE - accountDetails.walletSol
                             const mintPk = new PublicKey(SOL_MINT)
@@ -509,7 +511,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
                     console.log('Google Sheet Updated', new Date().toTimeString())
                     lastGoogleUpdate = now
                 }
-                if (CAN_TRADE_NOW && db.getOpenTransactions() > 0) {
+                if (shouldTradeNow && db.getOpenTransactions() > 0) {
                     await sleep(SLEEP_MAIN_LOOP_IN_MINUTES * 1000 * 60)
                 } else {
                     await sleep(0.5 * 1000 * 60)
@@ -525,7 +527,7 @@ async function doubleSwapLoop(CAN_TRADE_NOW: boolean = true, UPDATE_GOOGLE_SHEET
 
 try {
     //    createKeypair();
-    doubleSwapLoop(CAN_TRADE, true, false);
+    doubleSwapLoop(true, false);
 } catch (error) {
     console.log(error);
 }

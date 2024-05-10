@@ -23,3 +23,7 @@ anchor run init
 
 ## To switch networks
 Update anchor.toml and constants.NETWORK
+
+## To Run Using PM2
+cd bots/mango
+pm2 start npm -- start

@@ -169,6 +169,8 @@ export async function updateGoogleSheet(
     }
 }
 
+
+
 export function saveCredentials(client: any) {
     const content = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8') as string);
     const key = content.installed || content.web;
@@ -200,4 +202,27 @@ export function toGoogleSheetsDate(date: Date) {
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
     const zeroDate = new Date('1899-12-30T00:00:00Z');
     return (date.getTime() - zeroDate.getTime()) / MS_PER_DAY;
+}
+
+export async function getTradeData(
+    googleSheets: any
+) {
+    try {
+        const sheetName = "MARKET_DATA"
+        const response = await googleSheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,        
+            range:`${sheetName}!H18:H19`,
+        });
+
+        const cellValues = response.data.values.flat();
+        console.log(cellValues);
+
+        const accountList:Array<string> = response.data.values?.[1]?.[0].split(",") || []
+        return {
+            tradingStatus:response.data.values?.[0]?.[0] === "TRUE",
+            accountList
+        }
+    } catch (e) {
+        console.error('Error reading google sheet', e);
+    }
 }

@@ -19,9 +19,6 @@ export const LONG_FUNDING_RATE_THRESHOLD = -25
 export const FREE_CASH_LIMIT = 0.075
 // MAIN LOOP
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
-export const CAN_TRADE = true
-// export const FILTER_TO_ACCOUNTS: Array<String> = ["ACCOUNT2", "BIRD", "BUCKET", "FIVE"]
-export const FILTER_TO_ACCOUNTS: Array<String> = ["SEVEN","DRIFT","SOL_FLARE","PRIVATE3","BUCKET","SIX","FIVE","BIRD", "ACCOUNT2", "BUCKET"]
 
 // CACHE EXPIRATIONS
 export const ORDER_EXPIRATION = 1 * 30

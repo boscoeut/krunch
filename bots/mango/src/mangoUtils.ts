@@ -24,7 +24,6 @@ import {
     COMMITTMENT,
     DEFAULT_PRIORITY_FEE,
     FEE_CONNECTION_URL,
-    FILTER_TO_ACCOUNTS,
     FUNDING_RATE_API,
     GET_BLOCK_CONNECTION_URL,
     GROUP_ADDRESS_LOOKUP_TABLE_KEY,
@@ -342,10 +341,6 @@ export async function reloadClient(client: Client) {
     }
 }
 
-export const canTradeAccount = (account: AccountDefinition) => {
-    const accounts = FILTER_TO_ACCOUNTS
-    return accounts.includes(account.name)
-}
 
 export const getDefaultTradeSize = (market: MarketKey, account: AccountDefinition) => {
     switch (market) {
@@ -367,18 +362,12 @@ export const getMinHealth = (account: string) => {
 }
 
 export const getSellPriceBuffer = (market: MarketKey, account: string) => {
-    if (account === 'BUCKET') {
-        return 0.002
-    }
-    if (account === 'FIVE') {
-        return 0.00225
-    }
-    const AMOUNT = 0.0025
+    const AMOUNT = 0.0025  // approximately .37
     return AMOUNT
 }
 
 export const getBuyPriceBuffer = (market: MarketKey, account: string) => {
-    const AMOUNT = 0.00275
+    const AMOUNT = 0.00275  // approximatley .41
     return AMOUNT    
 }
 
