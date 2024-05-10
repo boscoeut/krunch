@@ -22,7 +22,6 @@ import {
     CLUSTER,
     CLUSTER_URL,
     COMMITTMENT,
-    DEFAULT_PRIORITY_FEE,
     FEE_CONNECTION_URL,
     FUNDING_RATE_API,
     GET_BLOCK_CONNECTION_URL,
@@ -551,7 +550,7 @@ export async function getCurrentFunding(accountDefinition: AccountDefinition) {
     return fundingAmount;
 }
 
-export const setupClient = async (accountDefinition: AccountDefinition, prioritizationFee: number = DEFAULT_PRIORITY_FEE): Promise<Client> => {
+export const setupClient = async (accountDefinition: AccountDefinition, prioritizationFee: number = 0): Promise<Client> => {
     const user = getUser(accountDefinition.privateKey);
     const { client, group, ids, wallet } = await getClient(user, prioritizationFee)
     const mangoAccount = await client.getMangoAccount(new PublicKey(accountDefinition.key));

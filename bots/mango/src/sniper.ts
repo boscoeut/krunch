@@ -10,21 +10,18 @@ import axios from 'axios';
 import fs from 'fs';
 import {
     ACTIVITY_FEED_URL,
-    DEFAULT_PRIORITY_FEE,
     FREE_CASH_LIMIT,
     GOOGLE_UPDATE_INTERVAL,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
     MIN_SOL_WALLET_BALANCE,
     SLEEP_MAIN_LOOP_IN_MINUTES,
-    SHORT_FUNDING_RATE_THRESHOLD,
-    LONG_FUNDING_RATE_THRESHOLD,
     SOL_MINT,
     SOL_RESERVE
 } from './constants';
 import * as db from './db';
 import { DB_KEYS } from './db';
-import { authorize, getTradeData, updateGoogleSheet } from './googleUtils';
+import { authorize, getTradingParameters, updateGoogleSheet } from './googleUtils';
 import {
     cancelOpenOrders,
     getBestPrice,
@@ -105,7 +102,8 @@ async function performSwap(client: Client,
     shortRateThreshold:number,
     longRateThreshold:number,
     sellPriceBuffer:number,
-    buyPriceBuffer:number
+    buyPriceBuffer:number,
+    jupiterSpotSlippage:number
 ) {
 
     let tradeInstructions: Array<any> = []
@@ -269,7 +267,8 @@ async function performSwap(client: Client,
                 spotUnbalanced ? 0 : (perpPrice * sellPriceBuffer),
                 spotUnbalanced ? 0 : (perpPrice * buyPriceBuffer),
                 orders.length,
-                market)
+                market,
+                jupiterSpotSlippage)
 
             for (const c of cancelOrders) {
                 try {
@@ -375,21 +374,25 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
     let lastFundingRate = 0
     const FUNDING_DIFF = 50
     const CHECK_FEES = false
-    let feeEstimate = Math.min(DEFAULT_PRIORITY_FEE, MAX_FEE)
+    
 
     while (true) {
         try {
-            const tradingParameters = await getTradeData(googleSheets)
+            const tradingParameters = await getTradingParameters(googleSheets)
             const shouldTradeNow = tradingParameters?.tradingStatus || false
             const accountList = tradingParameters?.accountList
-            const shortRateThreshold = tradingParameters?.shortRateThreshold || SHORT_FUNDING_RATE_THRESHOLD
-            const longRateThreshold = tradingParameters?.longRateThreshold || LONG_FUNDING_RATE_THRESHOLD
+            const shortRateThreshold = tradingParameters?.shortRateThreshold || 100
+            const longRateThreshold = tradingParameters?.longRateThreshold || -25
             const sellPriceBuffer = tradingParameters?.sellPriceBuffer || 0.0027
             const buyPriceBuffer = tradingParameters?.buyPriceBuffer || 0.0027
+            const jupiterSpotSlippage = tradingParameters?.jupiterSpotSlippage || 5
+            const priorityFee = tradingParameters?.priorityFee || 10_000
     
+            let feeEstimate = Math.min(priorityFee, MAX_FEE)
+
             accountDetailList.length = 0
             if (CHECK_FEES) {
-                let newFeeEstimate = DEFAULT_PRIORITY_FEE
+                let newFeeEstimate = feeEstimate
                 try {
                     newFeeEstimate = await db.getFeeEstimate()
                 } catch (e: any) {
@@ -412,7 +415,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                 await sleep(10 * 1000)
             } else {
                 const newItems = accountDefinitions.map(async (accountDefinition) => {
-                    let client = await db.getClient(accountDefinition, DEFAULT_PRIORITY_FEE)
+                    let client = await db.getClient(accountDefinition, feeEstimate)
 
                     if (accountList?.includes(accountDefinition.name)) {
                         await checkActivityFeed(accountDefinition.name, client.mangoAccount!.publicKey.toString())
@@ -443,7 +446,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                             if (ethTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
                                     accountDetails, ethTradeSize, fundingRates.ethFundingRate, client.group, "ETH-PERP", shortRateThreshold, longRateThreshold,
-                                    sellPriceBuffer, buyPriceBuffer)
+                                    sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage)
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)
@@ -451,7 +454,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                             if (btcTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
                                     accountDetails, btcTradeSize, fundingRates.btcFundingRate, client.group, "BTC-PERP", shortRateThreshold, longRateThreshold,
-                                    sellPriceBuffer, buyPriceBuffer)
+                                    sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage)
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)
@@ -459,7 +462,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                             if (solTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
                                     accountDetails, solTradeSize, fundingRates.solFundingRate, client.group, "SOL-PERP", shortRateThreshold, longRateThreshold,
-                                sellPriceBuffer, buyPriceBuffer)
+                                sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage)
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)
@@ -500,8 +503,8 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                     const inBank = accountDetailList[0].solBank
                     const outBank = accountDetailList[0].usdcBank
                     solPrice = accountDetailList[0].solPrice
-                    const sellRoute = await getBestPrice(Side.SELL, 1, inBank, outBank)
-                    const buyRoute = await getBestPrice(Side.BUY, solPrice, outBank, inBank)
+                    const sellRoute = await getBestPrice(Side.SELL, 1, inBank, outBank, jupiterSpotSlippage)
+                    const buyRoute = await getBestPrice(Side.BUY, solPrice, outBank, inBank,jupiterSpotSlippage)
                     bestBuyPrice = buyRoute.price
                     bestSellPrice = sellRoute.price
                     if (sellRoute.price > solPrice) {

@@ -9,13 +9,10 @@ export const MIN_SOL_WALLET_BALANCE = 0.02
 // TRADING PARAMS
 export const SWAP_ONLY_DIRECT_ROUTES = false
 export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.1
-export const JUPITER_SPOT_SLIPPAGE = 10
 export const POST_TRADE_TIMEOUT = 45
 export const TRADE_TIMEOUT = 90
 export const MIN_HEALTH_FACTOR = 135
 export const DRIFT_HEALTH_FACTOR = 175
-export const SHORT_FUNDING_RATE_THRESHOLD = 100
-export const LONG_FUNDING_RATE_THRESHOLD = -25
 export const FREE_CASH_LIMIT = 0.075
 // MAIN LOOP
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
@@ -67,7 +64,6 @@ export const ACTIVITY_FEED_URL = 'https://api.mngo.cloud/data/v4/stats/activity-
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000
-export const DEFAULT_PRIORITY_FEE = 50_000
 export const FEE_MULTIPLIER = 1
 
 // JUP

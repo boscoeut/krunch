@@ -28,7 +28,6 @@ import {
 import axios from 'axios';
 import { toFixedFloor, sleep } from './mangoUtils';
 import {
-    JUPITER_SPOT_SLIPPAGE,
     JUPITER_V6_QUOTE_API_MAINNET,
     ORDER_EXPIRATION,
     TRADE_TIMEOUT,
@@ -298,7 +297,7 @@ async function getMarginTradeIx({
     ]
 }
 
-export const getBestPrice = async (side: Side, spotAmount: number, inBank: Bank, outBank: Bank) => {
+export const getBestPrice = async (side: Side, spotAmount: number, inBank: Bank, outBank: Bank, slippageBps:number) => {
     const amountBn = toNative(
         Math.min(spotAmount, 99999999999), // Jupiter API can't handle amounts larger than 99999999999
         inBank.mintDecimals,
@@ -310,7 +309,7 @@ export const getBestPrice = async (side: Side, spotAmount: number, inBank: Bank,
         inputMint: inBank.mint.toString(),
         outputMint: outBank.mint.toString(),
         amount: amountBn.toString(),
-        slippageBps: JUPITER_SPOT_SLIPPAGE.toString(),
+        slippageBps: slippageBps.toString(),
         swapMode,
         onlyDirectRoutes: `${onlyDirectRoutes}`,
         maxAccounts: `${maxAccounts}`,
@@ -461,7 +460,8 @@ export const spotAndPerpSwap = async (
     sellPriceBuffer: number,
     buyPriceBuffer: number,
     numOrders: number,
-    market: MarketKey) => {
+    market: MarketKey,
+    jupiterSpotSlippage:number) => {
 
     let perpSide: PerpOrderSide = PerpOrderSide.bid
     let spotPrice = 0
@@ -482,7 +482,7 @@ export const spotAndPerpSwap = async (
         const outBank = spotSide === Side.SELL ? usdcBank : perpBank
 
         const quoteAmount = Side.BUY === spotSide ? spotAmount * perpPrice : spotAmount
-        const { price, bestRoute: bestRoute } = await getBestPrice(spotSide, quoteAmount, inBank, outBank)
+        const { price, bestRoute: bestRoute } = await getBestPrice(spotSide, quoteAmount, inBank, outBank, jupiterSpotSlippage)
         spotPrice = price
         const clientOrderId = Date.now()
         try {

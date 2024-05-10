@@ -250,6 +250,6 @@ export const getFeeEstimate = async (cacheOnly: boolean = false) => {
     }
 }
 
-export const getClient = async (accountDefinition: AccountDefinition, DEFAULT_PRIORITY_FEE: number) => {
-    return await setupClient(accountDefinition, DEFAULT_PRIORITY_FEE)
+export const getClient = async (accountDefinition: AccountDefinition, priorityFee: number) => {
+    return await setupClient(accountDefinition, priorityFee)
 }

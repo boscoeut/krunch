@@ -204,30 +204,51 @@ export function toGoogleSheetsDate(date: Date) {
     return (date.getTime() - zeroDate.getTime()) / MS_PER_DAY;
 }
 
-export async function getTradeData(
+export async function getTradingParameters(
     googleSheets: any
 ) {
     try {
         const sheetName = "MARKET_DATA"
         const response = await googleSheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,        
-            range:`${sheetName}!H18:H24`,
+            range:`${sheetName}!H18:H26`,
         });
 
         const cellValues = response.data.values.flat();
         console.log(cellValues);
 
         const accountList:Array<string> = response.data.values?.[1]?.[0].split(",") || []
-        return {
+        const result = {
             tradingStatus:response.data.values?.[0]?.[0] === "TRUE",
             accountList,
             shortRateThreshold:Number(response.data.values?.[2]?.[0]),
             longRateThreshold:Number(response.data.values?.[3]?.[0]),
             solTradeSize:Number(response.data.values?.[4]?.[0]),
             buyPriceBuffer:Number(response.data.values?.[5]?.[0]),
-            sellPriceBuffer:Number(response.data.values?.[6]?.[0])
+            sellPriceBuffer:Number(response.data.values?.[6]?.[0]),
+            jupiterSpotSlippage:Number(response.data.values?.[7]?.[0]),
+            priorityFee:Number(response.data.values?.[8]?.[0]),
         }
+
+        // check values
+        if (result.shortRateThreshold < 10){
+            throw new Error("Short rate threshold is too low:"+result.shortRateThreshold)
+        }
+        if (result.longRateThreshold > 10){
+            throw new Error("Long rate threshold is too high: " + result.longRateThreshold)
+        }
+        if (result.solTradeSize > 3.5){
+            throw new Error("Sol Trade Size is to High: "+result.solTradeSize)
+        }
+        if (result.buyPriceBuffer < 0.001){
+            throw new Error("buyPriceBuffer is to low: "+result.buyPriceBuffer)
+        }
+        if (result.sellPriceBuffer < 0.001){
+            throw new Error("sellPriceBuffer is to low: "+result.sellPriceBuffer)
+        }
+        return result
     } catch (e) {
         console.error('Error reading google sheet', e);
+        throw e
     }
 }
