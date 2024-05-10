@@ -3,7 +3,7 @@ import path from 'path';
 import * as db from './db';
 import { AccountDetail, FundingRates, OpenTransaction } from './types';
 
-import { SPREADSHEET_ID, TRANSACTION_CACHE_SIZE } from './constants';
+import { MAX_FEE, SPREADSHEET_ID, TRANSACTION_CACHE_SIZE } from './constants';
 const { authenticate } = require('@google-cloud/local-auth');
 const { google } = require('googleapis');
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
@@ -211,7 +211,7 @@ export async function getTradingParameters(
         const sheetName = "MARKET_DATA"
         const response = await googleSheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,        
-            range:`${sheetName}!H18:H26`,
+            range:`${sheetName}!H18:H29`,
         });
 
         const cellValues = response.data.values.flat();
@@ -228,6 +228,9 @@ export async function getTradingParameters(
             sellPriceBuffer:Number(response.data.values?.[6]?.[0]),
             jupiterSpotSlippage:Number(response.data.values?.[7]?.[0]),
             priorityFee:Number(response.data.values?.[8]?.[0]),
+            minHealthFactor:Number(response.data.values?.[9]?.[0]),
+            driftHealthFactor:Number(response.data.values?.[10]?.[0]),
+            freeCashLimit:Number(response.data.values?.[11]?.[0]),
         }
 
         // check values
@@ -245,6 +248,9 @@ export async function getTradingParameters(
         }
         if (result.sellPriceBuffer < 0.001){
             throw new Error("sellPriceBuffer is to low: "+result.sellPriceBuffer)
+        }
+        if (result.priorityFee > MAX_FEE){
+            throw new Error("priorityFee is to high: "+result.priorityFee+" MAX_FEE="+MAX_FEE)
         }
         return result
     } catch (e) {

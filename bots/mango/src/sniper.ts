@@ -10,7 +10,6 @@ import axios from 'axios';
 import fs from 'fs';
 import {
     ACTIVITY_FEED_URL,
-    FREE_CASH_LIMIT,
     GOOGLE_UPDATE_INTERVAL,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
@@ -32,7 +31,6 @@ import {
 import {
     getDefaultTradeSize,
     getMaxLongPerpSize, getMaxShortPerpSize,
-    getMinHealth,
     sleep
 } from './mangoUtils';
 import { postToSlackFunding, postToSlackPriceAlert } from './slackUtils';
@@ -53,9 +51,9 @@ function roundToNearestFloor(num: number, nearest: number = 2) {
 function getTradeSize(requestedTradeSize: number, solAmount: number, action: Side,
     borrow: number, oraclePrice: number,
     minPerp: number, maxPerp: number, health: number, market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP",
-    account: string
+    account: string, freeCashLimit:number, minHealth:number
 ) {
-    const freeCash = borrow * FREE_CASH_LIMIT
+    const freeCash = borrow * freeCashLimit
     let maxSize = freeCash > 0 ? (freeCash / oraclePrice) : 0
     let tickSize = 0.01
     if (market === "BTC-PERP") {
@@ -74,7 +72,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
     let tradeSize = requestedTradeSize
     if (solAmount >= 0 && action === Side.BUY) {
         tradeSize = Math.min(requestedTradeSize, maxSize)
-        if (health < getMinHealth(account)) {
+        if (health < minHealth) {
             tradeSize = 0
         }
     } else if (solAmount < 0 && action === Side.BUY) {
@@ -82,7 +80,7 @@ function getTradeSize(requestedTradeSize: number, solAmount: number, action: Sid
         tradeSize = Math.min(requestedTradeSize, amt)
     } else if (solAmount <= 0 && action === Side.SELL) {
         tradeSize = Math.min(requestedTradeSize, maxSize)
-        if (health < getMinHealth(account)) {
+        if (health < minHealth) {
             tradeSize = 0
         }
     } else if (solAmount > 0 && action === Side.SELL) {
@@ -103,7 +101,9 @@ async function performSwap(client: Client,
     longRateThreshold:number,
     sellPriceBuffer:number,
     buyPriceBuffer:number,
-    jupiterSpotSlippage:number
+    jupiterSpotSlippage:number,
+    freeCashLimit:number,
+    minHealth:number
 ) {
 
     let tradeInstructions: Array<any> = []
@@ -156,12 +156,12 @@ async function performSwap(client: Client,
         tradeSize, perpAmount,
         Side.BUY, accountDetails.borrow,
         oraclePrice, getMaxShortPerpSize(market, accountDefinition), getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market,
-        accountDefinition.name)
+        accountDefinition.name, freeCashLimit, minHealth)
     let sellPerpTradeSize = getTradeSize(
         tradeSize, perpAmount,
         Side.SELL, accountDetails.borrow,
         oraclePrice, getMaxShortPerpSize(market, accountDefinition), getMaxLongPerpSize(market, accountDefinition), accountDetails.health, market,
-        accountDefinition.name)
+        accountDefinition.name, freeCashLimit, minHealth)
 
     let spotAmount = 0
     if (spotUnbalanced) {
@@ -387,6 +387,9 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
             const buyPriceBuffer = tradingParameters?.buyPriceBuffer || 0.0027
             const jupiterSpotSlippage = tradingParameters?.jupiterSpotSlippage || 5
             const priorityFee = tradingParameters?.priorityFee || 10_000
+            const minHealthFactor = tradingParameters?.minHealthFactor || 135
+            const driftHealthFactor = tradingParameters?.driftHealthFactor || 175
+            const freeCashLimit = tradingParameters?.freeCashLimit || 0.075
     
             let feeEstimate = Math.min(priorityFee, MAX_FEE)
 
@@ -432,6 +435,8 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                     let addressLookupTables: Array<any> = []
                     let orderIds: Array<number> = []
 
+                    const minHealth = accountDefinition.name === "DRIFT" ? driftHealthFactor:minHealthFactor
+
                     if (accountList?.includes(accountDefinition.name) && shouldTradeNow) {
                         if (accountDetails.walletSol < MIN_SOL_WALLET_BALANCE) {
                             const borrowAmount = SOL_RESERVE - accountDetails.walletSol
@@ -446,7 +451,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                             if (ethTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
                                     accountDetails, ethTradeSize, fundingRates.ethFundingRate, client.group, "ETH-PERP", shortRateThreshold, longRateThreshold,
-                                    sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage)
+                                    sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage, freeCashLimit, minHealth)
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)
@@ -454,7 +459,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                             if (btcTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
                                     accountDetails, btcTradeSize, fundingRates.btcFundingRate, client.group, "BTC-PERP", shortRateThreshold, longRateThreshold,
-                                    sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage)
+                                    sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage, freeCashLimit, minHealth)
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)
@@ -462,7 +467,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                             if (solTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
                                     accountDetails, solTradeSize, fundingRates.solFundingRate, client.group, "SOL-PERP", shortRateThreshold, longRateThreshold,
-                                sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage)
+                                sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage, freeCashLimit, minHealth)
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)

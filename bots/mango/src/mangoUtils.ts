@@ -32,8 +32,6 @@ import {
     LITE_RPC_URL,
     MANGO_DATA_API_URL,
     MAX_PRIORITY_FEE_KEYS,
-    MIN_HEALTH_FACTOR,
-    DRIFT_HEALTH_FACTOR,
     QUICKNODE_CONNECTION_URL,
     SOL_MINT,
     SOL_RESERVE,
@@ -349,14 +347,6 @@ export const getDefaultTradeSize = (market: MarketKey, account: AccountDefinitio
             return 2.5
         case 'ETH-PERP':
             return 0.0
-    }
-}
-
-export const getMinHealth = (account: string) => {
-    if (account === 'DRIFT') {
-        return DRIFT_HEALTH_FACTOR
-    } else {
-        return MIN_HEALTH_FACTOR
     }
 }
 

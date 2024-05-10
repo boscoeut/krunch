@@ -1,4 +1,3 @@
-import { PerpOrderType } from '@blockworks-foundation/mango-v4';
 import { Cluster, PublicKey } from '@solana/web3.js';
 
 // THRESHOLDS
@@ -11,9 +10,7 @@ export const SWAP_ONLY_DIRECT_ROUTES = false
 export const SOL_PRICE_SPOT_DIFF_SLIPPAGE = 0.1
 export const POST_TRADE_TIMEOUT = 45
 export const TRADE_TIMEOUT = 90
-export const MIN_HEALTH_FACTOR = 135
-export const DRIFT_HEALTH_FACTOR = 175
-export const FREE_CASH_LIMIT = 0.075
+
 // MAIN LOOP
 export const SLEEP_MAIN_LOOP_IN_MINUTES = 0.1
 
