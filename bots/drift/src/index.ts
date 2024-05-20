@@ -179,7 +179,7 @@ async function checkTrades(markets: Array<Market>) {
     const user = driftClient.getUser();
     console.timeEnd('Get User');
 
-    console.time('Get Unrealized PNL');
+    console.time('Get Unrealized PNL');    
     const pnl = user.getUnrealizedPNL(true);
     console.timeEnd('Get Unrealized PNL');
     console.log('Unrealized PNL:', pnl.toString());

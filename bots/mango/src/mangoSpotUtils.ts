@@ -33,7 +33,8 @@ import {
     TRADE_TIMEOUT,
     POST_TRADE_TIMEOUT,
     SOL_PRICE_SPOT_DIFF_SLIPPAGE,
-    SWAP_ONLY_DIRECT_ROUTES
+    SWAP_ONLY_DIRECT_ROUTES,
+    SHOULD_CANCEL_ORDERS
 } from './constants';
 import * as db from './db';
 import {
@@ -356,7 +357,9 @@ export const cancelOpenOrders = async (client: MangoClient, mangoAccount: MangoA
     )
     if (orders.length > 0) {
         console.log(`Cancelling ${orders.length} orders for ${account}`)
-        await client.perpCancelAllOrders(group, mangoAccount, perpMarket.perpMarketIndex, 10)
+        if (SHOULD_CANCEL_ORDERS){
+            await client.perpCancelAllOrders(group, mangoAccount, perpMarket.perpMarketIndex, 10)
+        }
     }
 }
 
@@ -529,7 +532,7 @@ export const spotAndPerpSwap = async (
                 orderId: clientOrderId
             })            
         } catch (e: any) {
-            db.updateOpenTransaction(clientOrderId, 'ERROR: ' + e.message)
+            await db.updateOpenTransaction(clientOrderId, 'ERROR: ' + e.message)
         }
     }
 
@@ -641,7 +644,7 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
             console.log(`sig = ${sig.signature}`)
 
             for (let orderId of orderIds) {
-                db.updateOpenTransaction(orderId, 'COMPLETE')
+                await db.updateOpenTransaction(orderId, 'COMPLETE')
             }
 
             // sleep to allow perp trade to settle
@@ -652,7 +655,7 @@ export const postTrades = async (accountName: string, tradeInstructions: any, cl
     } catch (e: any) {
         const errorMessage = await handleError(e)
         for (let orderId of orderIds) {
-            db.updateOpenTransaction(orderId, 'ERROR: '+ errorMessage)
+            await db.updateOpenTransaction(orderId, 'ERROR: '+ errorMessage)
         }
     }
 }

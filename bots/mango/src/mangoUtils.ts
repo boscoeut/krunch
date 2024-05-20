@@ -92,8 +92,9 @@ export const fetchJupPrice = async () => {
         const solPrice = response.data.data.SOL.price
         const btcPrice = response.data.data.TBTC.price
         const ethPrice = response.data.data.ETH.price
+        const driftPrice = response.data.data.DRIFT.price
         const wormholePrice = response.data.data["85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ"].price
-        return { jupPrice, solPrice, wormholePrice, ethPrice, btcPrice }
+        return { jupPrice, solPrice, wormholePrice, ethPrice, btcPrice,driftPrice }
     } catch (e) {
         console.log('Failed to fetch jup price', e)
         return { jupPrice: 0, solPrice: 0, wormwholePrice: 0, ethPrice: 0, btcPrice: 0 }

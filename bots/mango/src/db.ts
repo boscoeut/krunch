@@ -41,7 +41,7 @@ export function addOpenTransaction(openTransaction: OpenTransaction) {
     }
 }
 
-export function updateOpenTransaction(orderId: number, error: string) {
+export async function updateOpenTransaction(orderId: number, error: string) {
     const transaction = transactionCache.find((t) => t.orderId === orderId)
     if (transaction) {
         transaction.error = error
@@ -49,9 +49,9 @@ export function updateOpenTransaction(orderId: number, error: string) {
         let perpSize = transaction.type === "PERP" ? transaction.size:0
        
         if (error?.toUpperCase().indexOf("ERROR")>-1){
-            postToSlackTradeError(transaction.account,perpSize,transaction.price,transaction.side as "BUY"|"SELL",transaction.side  as "BUY"|"SELL",transaction.price,spotSize,error)
+            await postToSlackTradeError(transaction.account,perpSize,transaction.price,transaction.side as "BUY"|"SELL",transaction.side  as "BUY"|"SELL",transaction.price,spotSize,error)
         }else{
-            postToSlackTrade(transaction.account,transaction.price,perpSize,
+            await postToSlackTrade(transaction.account,transaction.price,perpSize,
                 transaction.price,transaction.side as "BUY"|"SELL",transaction.side  as "BUY"|"SELL",
                 transaction.price,spotSize,0, transaction.market, transaction.type)
         }
@@ -75,6 +75,8 @@ export enum DB_KEYS {
     USDC_BORROW_RATE="USDC_BORROW_RATE",
     USDC_DEPOSIT_RATE="USDC_DEPOSIT_RATE",
     OPEN_ORDERS="OPEN_ORDERS",
+    DRIFT_ACCOUNTS="DRIFT_ACCOUNTS",
+
 }
 
 export type GetOptions = {
@@ -219,7 +221,7 @@ export const fetchFundingRate = async (force:boolean=false) => {
 
 
 export const fetchJupPrice = async () => {
-    return await get<{ solPrice: number, jupPrice: number, wormholePrice: number, btcPrice: number, ethPrice: number }>(DB_KEYS.JUP_PRICE)
+    return await get<{ solPrice: number, jupPrice: number, wormholePrice: number, btcPrice: number, ethPrice: number, driftPrice:number }>(DB_KEYS.JUP_PRICE)
 }
 export const getBidsAndAsks = async (marketName: string, perpMarket: PerpMarket, client: MangoClient) => {
     return await get<{ bestBid: number, bestAsk: number }>(DB_KEYS.BIDS_AND_ASKS, { cacheKey: marketName, params: [perpMarket, client] })

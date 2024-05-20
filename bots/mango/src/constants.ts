@@ -30,6 +30,7 @@ export const CURRENT_FUNDING_EXPIRATION = 5
 export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
 export const SOL_MINT = 'So11111111111111111111111111111111111111112'
 export const W_MINT = '85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ'
+export const DRIFT_MINT = 'DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7'
 export const JUP_MINT = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN'
 export const SOL_RESERVE = 0.035
 export const USDC_DECIMALS = 6
@@ -57,15 +58,17 @@ export const QUICKNODE_CONNECTION_URL = 'https://side-indulgent-research.solana-
 // export const CONNECTION_URL = 'https://ssc-dao.genesysgo.net';  //genesysgo
 export const GET_BLOCK_CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
 export const ACTIVITY_FEED_URL = 'https://api.mngo.cloud/data/v4/stats/activity-feed?offset=0&limit=1000&mango-account='
-
+export const HELIUS_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=f8550011-b7ca-4967-a265-6605701031fe'
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000
 export const FEE_MULTIPLIER = 1
 
 // JUP
-export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL,85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ,TBTC,ETH"
+export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL,85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ,TBTC,ETH,DRIFT"
 
 // GOOGLE SHEETS
 export const SPREADSHEET_ID = '1-k6Lv4quwIS-rRck-JYLA0WiuC9x43nDuMa_95q8CIw';
 export const GOOGLE_UPDATE_INTERVAL = 15 * 1000
+
+export const SHOULD_CANCEL_ORDERS = false

@@ -30,7 +30,7 @@ export async function updateWallets(items: any[]) {
                 valueInputOption: 'USER_ENTERED',
                 data: [
                     {
-                        range: `Wallets!A4:E${items.length + 3}`,
+                        range: `Wallets!A4:F${items.length + 3}`,
                         values: items,
                     },
                     
@@ -47,11 +47,13 @@ export async function updateGoogleSheet(
     googleSheets: any,
     accountDetails: AccountDetail[] = [], fee: number,
     transactionCache: OpenTransaction[] = [], bestBuyPrice: number, bestSellPrice: number,
-    solPrice: number
+    solPrice: number,
+    driftAccounts:Array<any> = []
 ) {
     try {
         const jupPrice = await db.fetchJupPrice()
         const wormholePrice = jupPrice.wormholePrice || 0
+        const driftPrice = jupPrice.driftPrice || 0
         const feeEstimate = await db.getFeeEstimate(true) || 0
 
         const borrowRate = db.getItem<number>(db.DB_KEYS.USDC_BORROW_RATE)
@@ -128,6 +130,12 @@ export async function updateGoogleSheet(
                 valueInputOption: 'USER_ENTERED',
                 data: [
                     {
+                        range: `DRIFT_ACCOUNT_DATA!A2:AU${driftAccounts.length + 1}`,
+                        values: driftAccounts.map((accountDetail) => {
+                            return Object.values(accountDetail)
+                        }),
+                    },
+                    {
                         range: `Account_Data!A2:AE${accountValues.length + 1}`,
                         values: accountValues.map((accountDetail) => {
                             return accountDetail
@@ -142,10 +150,10 @@ export async function updateGoogleSheet(
                             [solPrice],
                             [jupPrice.solPrice],
                             [jupPrice.jupPrice],
-                            [wormholePrice],
+                            [wormholePrice],                            
                             [bestBid],
                             [bestAsk],
-                            [],
+                            [driftPrice],
                             [],
                             [bestBuyPrice],
                             [bestSellPrice],

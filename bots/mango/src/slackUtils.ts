@@ -252,10 +252,10 @@ export const postToSlack = async (data: any) => {
         'Authorization': `Bearer ${token}`
     }
     try {
-        const SLACK_ARELRTS_ON = true
+        const SLACK_ARELRTS_ON = false
         if (SLACK_ARELRTS_ON && data.channel === TRADE_CHANNEL_ID) {
             const result = await axios.post(url, data, { headers })
-            console.log('posted to slack    ', result)
+            console.log('posted to slack    ', result.statusText)
         }
     } catch (e: any) {
         console.log('Error posting to slack:', e.message)

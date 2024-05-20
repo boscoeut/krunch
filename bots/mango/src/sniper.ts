@@ -4,16 +4,21 @@ import {
     toNative
 } from '@blockworks-foundation/mango-v4';
 import {
-    PublicKey
-} from '@solana/web3.js';
+    DriftClient, BulkAccountLoader, calculateBidAskPrice, BN,
+    convertToNumber, PRICE_PRECISION, User, FUNDING_RATE_BUFFER_PRECISION,
+    SpotBalanceType, Wallet, DRIFT_PROGRAM_ID, PerpMarkets
+} from "@drift-labs/sdk";
+import { Connection, PublicKey } from "@solana/web3.js";
 import axios from 'axios';
 import fs from 'fs';
 import {
     ACTIVITY_FEED_URL,
     GOOGLE_UPDATE_INTERVAL,
+    HELIUS_CONNECTION_URL,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
     MIN_SOL_WALLET_BALANCE,
+    SHOULD_CANCEL_ORDERS,
     SLEEP_MAIN_LOOP_IN_MINUTES,
     SOL_MINT,
     SOL_RESERVE
@@ -31,6 +36,7 @@ import {
 import {
     getDefaultTradeSize,
     getMaxLongPerpSize, getMaxShortPerpSize,
+    getUser,
     sleep
 } from './mangoUtils';
 import { postToSlackFunding, postToSlackPriceAlert } from './slackUtils';
@@ -51,7 +57,7 @@ function roundToNearestFloor(num: number, nearest: number = 2) {
 function getTradeSize(requestedTradeSize: number, solAmount: number, action: Side,
     borrow: number, oraclePrice: number,
     minPerp: number, maxPerp: number, health: number, market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP",
-    account: string, freeCashLimit:number, minHealth:number
+    account: string, freeCashLimit: number, minHealth: number
 ) {
     const freeCash = borrow * freeCashLimit
     let maxSize = freeCash > 0 ? (freeCash / oraclePrice) : 0
@@ -97,13 +103,13 @@ async function performSwap(client: Client,
     fundingRate: number,
     group: Group,
     market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP",
-    shortRateThreshold:number,
-    longRateThreshold:number,
-    sellPriceBuffer:number,
-    buyPriceBuffer:number,
-    jupiterSpotSlippage:number,
-    freeCashLimit:number,
-    minHealth:number
+    shortRateThreshold: number,
+    longRateThreshold: number,
+    sellPriceBuffer: number,
+    buyPriceBuffer: number,
+    jupiterSpotSlippage: number,
+    freeCashLimit: number,
+    minHealth: number
 ) {
 
     let tradeInstructions: Array<any> = []
@@ -187,7 +193,7 @@ async function performSwap(client: Client,
             true
         )
         db.setItem(DB_KEYS.OPEN_ORDERS, orders.length, { cacheKey: accountDefinition.name + '_' + market })
-        const result = await checkForPriceMismatch(accountDefinition, oraclePrice, bestBid, bestAsk, market,buyPriceBuffer, sellPriceBuffer)
+        const result = await checkForPriceMismatch(accountDefinition, oraclePrice, bestBid, bestAsk, market, buyPriceBuffer, sellPriceBuffer)
         const buyMismatch = result.buyMismatch > buyPriceBuffer * oraclePrice
         const sellMismatch = result.sellMismatch > sellPriceBuffer * oraclePrice
 
@@ -270,14 +276,16 @@ async function performSwap(client: Client,
                 market,
                 jupiterSpotSlippage)
 
-            for (const c of cancelOrders) {
-                try {
-                    tradeInstructions.push(await client.client.perpCancelOrderIx(group,
-                        client.mangoAccount!,
-                        perpMarket.perpMarketIndex,
-                        c.orderId))
-                } catch (x: any) {
-                    console.log(x.message)
+            if (SHOULD_CANCEL_ORDERS) {
+                for (const c of cancelOrders) {
+                    try {
+                        tradeInstructions.push(await client.client.perpCancelOrderIx(group,
+                            client.mangoAccount!,
+                            perpMarket.perpMarketIndex,
+                            c.orderId))
+                    } catch (x: any) {
+                        console.log(x.message)
+                    }
                 }
             }
             tradeInstructions.push(...result.tradeInstructions)
@@ -294,8 +302,8 @@ async function checkForPriceMismatch(
     bestBid: number,
     bestAsk: number,
     market: "SOL-PERP" | "BTC-PERP" | "ETH-PERP",
-    _buyPriceBuffer:number,
-    _sellPriceBuffer:number) {
+    _buyPriceBuffer: number,
+    _sellPriceBuffer: number) {
     const buyPriceBuffer = _buyPriceBuffer * perpPrice
     const sellPriceBuffer = _sellPriceBuffer * perpPrice
 
@@ -305,10 +313,10 @@ async function checkForPriceMismatch(
     console.log(`BUY  PRICE MISMATCH: BestAsk=${bestAsk.toFixed(2)} Oracle=${perpPrice.toFixed(2)}  Diff=${buySpread.toFixed(2)}`)
     console.log(`SELL PRICE MISMATCH: BestBid=${bestBid.toFixed(2)} Oracle=${perpPrice.toFixed(2)}  Diff=${sellSpread.toFixed(2)}`)
     if (buySpread > buyPriceBuffer * perpPrice && bestAsk > 0) {
-        postToSlackPriceAlert(perpPrice, bestBid, bestAsk, buySpread, sellSpread)
+        await postToSlackPriceAlert(perpPrice, bestBid, bestAsk, buySpread, sellSpread)
     }
     if (sellSpread > sellPriceBuffer * perpPrice && bestBid > 0) {
-        postToSlackPriceAlert(perpPrice, bestBid, bestAsk, buySpread, sellSpread)
+        await postToSlackPriceAlert(perpPrice, bestBid, bestAsk, buySpread, sellSpread)
     }
     return { buyMismatch: buySpread, sellMismatch: sellSpread }
 }
@@ -374,10 +382,13 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
     let lastFundingRate = 0
     const FUNDING_DIFF = 50
     const CHECK_FEES = false
-    
+
 
     while (true) {
         try {
+            const drift = await checkDrift("DRIFT");
+            const private3 = await checkDrift("PRIVATE3");
+
             const tradingParameters = await getTradingParameters(googleSheets)
             const shouldTradeNow = tradingParameters?.tradingStatus || false
             const accountList = tradingParameters?.accountList
@@ -390,7 +401,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
             const minHealthFactor = tradingParameters?.minHealthFactor || 135
             const driftHealthFactor = tradingParameters?.driftHealthFactor || 175
             const freeCashLimit = tradingParameters?.freeCashLimit || 0.075
-    
+
             let feeEstimate = Math.min(priorityFee, MAX_FEE)
 
             accountDetailList.length = 0
@@ -409,7 +420,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
 
             const fundingRates = await db.fetchFundingRate()
             if (Math.abs(fundingRates.solFundingRate - lastFundingRate) > FUNDING_DIFF) {
-                postToSlackFunding(fundingRates.solFundingRate)
+                await postToSlackFunding(fundingRates.solFundingRate)
                 lastFundingRate = fundingRates.solFundingRate
             }
             console.log('SOL FUNDING RATE: ', fundingRates.solFundingRate)
@@ -435,7 +446,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                     let addressLookupTables: Array<any> = []
                     let orderIds: Array<number> = []
 
-                    const minHealth = accountDefinition.name === "DRIFT" ? driftHealthFactor:minHealthFactor
+                    const minHealth = accountDefinition.name === "DRIFT" ? driftHealthFactor : minHealthFactor
 
                     if (accountList?.includes(accountDefinition.name) && shouldTradeNow) {
                         if (accountDetails.walletSol < MIN_SOL_WALLET_BALANCE) {
@@ -467,7 +478,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                             if (solTradeSize > 0 && tradeInstructions.length <= 0) {
                                 const result = await performSwap(client, accountDefinition,
                                     accountDetails, solTradeSize, fundingRates.solFundingRate, client.group, "SOL-PERP", shortRateThreshold, longRateThreshold,
-                                sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage, freeCashLimit, minHealth)
+                                    sellPriceBuffer, buyPriceBuffer, jupiterSpotSlippage, freeCashLimit, minHealth)
                                 tradeInstructions.push(...result.tradeInstructions)
                                 addressLookupTables.push(...result.addressLookupTables)
                                 orderIds.push(...result.orderIds)
@@ -509,7 +520,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                     const outBank = accountDetailList[0].usdcBank
                     solPrice = accountDetailList[0].solPrice
                     const sellRoute = await getBestPrice(Side.SELL, 1, inBank, outBank, jupiterSpotSlippage)
-                    const buyRoute = await getBestPrice(Side.BUY, solPrice, outBank, inBank,jupiterSpotSlippage)
+                    const buyRoute = await getBestPrice(Side.BUY, solPrice, outBank, inBank, jupiterSpotSlippage)
                     bestBuyPrice = buyRoute.price
                     bestSellPrice = sellRoute.price
                     if (sellRoute.price > solPrice) {
@@ -526,7 +537,17 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                     (now - lastGoogleUpdate > GOOGLE_UPDATE_INTERVAL) &&
                     accountDetailList.length === accountDefinitions.length) {
                     // update google sheet
-                    await updateGoogleSheet(fundingRates, googleSheets, accountDetailList, feeEstimate, db.getTransactionCache(), bestBuyPrice, bestSellPrice, solPrice)
+                    const driftUpdates: Array<any> = []
+                    if (drift) {
+                        driftUpdates.push(drift)
+                    }
+                    if (private3) {
+                        driftUpdates.push(private3)
+                    }
+                    await updateGoogleSheet(fundingRates, googleSheets,
+                        accountDetailList, feeEstimate,
+                        db.getTransactionCache(), bestBuyPrice,
+                        bestSellPrice, solPrice, driftUpdates)
                     // end google sheet update
                     console.log('Google Sheet Updated', new Date().toTimeString())
                     lastGoogleUpdate = now
@@ -545,9 +566,188 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
     }
 }
 
-try {
-    //    createKeypair();
-    doubleSwapLoop(true, false);
-} catch (error) {
-    console.log(error);
+function formatUsdc(usdc: any) {
+    return usdc / 10 ** 6
 }
+
+function formatPerp(usdc: any) {
+    return usdc / 10 ** 9
+}
+
+function formatSpot(usdc: any) {
+    return usdc / 10 ** 6
+}
+
+function isDeposit(balanceType: any) {
+    return !!balanceType?.deposit
+}
+
+function getPerpInfo(env: "mainnet-beta" | "devnet", symbol: string, driftClient: DriftClient, user: User) {
+    const marketInfo = PerpMarkets[env].find(
+        (market: any) => market.baseAssetSymbol === symbol
+    );
+    const marketIndex = marketInfo!.marketIndex;
+    const ordacleData = driftClient.getOracleDataForPerpMarket(marketIndex);
+    console.log(ordacleData)
+
+    const perpMarketAccount = driftClient.getPerpMarketAccount(marketIndex);
+    const fundingRate = perpMarketAccount!.amm.lastFundingRate.toNumber()
+    const fundingPeriod = perpMarketAccount!.amm.fundingPeriod.toNumber()
+    const fundingRate24H = perpMarketAccount!.amm.last24HAvgFundingRate.toNumber()
+    const activePerpPositions = user.getActivePerpPositions()
+    const perpPosition = formatPerp(activePerpPositions.find(x => x.marketIndex === marketIndex)?.baseAssetAmount) || 0
+    console.log(FUNDING_RATE_BUFFER_PRECISION.toNumber())
+    const rate = perpMarketAccount!.amm.last24HAvgFundingRate!.div(FUNDING_RATE_BUFFER_PRECISION).mul(new BN(24))
+    const CONVERSION_SCALE = FUNDING_RATE_BUFFER_PRECISION.mul(PRICE_PRECISION);
+    const lastFundingRate = convertToNumber(
+        perpMarketAccount!.amm.last24HAvgFundingRate,
+        CONVERSION_SCALE
+    );
+
+    const ammAccountState = perpMarketAccount!.amm;
+
+    const priceSpread =
+        ammAccountState.lastMarkPriceTwap.toNumber() /
+        PRICE_PRECISION.toNumber() -
+        ammAccountState.historicalOracleData.lastOraclePriceTwap.toNumber() /
+        PRICE_PRECISION.toNumber();
+    const peroidicity = perpMarketAccount!.amm.fundingPeriod;
+    const frontEndFundingCalc =
+        priceSpread / ((24 * 3600) / Math.max(1, peroidicity.toNumber()));
+    console.log('frontEndFundingCalc:', frontEndFundingCalc);
+    console.log('last funding rate:', lastFundingRate);
+    console.log('PRICE_PRECISION:', PRICE_PRECISION.toNumber());
+
+  
+    return {
+        fundingRate,
+        perpPosition,
+        fundingRate24H,
+        fundingPeriod,
+        lastFundingRate:frontEndFundingCalc
+    }
+}
+
+
+async function checkDrift(account: string) {
+    try {
+        const env = 'mainnet-beta';
+        const URL = HELIUS_CONNECTION_URL
+        const key = account.toLowerCase() + "Key";
+        const wallet = new Wallet(getUser("./secrets/" + key + ".json"))
+        const connection = new Connection(URL);
+
+        // Set up the Drift Client
+        const driftPublicKey = new PublicKey(DRIFT_PROGRAM_ID);
+        const bulkAccountLoader = new BulkAccountLoader(
+            connection,
+            'confirmed',
+            1000
+        );
+        const driftClient = new DriftClient({
+            connection: connection,
+            wallet: wallet,
+            programID: driftPublicKey,
+            accountSubscription: {
+                type: 'polling',
+                accountLoader: bulkAccountLoader,
+            },
+        });
+
+        // Subscribe to the Drift Account
+        await driftClient.subscribe();
+        const user = driftClient.getUser();
+
+        // Get current price
+        const solMarketInfo = PerpMarkets[env].find(
+            (market) => market.baseAssetSymbol === 'SOL'
+        );
+
+        const wMarketInfo = PerpMarkets[env].find(
+            (market) => market.baseAssetSymbol === 'W'
+        );
+        const jupMarketInfo = PerpMarkets[env].find(
+            (market) => market.baseAssetSymbol === 'JUP'
+        );
+        const ethMarketInfo = PerpMarkets[env].find(
+            (market) => market.baseAssetSymbol === 'ETH'
+        );
+
+        const marketIndex = solMarketInfo!.marketIndex;
+        const ordacleData = driftClient.getOracleDataForPerpMarket(marketIndex);
+        console.log(ordacleData)
+
+        const perpMarketAccount = driftClient.getPerpMarketAccount(marketIndex);
+        console.log(perpMarketAccount)
+        //perpMarketAccount.amm.lastFundingRate.toNumber()/10**9*24*365
+
+        console.log('DRIFT Account:', account);
+        const pnl = user.getUnrealizedPNL(true);
+        console.log('Unrealized PNL:', formatUsdc(pnl));
+
+        const usdValue = user.getNetUsdValue();
+        console.log('Net USD Value:', formatUsdc(usdValue));
+        const totalValue = user.getTotalAssetValue();
+        console.log('Total Value:', formatUsdc(totalValue));
+
+        const health = user.getHealth()
+        console.log('Health:', health)
+        const funding = user.getUnrealizedFundingPNL()
+        console.log('Funding:', formatUsdc(funding))
+
+        const freeCollateral = user.getFreeCollateral();
+        console.log('freeCollateral:', formatUsdc(freeCollateral))
+
+        const totalAllTimePnl = user.getTotalAllTimePnl()
+        console.log('Total All Time PNL:', formatUsdc(totalAllTimePnl))
+        const perpPositionValue = user.getTotalPerpPositionValue()
+        console.log('Total Perp Position Value:', formatUsdc(perpPositionValue))
+
+        let spotPositions = user.getUserAccount().spotPositions
+        console.log('Spot Positions:', spotPositions)
+
+        const solPerp = getPerpInfo(env, 'SOL', driftClient, user)
+        const pythPerp = getPerpInfo(env, 'PYTH', driftClient, user)
+        const ethPerp = getPerpInfo(env, 'ETH', driftClient, user)
+        const jupPerp = getPerpInfo(env, 'JUP', driftClient, user)
+        const wPerp = getPerpInfo(env, 'W', driftClient, user)
+
+        const result = {
+            account,
+            pnl: formatUsdc(pnl),
+            usdValue: formatUsdc(usdValue),
+            totalValue: formatUsdc(totalValue),
+            health: health,
+            funding: formatUsdc(funding),
+            freeCollateral: formatUsdc(freeCollateral),
+            totalAllTimePnl: formatUsdc(totalAllTimePnl),
+            perpPositionValue: formatUsdc(perpPositionValue),
+            solPerp: solPerp.perpPosition,
+            ethPerp: ethPerp.perpPosition,
+            jupPerp: jupPerp.perpPosition,
+            wPerp: wPerp.perpPosition,
+            usdc: formatPerp(spotPositions.find(x => x.marketIndex === 0)?.scaledBalance) * (isDeposit(spotPositions.find(x => x.marketIndex === 0)?.balanceType) ? 1 : -1) || 0,
+            w: formatPerp(spotPositions.find(x => x.marketIndex === 13)?.scaledBalance) * (isDeposit(spotPositions.find(x => x.marketIndex === 13)?.balanceType) ? 1 : -1) || 0,
+            jup: formatPerp(spotPositions.find(x => x.marketIndex === 11)?.scaledBalance) * (isDeposit(spotPositions.find(x => x.marketIndex === 11)?.balanceType) ? 1 : -1) || 0,
+            sol: formatPerp(spotPositions.find(x => x.marketIndex === 1)?.scaledBalance) * (isDeposit(spotPositions.find(x => x.marketIndex === 1)?.balanceType) ? 1 : -1) || 0,
+            solFundingRate: solPerp.lastFundingRate,
+            ethFundingRate: ethPerp.lastFundingRate,
+            jupFundingRate: jupPerp.lastFundingRate,
+            wFundingRate: wPerp.lastFundingRate,
+        }
+        console.log(result)
+        return result
+    } catch (x) {
+        console.error(x);
+        return null;
+    }
+}
+
+(async () => {
+    try {
+        await doubleSwapLoop(true, false);
+    } catch (error) {
+        console.log(error);
+    }
+
+})();
