@@ -221,7 +221,7 @@ export const fetchFundingRate = async (force:boolean=false) => {
 
 
 export const fetchJupPrice = async () => {
-    return await get<{ solPrice: number, jupPrice: number, wormholePrice: number, btcPrice: number, ethPrice: number, driftPrice:number }>(DB_KEYS.JUP_PRICE)
+    return await get<{ solPrice: number, jupPrice: number, wormholePrice: number, btcPrice: number, ethPrice: number, driftPrice:number,renderPrice:number }>(DB_KEYS.JUP_PRICE)
 }
 export const getBidsAndAsks = async (marketName: string, perpMarket: PerpMarket, client: MangoClient) => {
     return await get<{ bestBid: number, bestAsk: number }>(DB_KEYS.BIDS_AND_ASKS, { cacheKey: marketName, params: [perpMarket, client] })

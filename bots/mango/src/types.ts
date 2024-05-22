@@ -12,7 +12,8 @@ import { Wallet } from '@coral-xyz/anchor';
 export type FundingRates = {
   solFundingRate: number,
   btcFundingRate: number,
-  ethFundingRate: number
+  ethFundingRate: number,
+  rndrFundingRate: number
 }
 
 export type OpenTransaction = {
@@ -80,6 +81,8 @@ export type AccountDetail = {
   btcBestAsk: number;
   ethPrice: number;
   btcPrice: number;
+  renderAmount:number;
+  renderFundingAmount:number;
 };
 
 export type MarketKey = 'BTC-PERP' | 'SOL-PERP' | 'ETH-PERP'

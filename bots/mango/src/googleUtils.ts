@@ -96,7 +96,9 @@ export async function updateGoogleSheet(
                 accountDetail.ethPrice,
                 solOrders,
                 btcOrders,
-                ethOrders
+                ethOrders,
+                accountDetail.renderAmount,
+                accountDetail.renderFundingAmount
             ]
         });
 
@@ -130,19 +132,19 @@ export async function updateGoogleSheet(
                 valueInputOption: 'USER_ENTERED',
                 data: [
                     {
-                        range: `DRIFT_ACCOUNT_DATA!A2:AU${driftAccounts.length + 1}`,
+                        range: `DRIFT_ACCOUNT_DATA!A2:AC${driftAccounts.length + 1}`,
                         values: driftAccounts.map((accountDetail) => {
                             return Object.values(accountDetail)
                         }),
                     },
                     {
-                        range: `Account_Data!A2:AE${accountValues.length + 1}`,
+                        range: `Account_Data!A2:AG${accountValues.length + 1}`,
                         values: accountValues.map((accountDetail) => {
                             return accountDetail
                         }),
                     },
                     {
-                        range: `Market_data!B1:B19`,
+                        range: `Market_data!B1:B21`,
                         values: [
                             [fundingRates.solFundingRate / 100],
                             [fee],
@@ -162,7 +164,9 @@ export async function updateGoogleSheet(
                             [jupPrice.btcPrice],
                             [jupPrice.ethPrice],
                             [borrowRate || 0],
-                            [depositRate || 0]
+                            [depositRate || 0],
+                            [fundingRates.rndrFundingRate / 100],
+                            [jupPrice.renderPrice]
                         ],
                     },
                     {

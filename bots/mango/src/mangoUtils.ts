@@ -91,13 +91,14 @@ export const fetchJupPrice = async () => {
         const jupPrice = response.data.data.JUP.price
         const solPrice = response.data.data.SOL.price
         const btcPrice = response.data.data.TBTC.price
+        const renderPrice = response.data.data.RENDER.price
         const ethPrice = response.data.data.ETH.price
         const driftPrice = response.data.data.DRIFT.price
         const wormholePrice = response.data.data["85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ"].price
-        return { jupPrice, solPrice, wormholePrice, ethPrice, btcPrice,driftPrice }
+        return { jupPrice, solPrice, wormholePrice, ethPrice, btcPrice,driftPrice,renderPrice }
     } catch (e) {
         console.log('Failed to fetch jup price', e)
-        return { jupPrice: 0, solPrice: 0, wormwholePrice: 0, ethPrice: 0, btcPrice: 0 }
+        return { jupPrice: 0, solPrice: 0, wormwholePrice: 0, ethPrice: 0, btcPrice: 0,renderPrice:0 }
     }
 }
 
@@ -175,17 +176,20 @@ export async function getFundingRate(): Promise<FundingRates> {
             const solHourlyRate = data?.find((d: any) => d.name === 'SOL-PERP').funding_rate_hourly
             const ethHourlyRate = data?.find((d: any) => d.name === 'ETH-PERP').funding_rate_hourly
             const btcHourlyRate = data?.find((d: any) => d.name === 'BTC-PERP').funding_rate_hourly
+            const rndrHourlyRate = data?.find((d: any) => d.name === 'RENDER-PERP').funding_rate_hourly
 
             return {
                 solFundingRate: Number((solHourlyRate * 100 * 24 * 365).toFixed(3)),
                 btcFundingRate: Number((btcHourlyRate * 100 * 24 * 365).toFixed(3)),
-                ethFundingRate: Number((ethHourlyRate * 100 * 24 * 365).toFixed(3))
+                ethFundingRate: Number((ethHourlyRate * 100 * 24 * 365).toFixed(3)),
+                rndrFundingRate: Number((rndrHourlyRate * 100 * 24 * 365).toFixed(3))
             }
         } else {
             return {
                 solFundingRate: 0,
                 btcFundingRate: 0,
-                ethFundingRate: 0
+                ethFundingRate: 0,
+                rndrFundingRate: 0
             }
         }
     } catch (x: any) {
@@ -193,7 +197,8 @@ export async function getFundingRate(): Promise<FundingRates> {
         return {
             solFundingRate: 0,
             btcFundingRate: 0,
-            ethFundingRate: 0
+            ethFundingRate: 0,
+            rndrFundingRate: 0
         }
     }
 }
@@ -392,6 +397,7 @@ export async function getAccountData(
     const perpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
     const btcPerpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === 'BTC-PERP');
     const ethPerpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === 'ETH-PERP');
+    const renderPerpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === 'RENDER-PERP');
 
     const tokens = await getTokenAccountsByOwnerWithWrappedSol(client.connection, user.publicKey)
     const usdcToken = tokens.find((t) => t.mint.toString() === USDC_MINT)
@@ -405,7 +411,9 @@ export async function getAccountData(
 
     let btcAmount = 0
     let ethAmount = 0
+    let renderAmount = 0
     let btcFundingAmount = 0
+    let renderFundingAmount = 0
     let ethFundingAmount = 0
     let ethBestBid = 0
     let ethBestAsk = 0
@@ -423,6 +431,16 @@ export async function getAccountData(
             btcAmount = btcPerpPosition!.basePositionLots.toNumber() / 10000
             const btcFunding = btcPerpPosition?.getCumulativeFunding(btcPerpMarket)
             btcFundingAmount = ((btcFunding?.cumulativeShortFunding || 0) - (btcFunding!.cumulativeLongFunding || 0)) / 10 ** 6
+        }
+    }
+    if (renderPerpMarket) {
+        const perpPosition = mangoAccount
+            .perpActive()
+            .find((pp: any) => pp.marketIndex === renderPerpMarket!.perpMarketIndex);
+        if (perpPosition) {
+            renderAmount = perpPosition!.basePositionLots.toNumber() / 10
+            const renderFunding = perpPosition?.getCumulativeFunding(renderPerpMarket)
+            renderFundingAmount = ((renderFunding?.cumulativeShortFunding || 0) - (renderFunding!.cumulativeLongFunding || 0)) / 10 ** 6
         }
     }
     if (ethPerpMarket) {
@@ -516,7 +534,9 @@ export async function getAccountData(
         btcBestBid,
         btcBestAsk,
         btcPrice,
-        ethPrice
+        ethPrice,
+        renderAmount,
+        renderFundingAmount
 
     }
 }

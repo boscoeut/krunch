@@ -4,9 +4,29 @@ import {
     toNative
 } from '@blockworks-foundation/mango-v4';
 import {
-    DriftClient, BulkAccountLoader, calculateBidAskPrice, BN,
-    convertToNumber, PRICE_PRECISION, User, FUNDING_RATE_BUFFER_PRECISION,
-    SpotBalanceType, Wallet, DRIFT_PROGRAM_ID, PerpMarkets
+    BulkAccountLoader,
+    DRIFT_PROGRAM_ID,
+    DriftClient,
+    FUNDING_RATE_BUFFER_PRECISION,
+    PerpMarkets,
+    User,
+    Wallet,
+    convertToNumber,
+    AMM_RESERVE_PRECISION,
+	PRICE_PRECISION,
+	QUOTE_PRECISION,
+	ZERO,
+	ONE,
+	FUNDING_RATE_OFFSET_DENOMINATOR,
+    PerpMarketAccount,
+    BN,
+    isVariant,
+    OraclePriceData,
+    calculateBidAskPrice,
+    calculateLiveOracleTwap,
+    calculateDepositRate,
+    calculateBorrowRate,
+    SpotMarkets,clampBN
 } from "@drift-labs/sdk";
 import { Connection, PublicKey } from "@solana/web3.js";
 import axios from 'axios';
@@ -14,7 +34,7 @@ import fs from 'fs';
 import {
     ACTIVITY_FEED_URL,
     GOOGLE_UPDATE_INTERVAL,
-    HELIUS_CONNECTION_URL,
+    HELIUS_ROBO_CONNECTION_URL,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
     MIN_SOL_WALLET_BALANCE,
@@ -53,6 +73,70 @@ function roundToNearestFloor(num: number, nearest: number = 2) {
     return Math.floor(num * nearest) / nearest;
 }
 
+
+function shrinkStaleTwaps(
+	market: PerpMarketAccount,
+	markTwapWithMantissa: BN,
+	oracleTwapWithMantissa: BN,
+	now?: BN
+) {
+	now = now || new BN((Date.now() / 1000).toFixed(0));
+	let newMarkTwap = markTwapWithMantissa;
+	let newOracleTwap = oracleTwapWithMantissa;
+	if (
+		market.amm.lastMarkPriceTwapTs.gt(
+			market.amm.historicalOracleData.lastOraclePriceTwapTs
+		)
+	) {
+		// shrink oracle based on invalid intervals
+		const oracleInvalidDuration = BN.max(
+			ZERO,
+			market.amm.lastMarkPriceTwapTs.sub(
+				market.amm.historicalOracleData.lastOraclePriceTwapTs
+			)
+		);
+		const timeSinceLastOracleTwapUpdate = now.sub(
+			market.amm.historicalOracleData.lastOraclePriceTwapTs
+		);
+		const oracleTwapTimeSinceLastUpdate = BN.max(
+			ONE,
+			BN.min(
+				market.amm.fundingPeriod,
+				BN.max(ONE, market.amm.fundingPeriod.sub(timeSinceLastOracleTwapUpdate))
+			)
+		);
+		newOracleTwap = oracleTwapTimeSinceLastUpdate
+			.mul(oracleTwapWithMantissa)
+			.add(oracleInvalidDuration.mul(markTwapWithMantissa))
+			.div(oracleTwapTimeSinceLastUpdate.add(oracleInvalidDuration));
+	} else if (
+		market.amm.lastMarkPriceTwapTs.lt(
+			market.amm.historicalOracleData.lastOraclePriceTwapTs
+		)
+	) {
+		// shrink mark to oracle twap over tradless intervals
+		const tradelessDuration = BN.max(
+			ZERO,
+			market.amm.historicalOracleData.lastOraclePriceTwapTs.sub(
+				market.amm.lastMarkPriceTwapTs
+			)
+		);
+		const timeSinceLastMarkTwapUpdate = now.sub(market.amm.lastMarkPriceTwapTs);
+		const markTwapTimeSinceLastUpdate = BN.max(
+			ONE,
+			BN.min(
+				market.amm.fundingPeriod,
+				BN.max(ONE, market.amm.fundingPeriod.sub(timeSinceLastMarkTwapUpdate))
+			)
+		);
+		newMarkTwap = markTwapTimeSinceLastUpdate
+			.mul(markTwapWithMantissa)
+			.add(tradelessDuration.mul(oracleTwapWithMantissa))
+			.div(markTwapTimeSinceLastUpdate.add(tradelessDuration));
+	}
+
+	return [newMarkTwap, newOracleTwap];
+}
 
 function getTradeSize(requestedTradeSize: number, solAmount: number, action: Side,
     borrow: number, oraclePrice: number,
@@ -373,7 +457,7 @@ async function checkActivityFeed(accountName: string, mangoAccount: string) {
     db.tradeHistory.set(accountName, perpUsdc + swapUsdc)
 }
 
-async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false) {
+async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRADES: boolean = false, SKIP_ZERO_FUNDING:boolean = true) {
     let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
@@ -387,7 +471,6 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
     while (true) {
         try {
             const drift = await checkDrift("DRIFT");
-            const private3 = await checkDrift("PRIVATE3");
 
             const tradingParameters = await getTradingParameters(googleSheets)
             const shouldTradeNow = tradingParameters?.tradingStatus || false
@@ -424,7 +507,7 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                 lastFundingRate = fundingRates.solFundingRate
             }
             console.log('SOL FUNDING RATE: ', fundingRates.solFundingRate)
-            if (fundingRates.solFundingRate === 0) {
+            if (fundingRates.solFundingRate === 0 && SKIP_ZERO_FUNDING) {
                 console.log('FUNDING RATE IS 0, SLEEPING FOR 5 SECONDS')
                 await sleep(10 * 1000)
             } else {
@@ -531,6 +614,8 @@ async function doubleSwapLoop(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE_TRAD
                     }
                 }
 
+                
+                const private3 = await checkDrift("PRIVATE3");
 
                 const now = Date.now()
                 if ((UPDATE_GOOGLE_SHEET || db.getOpenTransactions() > 0) &&
@@ -582,7 +667,199 @@ function isDeposit(balanceType: any) {
     return !!balanceType?.deposit
 }
 
-function getPerpInfo(env: "mainnet-beta" | "devnet", symbol: string, driftClient: DriftClient, user: User) {
+function getMaxPriceDivergenceForFundingRate(
+	market: PerpMarketAccount,
+	oracleTwap: BN
+) {
+	if (isVariant(market.contractTier, 'a')) {
+		return oracleTwap.divn(33);
+	} else if (isVariant(market.contractTier, 'b')) {
+		return oracleTwap.divn(33);
+	} else if (isVariant(market.contractTier, 'c')) {
+		return oracleTwap.divn(20);
+	} else {
+		return oracleTwap.divn(10);
+	}
+}
+
+function calculateLiveMarkTwap(
+	market: PerpMarketAccount,
+	oraclePriceData: OraclePriceData,
+	markPrice?: BN,
+	now?: BN,
+	period = new BN(3600)
+): BN {
+	now = now || new BN((Date.now() / 1000).toFixed(0));
+
+	const lastMarkTwapWithMantissa = market.amm.lastMarkPriceTwap;
+	const lastMarkPriceTwapTs = market.amm.lastMarkPriceTwapTs;
+
+	const timeSinceLastMarkChange = now.sub(lastMarkPriceTwapTs);
+	const markTwapTimeSinceLastUpdate = BN.max(
+		period,
+		BN.max(ZERO, period.sub(timeSinceLastMarkChange))
+	);
+
+	if (!markPrice) {
+		const [bid, ask] = calculateBidAskPrice(market.amm, oraclePriceData);
+		markPrice = bid.add(ask).div(new BN(2));
+	}
+
+	const markTwapWithMantissa = markTwapTimeSinceLastUpdate
+		.mul(lastMarkTwapWithMantissa)
+		.add(timeSinceLastMarkChange.mul(markPrice))
+		.div(timeSinceLastMarkChange.add(markTwapTimeSinceLastUpdate));
+
+	return markTwapWithMantissa;
+}
+
+
+/**
+ *
+ * @param market
+ * @returns Estimated fee pool size
+ */
+export function calculateFundingPool(market: PerpMarketAccount): BN {
+	// todo
+	const totalFeeLB = market.amm.totalExchangeFee.div(new BN(2));
+	const feePool = BN.max(
+		ZERO,
+		market.amm.totalFeeMinusDistributions
+			.sub(totalFeeLB)
+			.mul(new BN(1))
+			.div(new BN(3))
+	);
+	return feePool;
+}
+
+export async function calculateAllEstimatedFundingRate(
+	market: PerpMarketAccount,
+	oraclePriceData: OraclePriceData,
+	markPrice?: BN,
+	now?: BN
+): Promise<[BN, BN, BN, BN, BN]> {
+	if (isVariant(market.status, 'uninitialized')) {
+		return [ZERO, ZERO, ZERO, ZERO, ZERO];
+	}
+
+	// todo: sufficiently differs from blockchain timestamp?
+	now = now || new BN((Date.now() / 1000).toFixed(0));
+
+	// calculate real-time mark and oracle twap
+	const liveMarkTwap = calculateLiveMarkTwap(
+		market,
+		oraclePriceData,
+		markPrice,
+		now,
+		market.amm.fundingPeriod
+	);
+	const liveOracleTwap = calculateLiveOracleTwap(
+		market.amm.historicalOracleData,
+		oraclePriceData,
+		now,
+		market.amm.fundingPeriod
+	);
+	const [markTwap, oracleTwap] = shrinkStaleTwaps(
+		market,
+		liveMarkTwap,
+		liveOracleTwap,
+		now
+	);
+
+	// if(!markTwap.eq(liveMarkTwap)){
+	// 	console.log('shrink mark:', liveMarkTwap.toString(), '->', markTwap.toString());
+	// }
+
+	// if(!oracleTwap.eq(liveOracleTwap)){
+	// 	console.log('shrink orac:', liveOracleTwap.toString(), '->', oracleTwap.toString());
+	// }
+
+	const twapSpread = markTwap.sub(oracleTwap);
+	const twapSpreadWithOffset = twapSpread.add(
+		oracleTwap.abs().div(FUNDING_RATE_OFFSET_DENOMINATOR)
+	);
+	const maxSpread = getMaxPriceDivergenceForFundingRate(market, oracleTwap);
+
+	const clampedSpreadWithOffset = clampBN(
+		twapSpreadWithOffset,
+		maxSpread.mul(new BN(-1)),
+		maxSpread
+	);
+
+	const twapSpreadPct = clampedSpreadWithOffset
+		.mul(PRICE_PRECISION)
+		.mul(new BN(100))
+		.div(oracleTwap);
+
+	const secondsInHour = new BN(3600);
+	const hoursInDay = new BN(24);
+	const timeSinceLastUpdate = now.sub(market.amm.lastFundingRateTs);
+
+	const lowerboundEst = twapSpreadPct
+		.mul(market.amm.fundingPeriod)
+		.mul(BN.min(secondsInHour, timeSinceLastUpdate))
+		.div(secondsInHour)
+		.div(secondsInHour)
+		.div(hoursInDay);
+
+	const interpEst = twapSpreadPct.div(hoursInDay);
+
+	const interpRateQuote = twapSpreadPct
+		.div(hoursInDay)
+		.div(PRICE_PRECISION.div(QUOTE_PRECISION));
+
+	let feePoolSize = calculateFundingPool(market);
+	if (interpRateQuote.lt(new BN(0))) {
+		feePoolSize = feePoolSize.mul(new BN(-1));
+	}
+
+	let cappedAltEst: BN;
+	let largerSide: BN;
+	let smallerSide: BN;
+	if (
+		market.amm.baseAssetAmountLong.gt(market.amm.baseAssetAmountShort.abs())
+	) {
+		largerSide = market.amm.baseAssetAmountLong.abs();
+		smallerSide = market.amm.baseAssetAmountShort.abs();
+		if (twapSpread.gt(new BN(0))) {
+			return [markTwap, oracleTwap, lowerboundEst, interpEst, interpEst];
+		}
+	} else if (
+		market.amm.baseAssetAmountLong.lt(market.amm.baseAssetAmountShort.abs())
+	) {
+		largerSide = market.amm.baseAssetAmountShort.abs();
+		smallerSide = market.amm.baseAssetAmountLong.abs();
+		if (twapSpread.lt(new BN(0))) {
+			return [markTwap, oracleTwap, lowerboundEst, interpEst, interpEst];
+		}
+	} else {
+		return [markTwap, oracleTwap, lowerboundEst, interpEst, interpEst];
+	}
+
+	if (largerSide.gt(ZERO)) {
+		// funding smaller flow
+		cappedAltEst = smallerSide.mul(twapSpread).div(hoursInDay);
+		const feePoolTopOff = feePoolSize
+			.mul(PRICE_PRECISION.div(QUOTE_PRECISION))
+			.mul(AMM_RESERVE_PRECISION);
+		cappedAltEst = cappedAltEst.add(feePoolTopOff).div(largerSide);
+
+		cappedAltEst = cappedAltEst
+			.mul(PRICE_PRECISION)
+			.mul(new BN(100))
+			.div(oracleTwap);
+
+		if (cappedAltEst.abs().gte(interpEst.abs())) {
+			cappedAltEst = interpEst;
+		}
+	} else {
+		cappedAltEst = interpEst;
+	}
+
+	return [markTwap, oracleTwap, lowerboundEst, cappedAltEst, interpEst];
+}
+
+async function getPerpInfo(env: "mainnet-beta" | "devnet", symbol: string, driftClient: DriftClient, user: User) {
     const marketInfo = PerpMarkets[env].find(
         (market: any) => market.baseAssetSymbol === symbol
     );
@@ -595,9 +872,9 @@ function getPerpInfo(env: "mainnet-beta" | "devnet", symbol: string, driftClient
     const fundingPeriod = perpMarketAccount!.amm.fundingPeriod.toNumber()
     const fundingRate24H = perpMarketAccount!.amm.last24HAvgFundingRate.toNumber()
     const activePerpPositions = user.getActivePerpPositions()
-    const perpPosition = formatPerp(activePerpPositions.find(x => x.marketIndex === marketIndex)?.baseAssetAmount) || 0
-    console.log(FUNDING_RATE_BUFFER_PRECISION.toNumber())
-    const rate = perpMarketAccount!.amm.last24HAvgFundingRate!.div(FUNDING_RATE_BUFFER_PRECISION).mul(new BN(24))
+
+    const userPosition = activePerpPositions.find(x => x.marketIndex === marketIndex)
+    const perpPosition = formatPerp(userPosition?.baseAssetAmount) || 0
     const CONVERSION_SCALE = FUNDING_RATE_BUFFER_PRECISION.mul(PRICE_PRECISION);
     const lastFundingRate = convertToNumber(
         perpMarketAccount!.amm.last24HAvgFundingRate,
@@ -605,7 +882,6 @@ function getPerpInfo(env: "mainnet-beta" | "devnet", symbol: string, driftClient
     );
 
     const ammAccountState = perpMarketAccount!.amm;
-
     const priceSpread =
         ammAccountState.lastMarkPriceTwap.toNumber() /
         PRICE_PRECISION.toNumber() -
@@ -614,17 +890,24 @@ function getPerpInfo(env: "mainnet-beta" | "devnet", symbol: string, driftClient
     const peroidicity = perpMarketAccount!.amm.fundingPeriod;
     const frontEndFundingCalc =
         priceSpread / ((24 * 3600) / Math.max(1, peroidicity.toNumber()));
+    console.log('PERP INFO:'+symbol);
+    console.log('fundingRate:', fundingRate);
+    console.log('fundingPeriod:', fundingPeriod);
+    console.log('fundingRate24H:', fundingRate24H);
+    console.log('perpPosition:', perpPosition)
     console.log('frontEndFundingCalc:', frontEndFundingCalc);
     console.log('last funding rate:', lastFundingRate);
     console.log('PRICE_PRECISION:', PRICE_PRECISION.toNumber());
-
-  
+    console.log('perpMarketAccount!.amm.last24HAvgFundingRate:', perpMarketAccount!.amm.last24HAvgFundingRate.toNumber());
+    const oraclePriceData = driftClient.getOracleDataForPerpMarket(marketIndex);
+    const allFundingRateData = await calculateAllEstimatedFundingRate(perpMarketAccount!,oraclePriceData)
+    console.log('allFundingRateData:', allFundingRateData);
     return {
         fundingRate,
         perpPosition,
         fundingRate24H,
         fundingPeriod,
-        lastFundingRate:frontEndFundingCalc
+        lastFundingRate:allFundingRateData[4].toNumber()
     }
 }
 
@@ -632,7 +915,7 @@ function getPerpInfo(env: "mainnet-beta" | "devnet", symbol: string, driftClient
 async function checkDrift(account: string) {
     try {
         const env = 'mainnet-beta';
-        const URL = HELIUS_CONNECTION_URL
+        const URL = HELIUS_ROBO_CONNECTION_URL
         const key = account.toLowerCase() + "Key";
         const wallet = new Wallet(getUser("./secrets/" + key + ".json"))
         const connection = new Connection(URL);
@@ -657,29 +940,10 @@ async function checkDrift(account: string) {
         // Subscribe to the Drift Account
         await driftClient.subscribe();
         const user = driftClient.getUser();
+        const userAccount = driftClient.getUserAccount()
 
-        // Get current price
-        const solMarketInfo = PerpMarkets[env].find(
-            (market) => market.baseAssetSymbol === 'SOL'
-        );
-
-        const wMarketInfo = PerpMarkets[env].find(
-            (market) => market.baseAssetSymbol === 'W'
-        );
-        const jupMarketInfo = PerpMarkets[env].find(
-            (market) => market.baseAssetSymbol === 'JUP'
-        );
-        const ethMarketInfo = PerpMarkets[env].find(
-            (market) => market.baseAssetSymbol === 'ETH'
-        );
-
-        const marketIndex = solMarketInfo!.marketIndex;
-        const ordacleData = driftClient.getOracleDataForPerpMarket(marketIndex);
-        console.log(ordacleData)
-
-        const perpMarketAccount = driftClient.getPerpMarketAccount(marketIndex);
-        console.log(perpMarketAccount)
-        //perpMarketAccount.amm.lastFundingRate.toNumber()/10**9*24*365
+        const cumulativePerpFunding = userAccount?.cumulativePerpFunding.toNumber() / 10**6
+        const cumulativeSpotFees = userAccount?.cumulativeSpotFees.toNumber() / 10**6
 
         console.log('DRIFT Account:', account);
         const pnl = user.getUnrealizedPNL(true);
@@ -706,11 +970,23 @@ async function checkDrift(account: string) {
         let spotPositions = user.getUserAccount().spotPositions
         console.log('Spot Positions:', spotPositions)
 
-        const solPerp = getPerpInfo(env, 'SOL', driftClient, user)
-        const pythPerp = getPerpInfo(env, 'PYTH', driftClient, user)
-        const ethPerp = getPerpInfo(env, 'ETH', driftClient, user)
-        const jupPerp = getPerpInfo(env, 'JUP', driftClient, user)
-        const wPerp = getPerpInfo(env, 'W', driftClient, user)
+        const solPerp = await getPerpInfo(env, 'SOL', driftClient, user)
+        const btcPerp = await getPerpInfo(env, 'BTC', driftClient, user)
+        const ethPerp = await getPerpInfo(env, 'ETH', driftClient, user)
+        const jupPerp =await  getPerpInfo(env, 'JUP', driftClient, user)
+        const wPerp = await getPerpInfo(env, 'W', driftClient, user)
+        const renderPerp =await getPerpInfo(env, 'RNDR', driftClient, user)
+
+        console.log(SpotMarkets[env])
+        const marketInfo = SpotMarkets[env].find(
+            (market: any) => market.symbol === "USDC"
+        );
+        const marketIndex = marketInfo!.marketIndex;
+        const usdcSpotMarket = driftClient.getSpotMarketAccount(marketIndex);
+        const usdcDepositRate = calculateDepositRate(usdcSpotMarket!)
+        const usdcBorrowRate = calculateBorrowRate(usdcSpotMarket!)
+        console.log('USDC Deposit Rate:', usdcDepositRate.toNumber());
+        console.log('USDC Borrow Rate:', usdcBorrowRate.toNumber());
 
         const result = {
             account,
@@ -734,6 +1010,14 @@ async function checkDrift(account: string) {
             ethFundingRate: ethPerp.lastFundingRate,
             jupFundingRate: jupPerp.lastFundingRate,
             wFundingRate: wPerp.lastFundingRate,
+            cumulativePerpFunding,
+            cumulativeSpotFees,
+            renderPerp: renderPerp.perpPosition,
+            renderFundingRate: renderPerp.lastFundingRate,
+            btcPerp: btcPerp.perpPosition,
+            btcFundingRate: btcPerp.lastFundingRate,
+            usdcDepositRate:usdcDepositRate.toNumber(),
+            usdcBorrowRate:usdcBorrowRate.toNumber()
         }
         console.log(result)
         return result
@@ -745,7 +1029,7 @@ async function checkDrift(account: string) {
 
 (async () => {
     try {
-        await doubleSwapLoop(true, false);
+        await doubleSwapLoop(true, false, false);
     } catch (error) {
         console.log(error);
     }

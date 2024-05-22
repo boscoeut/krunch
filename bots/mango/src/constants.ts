@@ -59,13 +59,14 @@ export const QUICKNODE_CONNECTION_URL = 'https://side-indulgent-research.solana-
 export const GET_BLOCK_CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
 export const ACTIVITY_FEED_URL = 'https://api.mngo.cloud/data/v4/stats/activity-feed?offset=0&limit=1000&mango-account='
 export const HELIUS_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=f8550011-b7ca-4967-a265-6605701031fe'
+export const HELIUS_ROBO_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=9ff7c826-8d26-482d-a39b-9e01d3310fcc'
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000
 export const FEE_MULTIPLIER = 1
 
 // JUP
-export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL,85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ,TBTC,ETH,DRIFT"
+export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL,85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ,TBTC,ETH,DRIFT,RENDER"
 
 // GOOGLE SHEETS
 export const SPREADSHEET_ID = '1-k6Lv4quwIS-rRck-JYLA0WiuC9x43nDuMa_95q8CIw';
