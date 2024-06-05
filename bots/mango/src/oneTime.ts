@@ -28,27 +28,36 @@ async function borrow(borrowAmount: number, mint: string, client: MangoClient,
     return result;
 }
 
-async function deposit(borrowAmount: number, mint: string, client: MangoClient,
-    mangoAccount: MangoAccount, group: Group) {
+async function deposit(depositAmount: number, mint: string, client: MangoClient,
+    mangoAccount: MangoAccount, group: Group, user: string) {
     const mintPk = new PublicKey(mint)
-    const borrowAmountBN = toNative(borrowAmount, group.getMintDecimals(mintPk));
-    return await client.tokenDepositNative(group, mangoAccount!, mintPk, borrowAmountBN, true)
+    const decimals = group.getMintDecimals(mintPk);
+    const depositAmountBN = toNative(depositAmount, decimals);
+    console.log("Depositing for user", user, "amount", depositAmountBN.toString())
+
+    try {
+        return await client.tokenDepositNative(group, mangoAccount!, mintPk, depositAmountBN)
+    } catch (e) {
+        console.log("Error depositing for user ", user, e)
+        throw e;
+    }
 }
 
 async function cancelOpenOrders(market: string, client: MangoClient,
-    mangoAccount: MangoAccount, group: Group) {
+    mangoAccount: MangoAccount, group: Group, limit: number = 10) {
     const values = group.perpMarketsMapByMarketIndex.values()
     const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
-    return await client.perpCancelAllOrdersIx(group, mangoAccount!, perpMarket.perpMarketIndex, 10)
+    return await client.perpCancelAllOrdersIx(group, mangoAccount!, perpMarket.perpMarketIndex, limit)
 }
 
 async function placePeggedPerpOrder(market: string, client: MangoClient,
     mangoAccount: MangoAccount, group: Group, side: PerpOrderSide,
-    size: number, priceOffset: number, clientOrderId: number) {
+    size: number, priceOffset: number, clientOrderId: number,
+    expiryTimestamp?: number) {
     const values = group.perpMarketsMapByMarketIndex.values()
     const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
 
-    if (size > 20) throw new Error("Size must be less than 20")
+    // if (size > 20) throw new Error("Size must be less than 20")
 
     const buffer = side === PerpOrderSide.bid ? -1 * priceOffset : priceOffset
     return await client.perpPlaceOrderPeggedV2Ix(
@@ -64,18 +73,19 @@ async function placePeggedPerpOrder(market: string, client: MangoClient,
         PerpOrderType.limit,
         PerpSelfTradeBehavior.cancelProvide,
         false, //reduceOnly
-        undefined, //expiryTimestamp,
+        expiryTimestamp, //expiryTimestamp,
         undefined // limit
     )
 }
 
 async function placePerpOrder(market: string, client: MangoClient,
     mangoAccount: MangoAccount, group: Group, side: PerpOrderSide,
-    size: number, price: number, clientOrderId: number) {
+    size: number, price: number, clientOrderId: number, perpOrderType: PerpOrderType = PerpOrderType.postOnly,
+    expiryTimestamp?: number) {
     const values = group.perpMarketsMapByMarketIndex.values()
     const perpMarket: any = Array.from(values).find((perpMarket: any) => perpMarket.name === market);
 
-    if (size > 15) throw new Error("Size must be less than 5")
+    // if (size > 20) throw new Error("Size must be less than 5")
 
     return await client.perpPlaceOrderV2Ix(
         group,
@@ -86,10 +96,10 @@ async function placePerpOrder(market: string, client: MangoClient,
         toFixedFloor(size),// size
         undefined,//maxQuoteQuantity,
         clientOrderId,//clientOrderId,
-        PerpOrderType.postOnly,
+        perpOrderType,
         PerpSelfTradeBehavior.cancelProvide,
         false, //reduceOnly
-        undefined, //expiryTimestamp,
+        expiryTimestamp, //expiryTimestamp,
         undefined // limit
     )
 }
@@ -103,33 +113,82 @@ async function postTrades(client: MangoClient, group: Group, tradeInstructions: 
     console.log('Transaction Complete', result);
 }
 
+async function cancelAllOrders(transactionInstructions: Array<any> = [], client: any, limit: number = 10) {
+    transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group, limit));
+    transactionInstructions.push(await cancelOpenOrders("BTC-PERP", client.client, client.mangoAccount!, client.group, limit));
+    transactionInstructions.push(await cancelOpenOrders("ETH-PERP", client.client, client.mangoAccount!, client.group, limit));
+    transactionInstructions.push(await cancelOpenOrders("RENDER-PERP", client.client, client.mangoAccount!, client.group, limit));
+}
+
+async function makeDeposits(depositDefinitions: Array<{ amount: number, mint: string, user: string }>) {
+    const priorityFee = 1;
+    let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
+    const promises: Array<Promise<any>> = []
+    for (const depositDefinition of depositDefinitions) {
+        const user = accountDefinitions.find(account => account.name === depositDefinition.user)
+        const client = await setupClient(user!, priorityFee);
+        const p = deposit(depositDefinition.amount, depositDefinition.mint, client.client, client.mangoAccount!, client.group, depositDefinition.user)
+        promises.push(p)
+    }
+    await Promise.all(promises)
+}
+
 (async () => {
     try {
-        const priorityFee = 100;
+        const priorityFee = 20000;
+        // const accounts: Array<string> = ["ACCOUNT2", "BIRD", "BUCKET", "DRIFT", "FIVE", "SEVEN", "SIX", "SOL_FLARE", "PRIVATE3"]
+        // const accounts: Array<string> = [ "BIRD", "BUCKET", "DRIFT", "FIVE", "SEVEN", "SIX", "SOL_FLARE", "PRIVATE3"]
+        // const accounts:Array<string> = ["BIRD","ACCOUNT2","SOL_FLARE","BUCKET"]
+        const accounts: Array<string> = ["PRIVATE3","DRIFT"]
+        // const accounts: Array<string> = ["DRIFT"]
         let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
-        const user = accountDefinitions.find(account => account.name === "BIRD")
-        const client = await setupClient(user!, priorityFee);
 
-        let transactionInstructions: Array<any> = [];
-        //  await deposit( 7.801777255, SOL_MINT, client.client, client.mangoAccount!, client.group);
-        transactionInstructions.push(...(await borrow(1000, USDC_MINT, client.client, client.mangoAccount!, client.group)));
-        //  transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group));
-        // transactionInstructions.push(await cancelOpenOrders("RENDER-PERP", client.client, client.mangoAccount!, client.group));
-        //    transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask,5,178.450,new Date().getTime()));
-        //    transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask,5,178.55,new Date().getTime()));
-        //    transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask,5,178.5,new Date().getTime()));
-        //    transactionInstructions.push(await placePerpOrder("RENDER-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask,10,11.0,new Date().getTime()));
+        const promises: Array<Promise<any>> = []
+        for (const accountName of accounts) {
+            const user = accountDefinitions.find(account => account.name === accountName)
+            const client = await setupClient(user!, priorityFee);
 
-        //  transactionInstructions.push(await placePeggedPerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask,5, 0.05 ,new Date().getTime()));
-        //  transactionInstructions.push(await placePeggedPerpOrder("RENDER-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid,15, 0.01 ,new Date().getTime()));
+            let transactionInstructions: Array<any> = [];
 
-        // transactionInstructions.push(await placePeggedPerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.005, 30, new Date().getTime()));
-        // transactionInstructions.push(await placePeggedPerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.1, 1.5, new Date().getTime()));
+            // promises.push(makeDeposits([{ amount: 150, mint: USDC_MINT, user: accountName }]))
 
-        if (transactionInstructions.length > 0) {
-            await postTrades(client.client, client.group, transactionInstructions, []);
+            await cancelAllOrders(transactionInstructions, client, 10);
+            // transactionInstructions.push(await cancelOpenOrders("BTC-PERP", client.client, client.mangoAccount!, client.group));
+            // transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.1,    3732.59,  new Date().getTime()));
+            // transactionInstructions.push(await placePerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.001,  69075,   new Date().getTime(),PerpOrderType.immediateOrCancel));
+            // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 5.89, 173.30,  new Date().getTime(), PerpOrderType.immediateOrCancel));
+            // transactionInstructions.push(await placePeggedPerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 1, 0, new Date().getTime()));
+            if (accountName === "DRIFT"){
+                // transactionInstructions.push(await cancelOpenOrders("ETH-PERP", client.client, client.mangoAccount!, client.group));
+                // transactionInstructions.push(await cancelOpenOrders("BTC-PERP", client.client, client.mangoAccount!, client.group));
+                // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 1, 168.5,  new Date().getTime(), PerpOrderType.limit));
+                // transactionInstructions.push(await placePerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.0001, 71000,  new Date().getTime(), PerpOrderType.limit));
+                // transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.001, 3850,  new Date().getTime(), PerpOrderType.limit));
+
+                // transactionInstructions.push(await placePeggedPerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 0.001, 25, new Date().getTime()));
+                // transactionInstructions.push(await placePeggedPerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 0.01, 0.3, new Date().getTime()));
+                // transactionInstructions.push(await placePeggedPerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 0.0001, 100, new Date().getTime()));
+                // transactionInstructions.push(await placePeggedPerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.005, 5, new Date().getTime()));
+            }
+            
+            if (accountName === "PRIVATE3") {
+                // await cancelAllOrders(transactionInstructions, client, 10);
+                // transactionInstructions.push(await placePerpOrder("RENDER-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid,20, 10.3155, new Date().getTime(), PerpOrderType.immediateOrCancel));
+                // transactionInstructions.push(await placePeggedPerpOrder("RENDER-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 1, 0.1, new Date().getTime()));                
+            } 
+            
+            // promises.push(makeDeposits([{ amount: 250, mint: USDC_MINT, user: accountName }]))
+            // transactionInstructions.push(...await borrow(150,USDC_MINT,client.client,client.mangoAccount!,client.group))
+            // transactionInstructions.push(await cancelOpenOrders("RENDER-PERP", client.client, client.mangoAccount!, client.group));
+            // transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group));
+            // transactionInstructions.push(await cancelOpenOrders("ETH-PERP", client.client, client.mangoAccount!, client.group));
+
+            if (transactionInstructions.length > 0) {
+                promises.push(postTrades(client.client, client.group, transactionInstructions, []));
+            }
         }
 
+        await Promise.all(promises)
     } catch (error) {
         console.log(error);
     }

@@ -4,7 +4,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { CLUSTER_URL, COMMITTMENT, SOL_MINT, USDC_MINT, JUP_MINT, W_MINT, DRIFT_MINT } from "./constants";
 import fs from 'fs';
 import { updateWallets } from "./googleUtils";
-async function checkBalances() {
+export async function checkBalances() {
     const connection = new Connection(CLUSTER_URL!, {
         commitment: COMMITTMENT
     });
@@ -32,11 +32,4 @@ async function checkBalances() {
         items.push([accountDefinition.name, sol, usdc, jup, w, drift])
     }
     await updateWallets(items)
-}
-
-try {
-    console.log('get wallet balances')
-    checkBalances()
-} catch (error) {
-    console.log(error);
 }

@@ -5,12 +5,12 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node src/sniper.ts",
-    "sniper": "ts-node src/sniper.ts",
+    "start": "ts-node src/runBots.ts",
+    "sniper": "ts-node src/runSniper.ts",
+    "driftGoogle": "ts-node src/driftGoogle.ts",
     "walletBalances": "ts-node src/getWalletBalances.ts",
+    "runBots": "ts-node src/runBots.ts",
     "oneTime": "ts-node src/oneTime.ts",
-    "pm2": "pm2 start -x ts-node src/pm2Test.ts",
-    "pm": "pm2 start -x ts-node src/sniper.ts",
     "nodemon": "nodemon"
   },
   "keywords": [],
@@ -23,7 +23,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@drift-labs/sdk": "^2.82.0-beta.19",
+    "@drift-labs/sdk": "^2.83.0-beta.8",
     "@blockworks-foundation/mango-v4": "^0.21.31",
     "@google-cloud/local-auth": "^2.1.0",
     "axios": "^1.6.7",

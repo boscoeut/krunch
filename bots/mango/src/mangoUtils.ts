@@ -6,6 +6,8 @@ import {
     MangoAccount,
     MangoClient,
     PerpMarket,
+    PerpOrder,
+    PerpOrderSide,
     toUiDecimals,
     toUiDecimalsForQuote
 } from '@blockworks-foundation/mango-v4';
@@ -33,13 +35,14 @@ import {
     MANGO_DATA_API_URL,
     MAX_PRIORITY_FEE_KEYS,
     QUICKNODE_CONNECTION_URL,
+    SOL_GROUP_PK,
     SOL_MINT,
     SOL_RESERVE,
     USDC_MINT,
-    USE_PRIORITY_FEE,
-    SOL_GROUP_PK
+    USE_PRIORITY_FEE
 } from './constants';
 import * as db from './db';
+import { DB_KEYS } from './db';
 import {
     AccountDefinition,
     AccountDetail,
@@ -95,10 +98,10 @@ export const fetchJupPrice = async () => {
         const ethPrice = response.data.data.ETH.price
         const driftPrice = response.data.data.DRIFT.price
         const wormholePrice = response.data.data["85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ"].price
-        return { jupPrice, solPrice, wormholePrice, ethPrice, btcPrice,driftPrice,renderPrice }
+        return { jupPrice, solPrice, wormholePrice, ethPrice, btcPrice, driftPrice, renderPrice }
     } catch (e) {
         console.log('Failed to fetch jup price', e)
-        return { jupPrice: 0, solPrice: 0, wormwholePrice: 0, ethPrice: 0, btcPrice: 0,renderPrice:0 }
+        return { jupPrice: 0, solPrice: 0, wormwholePrice: 0, ethPrice: 0, btcPrice: 0, renderPrice: 0 }
     }
 }
 
@@ -169,7 +172,7 @@ export const getBidsAndAsks = async (perpMarket: PerpMarket, client: MangoClient
 }
 
 export async function getFundingRate(): Promise<FundingRates> {
-    try {        
+    try {
         const fundingRate = await axios.get(FUNDING_RATE_API, { timeout: 15000 })
         const data: any = fundingRate.data
         if (data?.find) {
@@ -385,6 +388,18 @@ export const getMaxShortPerpSize = (market: MarketKey, account: AccountDefinitio
     }
 }
 
+function getPerpOrderSize(orders: PerpOrder[]) {
+    let size = 0
+    orders.forEach(order => {
+        if (order.side === PerpOrderSide.ask) {
+            size -= order.uiSize
+        } else {
+            size += order.uiSize
+        }
+    })
+    return size
+}
+
 export async function getAccountData(
     accountDefinition: AccountDefinition,
     client: any,
@@ -432,6 +447,14 @@ export async function getAccountData(
             const btcFunding = btcPerpPosition?.getCumulativeFunding(btcPerpMarket)
             btcFundingAmount = ((btcFunding?.cumulativeShortFunding || 0) - (btcFunding!.cumulativeLongFunding || 0)) / 10 ** 6
         }
+        const orders = await mangoAccount!.loadPerpOpenOrdersForMarket(
+            client,
+            group,
+            btcPerpMarket.perpMarketIndex,
+            true
+        )
+        db.setItem(DB_KEYS.OPEN_ORDERS, getPerpOrderSize(orders), { cacheKey: accountDefinition.name + '_' + 'BTC-PERP' })
+
     }
     if (renderPerpMarket) {
         const perpPosition = mangoAccount
@@ -442,6 +465,13 @@ export async function getAccountData(
             const renderFunding = perpPosition?.getCumulativeFunding(renderPerpMarket)
             renderFundingAmount = ((renderFunding?.cumulativeShortFunding || 0) - (renderFunding!.cumulativeLongFunding || 0)) / 10 ** 6
         }
+        const orders = await mangoAccount!.loadPerpOpenOrdersForMarket(
+            client,
+            group,
+            renderPerpMarket.perpMarketIndex,
+            true
+        )
+        db.setItem(DB_KEYS.OPEN_ORDERS, getPerpOrderSize(orders), { cacheKey: accountDefinition.name + '_' + 'RENDER-PERP' })
     }
     if (ethPerpMarket) {
         const ethsBidAsks = await getBidsAndAsks(ethPerpMarket, client)
@@ -455,6 +485,13 @@ export async function getAccountData(
             const ethFunding = ethPerpPosition?.getCumulativeFunding(ethPerpMarket)
             ethFundingAmount = ((ethFunding?.cumulativeShortFunding || 0) - (ethFunding!.cumulativeLongFunding || 0)) / 10 ** 6
         }
+        const orders = await mangoAccount!.loadPerpOpenOrdersForMarket(
+            client,
+            group,
+            ethPerpMarket.perpMarketIndex,
+            true
+        )
+        db.setItem(DB_KEYS.OPEN_ORDERS, getPerpOrderSize(orders), { cacheKey: accountDefinition.name + '_' + 'ETH-PERP' })
     }
 
     let fundingAmount = 0
@@ -462,7 +499,14 @@ export async function getAccountData(
         const solFunding = perpPosition?.getCumulativeFunding(perpMarket)
         fundingAmount = ((solFunding?.cumulativeShortFunding || 0) - (solFunding!.cumulativeLongFunding || 0)) / 10 ** 6
     }
+    const solOrders = await mangoAccount!.loadPerpOpenOrdersForMarket(
+        client,
+        group,
+        perpMarket.perpMarketIndex,
+        true
+    )
 
+    db.setItem(DB_KEYS.OPEN_ORDERS, getPerpOrderSize(solOrders), { cacheKey: accountDefinition.name + '_' + 'SOL-PERP' })
 
     let historicalFunding = 0;
     let interestAmount = 0;
