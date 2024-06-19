@@ -273,6 +273,23 @@ export async function getBotRunDetails(
     }
 }
 
+export async function getDiffs(
+    googleSheets: any
+) {
+    try {
+        const sheetName = "Phone"
+        const response = await googleSheets.spreadsheets.values.batchGet({
+            spreadsheetId: SPREADSHEET_ID,
+            ranges: [`${sheetName}!H14:H17`]
+        });
+        const cellValues = response.data.valueRanges;
+        return cellValues[0]
+    } catch (e) {
+        console.error('Error reading google sheet', e);
+        throw e
+    }
+}
+
 export async function getTradingParameters(
     googleSheets: any
 ) {

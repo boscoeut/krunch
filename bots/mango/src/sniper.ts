@@ -4,29 +4,30 @@ import {
     toNative
 } from '@blockworks-foundation/mango-v4';
 import {
+    AMM_RESERVE_PRECISION,
+    BN,
     BulkAccountLoader,
     DRIFT_PROGRAM_ID,
     DriftClient,
     FUNDING_RATE_BUFFER_PRECISION,
+    FUNDING_RATE_OFFSET_DENOMINATOR,
+    ONE,
+    OraclePriceData,
+    PRICE_PRECISION,
+    PerpMarketAccount,
     PerpMarkets,
+    QUOTE_PRECISION,
+    SpotMarkets,
     User,
     Wallet,
-    convertToNumber,
-    AMM_RESERVE_PRECISION,
-    PRICE_PRECISION,
-    QUOTE_PRECISION,
     ZERO,
-    ONE,
-    FUNDING_RATE_OFFSET_DENOMINATOR,
-    PerpMarketAccount,
-    BN,
-    isVariant,
-    OraclePriceData,
     calculateBidAskPrice,
-    calculateLiveOracleTwap,
-    calculateDepositRate,
     calculateBorrowRate,
-    SpotMarkets, clampBN
+    calculateDepositRate,
+    calculateLiveOracleTwap,
+    clampBN,
+    convertToNumber,
+    isVariant
 } from "@drift-labs/sdk";
 import { Connection, PublicKey } from "@solana/web3.js";
 import axios from 'axios';
@@ -34,21 +35,17 @@ import fs from 'fs';
 import {
     ACTIVITY_FEED_URL,
     GOOGLE_UPDATE_INTERVAL,
-    HELIUS_CONNECTION_URL,
-    HELIUS_ROBO_CONNECTION_URL,
-    HELIUS_GITLAB_CONNECTION_URL,
-    HELIUS_BOSCO_CONNECTION_URL,
+    HELIUS_JANE_CONNECTION_URL,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
     MIN_SOL_WALLET_BALANCE,
     SHOULD_CANCEL_ORDERS,
-    SLEEP_MAIN_LOOP_IN_MINUTES,
     SOL_MINT,
     SOL_RESERVE
 } from './constants';
 import * as db from './db';
 import { DB_KEYS } from './db';
-import { authorize, getTradingParameters, updateGoogleSheet, updateDriftSheet } from './googleUtils';
+import { authorize, getTradingParameters, updateDriftSheet, updateGoogleSheet } from './googleUtils';
 import {
     cancelOpenOrders,
     getBestPrice,
@@ -919,7 +916,6 @@ async function getPerpInfo(env: "mainnet-beta" | "devnet", symbol: string, drift
         perpMarketAccount!.amm.last24HAvgFundingRate,
         CONVERSION_SCALE
     );
-
     const ammAccountState = perpMarketAccount!.amm;
     const priceSpread =
         ammAccountState.lastMarkPriceTwap.toNumber() /
@@ -951,10 +947,10 @@ async function getPerpInfo(env: "mainnet-beta" | "devnet", symbol: string, drift
 }
 
 
-async function checkDrift(account: string) {
+export async function checkDrift(account: string) {
     try {
         const env = 'mainnet-beta';
-        const URL = HELIUS_BOSCO_CONNECTION_URL
+        const URL = HELIUS_JANE_CONNECTION_URL
         const key = account.toLowerCase() + "Key";
         const wallet = new Wallet(getUser("./secrets/" + key + ".json"))
         const connection = new Connection(URL);

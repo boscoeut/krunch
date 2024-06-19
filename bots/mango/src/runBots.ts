@@ -13,15 +13,11 @@ import { getMangoData, updateDrift } from './sniper';
             console.log("RUNNING BOTS", lastUpdate,lastConfirmed)
             if (lastConfirmed !== lastUpdate){
 
-                console.log("checkBalances...")
-                await checkBalances()
-                
-                console.log("UPDATING DRIFT")
-                await updateDrift()
-
-                console.log("getMangoData...")
-                await getMangoData(true,false,false,false)
-
+                await Promise.all([
+                    checkBalances(),
+                    updateDrift(),
+                    getMangoData(true, false, false, false)
+                ])                
                 console.log("UPDATING BOTS")
                 await updateBotRunDetails(googleSheets, lastUpdate)
                 

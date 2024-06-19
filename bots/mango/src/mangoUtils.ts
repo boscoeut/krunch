@@ -260,10 +260,10 @@ export function toFixedFloor(num: number, fixed: number = 4): number {
     return Number(val)
 }
 
-export const getClient = async (user: Keypair, prioritizationFee: number): Promise<Client> => {
+export const getClient = async (user: Keypair, prioritizationFee: number, clusterUrl: string=CLUSTER_URL): Promise<Client> => {
     const options = AnchorProvider.defaultOptions();
     options.skipPreflight = false
-    const connection = new Connection(CLUSTER_URL!, {
+    const connection = new Connection(clusterUrl!, {
         commitment: COMMITTMENT,
         // wsEndpoint: ALCHEMY_WS_URL
     });
@@ -430,6 +430,7 @@ export async function getAccountData(
     let btcFundingAmount = 0
     let renderFundingAmount = 0
     let ethFundingAmount = 0
+    let solFundingAmount = 0
     let ethBestBid = 0
     let ethBestAsk = 0
     let btcBestBid = 0
@@ -494,10 +495,10 @@ export async function getAccountData(
         db.setItem(DB_KEYS.OPEN_ORDERS, getPerpOrderSize(orders), { cacheKey: accountDefinition.name + '_' + 'ETH-PERP' })
     }
 
-    let fundingAmount = 0
+    
     if (perpPosition) {
         const solFunding = perpPosition?.getCumulativeFunding(perpMarket)
-        fundingAmount = ((solFunding?.cumulativeShortFunding || 0) - (solFunding!.cumulativeLongFunding || 0)) / 10 ** 6
+        solFundingAmount = ((solFunding?.cumulativeShortFunding || 0) - (solFunding!.cumulativeLongFunding || 0)) / 10 ** 6
     }
     const solOrders = await mangoAccount!.loadPerpOpenOrdersForMarket(
         client,
@@ -545,12 +546,12 @@ export async function getAccountData(
         account: accountDefinition.key,
         name: accountDefinition.name,
         jupBasis: accountDefinition.jup,
-        fundingAmount,
+        fundingAmount: solFundingAmount,
         interestAmount,
         solAmount,
         borrow,
         usdBasis: accountDefinition.usd,
-        funding: fundingAmount,
+        funding: solFundingAmount,
         health: mangoAccount.getHealthRatio(group, HealthType.maint)!.toNumber(),
         equity,
         solBalance,
@@ -605,9 +606,9 @@ export async function getCurrentFunding(accountDefinition: AccountDefinition) {
     return fundingAmount;
 }
 
-export const setupClient = async (accountDefinition: AccountDefinition, prioritizationFee: number = 0): Promise<Client> => {
+export const setupClient = async (accountDefinition: AccountDefinition, prioritizationFee: number = 0, clusterUrl:string = CLUSTER_URL): Promise<Client> => {
     const user = getUser(accountDefinition.privateKey);
-    const { client, group, ids, wallet } = await getClient(user, prioritizationFee)
+    const { client, group, ids, wallet } = await getClient(user, prioritizationFee,clusterUrl)
     const mangoAccount = await client.getMangoAccount(new PublicKey(accountDefinition.key));
     return {
         client, user, mangoAccount, group, ids, wallet

@@ -60,8 +60,11 @@ export const GET_BLOCK_CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27
 export const ACTIVITY_FEED_URL = 'https://api.mngo.cloud/data/v4/stats/activity-feed?offset=0&limit=1000&mango-account='
 export const HELIUS_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=f8550011-b7ca-4967-a265-6605701031fe'
 export const HELIUS_BOSCO_CONNECTION_URL = "https://mainnet.helius-rpc.com/?api-key=6fce0a28-fd4e-4bb9-8d3a-56ee7da6a7d2"
+export const HELIUS_ALEX_CONNECTION_URL = "https://mainnet.helius-rpc.com/?api-key=19ccc2d5-d98c-49d2-961f-d6132f665552"
 export const HELIUS_ROBO_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=9ff7c826-8d26-482d-a39b-9e01d3310fcc'
+export const HELIUS_GRACE_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=5b648979-cb5a-4b0d-86e3-c4bd87c26c63'
 export const HELIUS_GITLAB_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=9379282b-031e-49d8-a84b-4cd1bf2445d8'
+export const HELIUS_JANE_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=a3ffcb7a-40d3-4808-8766-aaa33947d99f'
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000
