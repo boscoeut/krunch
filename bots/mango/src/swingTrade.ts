@@ -302,17 +302,20 @@ export async function swingMangoTrade({
             size: 3,
             offset: 1
         }, {
-            size: 3,
+            size: 5,
             offset: 2
         }, {
-            size: 3,
+            size: 10,
             offset: 3
-        }, {
-            size: 5,
-            offset: 4
         }, {
             size: 10,
             offset: 4
+        }, {
+            size: 20,
+            offset: 5
+        }, {
+            size: 25,
+            offset: 6
         }]
         // get sum of steps.size
         let stepSum = 0
@@ -444,12 +447,12 @@ export async function swingMangoTrade({
         priorityFee,
         initialAmount: 20,
         additionalAmount: 5,
-        maxAmount: 190,
+        maxAmount: 210,
         addOffset: -0.35,
-        removeOffset: 5,
+        removeOffset: 1,
         tickSize: 2,
         shouldExecute: true,
-        clearOldOrders: true,
+        clearOldOrders: false,
         side: "BUY"
     })
 
