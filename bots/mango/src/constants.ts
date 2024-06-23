@@ -65,6 +65,7 @@ export const HELIUS_ROBO_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-k
 export const HELIUS_GRACE_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=5b648979-cb5a-4b0d-86e3-c4bd87c26c63'
 export const HELIUS_GITLAB_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=9379282b-031e-49d8-a84b-4cd1bf2445d8'
 export const HELIUS_JANE_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=a3ffcb7a-40d3-4808-8766-aaa33947d99f'
+export const HELIUS_ALEX_NC_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=bb96a580-603f-42ab-8290-e50e30b1ad85'
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000

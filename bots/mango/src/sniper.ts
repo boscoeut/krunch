@@ -35,7 +35,7 @@ import fs from 'fs';
 import {
     ACTIVITY_FEED_URL,
     GOOGLE_UPDATE_INTERVAL,
-    HELIUS_JANE_CONNECTION_URL,
+    HELIUS_ALEX_NC_CONNECTION_URL,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
     MIN_SOL_WALLET_BALANCE,
@@ -950,7 +950,7 @@ async function getPerpInfo(env: "mainnet-beta" | "devnet", symbol: string, drift
 export async function checkDrift(account: string) {
     try {
         const env = 'mainnet-beta';
-        const URL = HELIUS_JANE_CONNECTION_URL
+        const URL = HELIUS_ALEX_NC_CONNECTION_URL
         const key = account.toLowerCase() + "Key";
         const wallet = new Wallet(getUser("./secrets/" + key + ".json"))
         const connection = new Connection(URL);

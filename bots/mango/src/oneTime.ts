@@ -385,7 +385,7 @@ async function executeTrade() {
                 // transactionInstructions.push(await placePeggedPerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 0.0001, 20, new Date().getTime()));
             }
 
-            promises.push(makeDeposits([{ amount: 1222.732, mint: USDC_MINT, user: accountName }]))
+            // promises.push(makeDeposits([{ amount: 2745.3422, mint: USDC_MINT, user: accountName }]))
             // promises.push(makeDeposits([{ amount: 0.00048988, mint: "6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU", user: accountName }]))
             // transactionInstructions.push(...await borrow(0.00004232,"7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",client.client,client.mangoAccount!,client.group))
             // transactionInstructions.push(...await borrow(88.297064,USDC_MINT,client.client,client.mangoAccount!,client.group))

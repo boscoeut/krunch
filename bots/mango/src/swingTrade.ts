@@ -1,13 +1,6 @@
 import {
     HealthType,
-    MANGO_V4_ID,
-    MangoAccount,
-    MangoClient,
-    PerpMarket,
-    PerpOrder,
     PerpOrderSide,
-    toUiDecimals,
-    toUiDecimalsForQuote,
     PerpOrderType,
     PerpSelfTradeBehavior
 } from '@blockworks-foundation/mango-v4';
@@ -69,7 +62,9 @@ type SwingParameters = {
     initialAmount: number,
     shouldExecute: boolean,
     clearOldOrders: boolean,
-    side: "BUY" | "SELL"
+    side: "BUY" | "SELL",
+    minOffset:number,
+    maxBulkTrade:number
 }
 
 
@@ -256,7 +251,9 @@ export async function swingMangoTrade({
     tickSize,
     shouldExecute = false,
     clearOldOrders = false,
-    side }: SwingParameters
+    side,
+    minOffset,
+    maxBulkTrade }: SwingParameters
 ) {
     const { exchangeInfo: mangoData, client, perpMarket } = await getMangoData(mangoAccount, market, priorityFee)
     console.log("MANGO DATA", mangoData)
@@ -271,7 +268,7 @@ export async function swingMangoTrade({
     let removeMangoOrders: Array<ExchangeOrder> = []
     let addMangoOrders: Array<ExchangeOrder> = []
     if (Math.abs(mangoData.amount) < maxAmount) {
-        const amount = mangoData.amount === 0 ? initialAmount : roundUp(Math.min(additionalAmount, maxAmount - Math.abs(mangoData.amount)), tickSize)
+        const amount = mangoData.amount === 0 ? initialAmount : roundUp(Math.min(additionalAmount, maxAmount - Math.abs(mangoData.amount)), tickSize)        
         const existingOrder = mangoData.orders.find(x => x.side === addSide && x.amount === amount)
         if (existingOrder) {
             addExistingOrders.push(existingOrder)
@@ -293,8 +290,8 @@ export async function swingMangoTrade({
         const profitPercent = mangoData.amount < 0 ? -1 * (removeOffset / 100) : (removeOffset / 100)
 
         const steps = [{
-            size: 1,
-            offset: 0.5
+            size: 0.1,
+            offset: 0.65
         }, {
             size: 1,
             offset: 0.75
@@ -307,9 +304,6 @@ export async function swingMangoTrade({
         }, {
             size: 10,
             offset: 3
-        }, {
-            size: 10,
-            offset: 4
         }, {
             size: 20,
             offset: 5
@@ -325,8 +319,10 @@ export async function swingMangoTrade({
 
         let orderPrice = mangoData.breakEven * (1 + profitPercent) * (removeSide === "BUY" ? -1 : 1)
         orderPrice = roundUp(orderPrice, tickSize)
-        const amount = Math.abs(mangoData.amount) - stepSum
-        const offset = (removeSide === "BUY" ? mangoData.oraclePrice - orderPrice : orderPrice - mangoData.oraclePrice)
+        let amount = Math.abs(mangoData.amount) - stepSum
+        amount = Math.min(amount,maxBulkTrade)
+        let offset = (removeSide === "BUY" ? mangoData.oraclePrice - orderPrice : orderPrice - mangoData.oraclePrice)
+        offset = Math.max(offset, minOffset)
         let existingOrder = mangoData.orders.find(x => x.side === removeSide && x.amount === amount)
         if (existingOrder) {
             removeExistingOrders.push(existingOrder)
@@ -436,7 +432,7 @@ export async function swingMangoTrade({
 }
 
 (async () => {
-    const priorityFee = 40_000
+    const priorityFee = 30_000
     if (priorityFee > 100_000) {
         throw new Error("Priority fee must be less than 100,000")
     }
@@ -445,15 +441,18 @@ export async function swingMangoTrade({
         mangoAccount: "SIX",
         market: "SOL",
         priorityFee,
-        initialAmount: 20,
-        additionalAmount: 5,
-        maxAmount: 210,
-        addOffset: -0.35,
+        initialAmount: 5,
+        additionalAmount: 3,
+        maxAmount: 375,
+        addOffset: -0.5,
+        // addOffset: -0.0,
         removeOffset: 1,
         tickSize: 2,
         shouldExecute: true,
         clearOldOrders: false,
-        side: "BUY"
+        side: "BUY",
+        minOffset: 8,
+        maxBulkTrade:250
     })
 
 
