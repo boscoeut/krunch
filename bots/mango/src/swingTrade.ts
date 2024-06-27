@@ -291,7 +291,10 @@ export async function swingMangoTrade({
 
         const steps = [{
             size: 0.1,
-            offset: 0.65
+            offset: 0.30
+        },{
+            size: 0.25,
+            offset: 0.50
         }, {
             size: 1,
             offset: 0.75
@@ -396,6 +399,8 @@ export async function swingMangoTrade({
                 let clientOrderId = new Date().getTime()
                 console.log(`mangoData.oraclePrice ${mangoData.oraclePrice} 
                     Offset= ${mangoData.oraclePrice-order.price}
+                    Amount= ${order.amount}
+                    Side= ${order.side}
                     Price= ${order.price}
                     `)
                 const orderType:PerpOrderType = order.type === "LIMIT" ? PerpOrderType.limit : PerpOrderType.immediateOrCancel
@@ -432,7 +437,7 @@ export async function swingMangoTrade({
 }
 
 (async () => {
-    const priorityFee = 30_000
+    const priorityFee = 60_000
     if (priorityFee > 100_000) {
         throw new Error("Priority fee must be less than 100,000")
     }
@@ -442,8 +447,8 @@ export async function swingMangoTrade({
         market: "SOL",
         priorityFee,
         initialAmount: 5,
-        additionalAmount: 3,
-        maxAmount: 375,
+        additionalAmount: 5,
+        maxAmount: 525,
         addOffset: -0.5,
         // addOffset: -0.0,
         removeOffset: 1,
@@ -452,8 +457,7 @@ export async function swingMangoTrade({
         clearOldOrders: false,
         side: "BUY",
         minOffset: 8,
-        maxBulkTrade:250
+        maxBulkTrade:315
     })
-
 
 })();

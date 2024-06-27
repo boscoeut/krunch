@@ -338,7 +338,7 @@ async function executeTrade() {
             // await settleFunds(client.client, client.mangoAccount!, client.group, "SOL-PERP");
             // await settleFunds(client.client, client.mangoAccount!, client.group,"BTC-PERP");
 
-            // await cancelAllOrders(transactionInstructions, client, 5);
+            // await cancelAllOrders(transactionInstructions, client, 10);
             // transactionInstructions.push(await placePeggedPerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.0075, 10, new Date().getTime()));
             // promises.push(makeDeposits([{ amount: 150, mint: USDC_MINT, user: accountName }]))
 
@@ -385,10 +385,10 @@ async function executeTrade() {
                 // transactionInstructions.push(await placePeggedPerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 0.0001, 20, new Date().getTime()));
             }
 
-            // promises.push(makeDeposits([{ amount: 2745.3422, mint: USDC_MINT, user: accountName }]))
+            // promises.push(makeDeposits([{ amount: 13137.135, mint: USDC_MINT, user: accountName }]))
             // promises.push(makeDeposits([{ amount: 0.00048988, mint: "6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU", user: accountName }]))
             // transactionInstructions.push(...await borrow(0.00004232,"7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",client.client,client.mangoAccount!,client.group))
-            // transactionInstructions.push(...await borrow(88.297064,USDC_MINT,client.client,client.mangoAccount!,client.group))
+            // transactionInstructions.push(...await borrow(100,USDC_MINT,client.client,client.mangoAccount!,client.group))
             // transactionInstructions.push(await cancelOpenOrders("RENDER-PERP", client.client, client.mangoAccount!, client.group));
             // transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group));
             // transactionInstructions.push(await cancelOpenOrders("ETH-PERP", client.client, client.mangoAccount!, client.group));
