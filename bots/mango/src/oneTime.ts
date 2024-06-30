@@ -388,7 +388,7 @@ async function executeTrade() {
             // promises.push(makeDeposits([{ amount: 13137.135, mint: USDC_MINT, user: accountName }]))
             // promises.push(makeDeposits([{ amount: 0.00048988, mint: "6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU", user: accountName }]))
             // transactionInstructions.push(...await borrow(0.00004232,"7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",client.client,client.mangoAccount!,client.group))
-            // transactionInstructions.push(...await borrow(100,USDC_MINT,client.client,client.mangoAccount!,client.group))
+            transactionInstructions.push(...await borrow(150,USDC_MINT,client.client,client.mangoAccount!,client.group))
             // transactionInstructions.push(await cancelOpenOrders("RENDER-PERP", client.client, client.mangoAccount!, client.group));
             // transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group));
             // transactionInstructions.push(await cancelOpenOrders("ETH-PERP", client.client, client.mangoAccount!, client.group));

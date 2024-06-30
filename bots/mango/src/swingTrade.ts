@@ -290,14 +290,14 @@ export async function swingMangoTrade({
         const profitPercent = mangoData.amount < 0 ? -1 * (removeOffset / 100) : (removeOffset / 100)
 
         const steps = [{
+            size: 0.01,
+            offset: 0.4
+        }, {
             size: 0.1,
-            offset: 0.30
-        },{
-            size: 0.25,
-            offset: 0.50
+            offset: 0.60
         }, {
             size: 1,
-            offset: 0.75
+            offset: 0.85
         }, {
             size: 3,
             offset: 1
@@ -437,7 +437,7 @@ export async function swingMangoTrade({
 }
 
 (async () => {
-    const priorityFee = 60_000
+    const priorityFee = 30_000
     if (priorityFee > 100_000) {
         throw new Error("Priority fee must be less than 100,000")
     }
@@ -447,9 +447,9 @@ export async function swingMangoTrade({
         market: "SOL",
         priorityFee,
         initialAmount: 5,
-        additionalAmount: 5,
-        maxAmount: 525,
-        addOffset: -0.5,
+        additionalAmount: 15,
+        maxAmount: 514,
+        addOffset: -0.70,
         // addOffset: -0.0,
         removeOffset: 1,
         tickSize: 2,
