@@ -153,7 +153,7 @@ async function getMarginTradeIx({
     const inputBank: Bank = group.getFirstBankByMint(inputMintPk);
     const outputBank: Bank = group.getFirstBankByMint(outputMintPk);
 
-    const healthRemainingAccounts: PublicKey[] =
+    const healthRemainingAccounts: PublicKey[] = await
         client.buildHealthRemainingAccounts(
             group,
             [mangoAccount],

@@ -28,7 +28,10 @@ export const CURRENT_FUNDING_EXPIRATION = 5
 
 // MINTS
 export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+export const ETH_WORMHOLE_MINT = '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs'
+export const BTC_WORMHOLE_MINT = '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh'
 export const SOL_MINT = 'So11111111111111111111111111111111111111112'
+export const RENDER_MINT = 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof'
 export const W_MINT = '85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ'
 export const DRIFT_MINT = 'DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7'
 export const JUP_MINT = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN'

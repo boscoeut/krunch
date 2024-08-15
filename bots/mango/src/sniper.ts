@@ -36,6 +36,7 @@ import {
     ACTIVITY_FEED_URL,
     GOOGLE_UPDATE_INTERVAL,
     HELIUS_ALEX_NC_CONNECTION_URL,
+    CLUSTER_URL,
     MAX_FEE,
     MAX_PERP_TRADE_SIZE,
     MIN_SOL_WALLET_BALANCE,
@@ -951,6 +952,7 @@ export async function checkDrift(account: string) {
     try {
         const env = 'mainnet-beta';
         const URL = HELIUS_ALEX_NC_CONNECTION_URL
+        // const URL = CLUSTER_URL
         const key = account.toLowerCase() + "Key";
         const wallet = new Wallet(getUser("./secrets/" + key + ".json"))
         const connection = new Connection(URL);
@@ -977,9 +979,15 @@ export async function checkDrift(account: string) {
         const user = driftClient.getUser();
         const userAccount = driftClient.getUserAccount()
 
-        const cumulativePerpFunding = userAccount?.cumulativePerpFunding.toNumber() / 10 ** 6
-        const cumulativeSpotFees = userAccount?.cumulativeSpotFees.toNumber() / 10 ** 6
-
+        let cumulativePerpFunding=0
+        if (userAccount && userAccount.cumulativePerpFunding){
+            cumulativePerpFunding = userAccount?.cumulativePerpFunding?.toNumber() / 10 ** 6
+        }
+        let cumulativeSpotFees = 0
+        if (userAccount && userAccount.cumulativeSpotFees){
+            cumulativeSpotFees = userAccount?.cumulativeSpotFees?.toNumber() / 10 ** 6
+        }
+       
         console.log('DRIFT Account:', account);
         const pnl = user.getUnrealizedPNL(true);
         console.log('Unrealized PNL:', formatUsdc(pnl));
