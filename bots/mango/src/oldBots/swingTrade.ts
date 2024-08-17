@@ -23,10 +23,10 @@ import {
     PublicKey
 } from '@solana/web3.js';
 import fs from 'fs';
-import { HELIUS_JANE_CONNECTION_URL } from "./constants";
-import { getFundingRate, getUser, setupClient, toFixedFloor } from './mangoUtils';
+import { HELIUS_JANE_CONNECTION_URL } from "../constants";
+import { getFundingRate, getUser, setupClient, toFixedFloor } from '../mangoUtils';
 import { calculateAllEstimatedFundingRate } from './sniper';
-import { AccountDefinition } from './types';
+import { AccountDefinition } from '../types';
 
 const perpMarketAccount = {}
 const env = 'mainnet-beta';

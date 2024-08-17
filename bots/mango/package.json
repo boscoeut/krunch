@@ -7,10 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node src/runBots.ts",
     "sniper": "ts-node src/runSniper.ts",
-    "driftGoogle": "ts-node src/driftGoogle.ts",
     "walletBalances": "ts-node src/getWalletBalances.ts",
-    "swingTrade": "ts-node src/swingTrade.ts",
     "runBots": "ts-node src/runBots.ts",
+    "marketMaker": "ts-node src/marketMaker.ts",
     "oneTime": "ts-node src/oneTime.ts",
     "nodemon": "nodemon"
   },

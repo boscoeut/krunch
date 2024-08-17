@@ -1,4 +1,4 @@
-import { updateDrift } from './sniper';
+import { updateDrift } from '../sniper';
 
 (async () => {
     try {
