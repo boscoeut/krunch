@@ -23,31 +23,31 @@ const updateDrift = async () => {
             {
                 market: "SOL-PERP",
                 orderSize: 10,
-                maxOrders: 8,
-                spread: 0.4,
+                maxOrders: 6,
+                spread: 0.35,
                 placeTrades: true,
-                maxShort: 210,
-                maxLong: 0,
-                maxPending: 50
+                maxShort: 220,
+                maxLong: 10,
+                maxPending: 60
             },
             {
                 market: "BTC-PERP",
                 orderSize: 0.01,
-                maxOrders: 7,
-                spread: 225,
+                maxOrders: 6,
+                spread: 175,
                 placeTrades: true,
-                maxShort: 0.08,
+                maxShort: 0.09,
                 maxLong: 0.03,
-                maxPending:  0.07
+                maxPending:  0.08
             }, {
                 market: "ETH-PERP",
                 orderSize: 0.65,
                 maxOrders: 7,
-                spread: 2.5,
+                spread: 1.75,
                 placeTrades: true,
                 maxShort: 11,
                 maxLong: 2,
-                maxPending: 6
+                maxPending: 7
             }
         ]
         let totalOrders = 0
@@ -92,6 +92,7 @@ const updateDrift = async () => {
                 | placeTrades=${market.placeTrades} 
                 | # Orders = ${orders.length} 
                 | Size = ${size} 
+                | Position = ${positions} 
                 | ShortSize = ${shortSize} | Avg ShortPrice = ${shortPrice / shortSize} 
                 | LongSize = ${longSize} | Avg LongPrice = ${longPrice / longSize}
                 | Avg Price = ${price / uiSize}`)
@@ -100,18 +101,18 @@ const updateDrift = async () => {
                 const price = perpMarket.uiPrice
                 // check if we should place trade
                 const exceedsSize = (longSize+positions > market.maxLong) || (shortSize+positions*-1 > market.maxShort)
-                const exceedsMaxPending = longSize > market.maxPending || shortSize > market.maxPending
+                const exceedsMaxPending = longSize+positions > market.maxPending || shortSize > market.maxPending
 
                 if (exceedsSize){
-                    console.log(`Max size exceeded.  MaxLong=${market.maxLong}  MaxShort=${market.maxShort} Long=${longSize+positions} | Short= ${shortSize+positions*-1}`)
+                    console.log(`Max size exceeded.  Position = ${positions}.  MaxLong=${market.maxLong}  MaxShort=${market.maxShort} Long=${longSize+positions} | Short= ${shortSize+positions*-1}`)
                 }
                 if (exceedsMaxPending){
-                    console.log(`Max Pending exceeded.  MaxPending=${market.maxPending}  Long=${longSize} | Short= ${shortSize}`)
+                    console.log(`Max Pending exceeded.  Position = ${positions}.  MaxPending=${market.maxPending}  Long=${longSize} | Short= ${shortSize}`)
                 }
 
                 if (!exceedsMaxPending && !exceedsSize){
                     console.log(`Placing order for ${market.market} @ ${price}.  Buy ${market.orderSize} @ ${price - market.spread}.  Sell ${market.orderSize} @ ${price + market.spread}`)
-                    if (orders.length > market.maxOrders){
+                    if (orders.length >= market.maxOrders){
                         transactionInstructions.push(await cancelOpenOrders(market.market, client.client, client.mangoAccount!, client.group,20));     
                         if (longSize>0){
                             const avgPrice = longPrice/ longSize
