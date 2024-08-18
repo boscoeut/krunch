@@ -24,7 +24,7 @@ const updateDrift = async () => {
                 market: "SOL-PERP",
                 orderSize: 10,
                 maxOrders: 6,
-                spread: 0.35,
+                spread: 0.32,
                 placeTrades: true,
                 maxShort: 220,
                 maxLong: 10,
