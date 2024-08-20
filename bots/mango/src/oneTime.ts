@@ -173,14 +173,14 @@ async function executeTrade() {
             // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 20,  153.60,   new Date().getTime(),PerpOrderType.postOnly));        
             // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 30,  145.0,   new Date().getTime(),PerpOrderType.postOnly));        
 
-            transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 10,  139,  new Date().getTime(),PerpOrderType.postOnly));        
-            transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 10,  137,  new Date().getTime(),PerpOrderType.postOnly));        
+            // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 10,  139,  new Date().getTime(),PerpOrderType.postOnly));        
+            // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 13,  143.1,  new Date().getTime(),PerpOrderType.postOnly));        
 
-            transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 1,  2540,   new Date().getTime(),PerpOrderType.limit));        
-            transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 1,  2530,   new Date().getTime(),PerpOrderType.postOnly));        
+            // transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 0.75,  2605,   new Date().getTime(),PerpOrderType.limit));        
+            // transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 1,  2530,   new Date().getTime(),PerpOrderType.postOnly));        
 
-            transactionInstructions.push(await placePerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 0.01,  57500,   new Date().getTime(),PerpOrderType.postOnly));        
-            transactionInstructions.push(await placePerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.01,  57000,   new Date().getTime(),PerpOrderType.postOnly));        
+            // transactionInstructions.push(await placePerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 0.01,  57500,   new Date().getTime(),PerpOrderType.postOnly));        
+            // transactionInstructions.push(await placePerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.01,  57000,   new Date().getTime(),PerpOrderType.postOnly));        
             // await settleFunds(client.client,client.mangoAccount!,client.group,"SOL-PERP");
 
             if (transactionInstructions.length > 0) {
