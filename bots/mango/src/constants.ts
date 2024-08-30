@@ -69,13 +69,14 @@ export const HELIUS_GRACE_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-
 export const HELIUS_GITLAB_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=9379282b-031e-49d8-a84b-4cd1bf2445d8'
 export const HELIUS_JANE_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=a3ffcb7a-40d3-4808-8766-aaa33947d99f'
 export const HELIUS_ALEX_NC_CONNECTION_URL = 'https://mainnet.helius-rpc.com/?api-key=bb96a580-603f-42ab-8290-e50e30b1ad85'
+export const HELIUS_WALLET_5='https://mainnet.helius-rpc.com/?api-key=918f4c30-1029-4b83-88ea-ce13169370e5'
 export const USE_PRIORITY_FEE=true
 export const MAX_FEE = 75_000
 export const FEE_DIFF_BUFFER = 15_000
 export const FEE_MULTIPLIER = 1
 
 // JUP
-export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,SOL,85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ,TBTC,ETH,DRIFT,RENDER"
+export const JUP_PRICE_URL = "https://price.jup.ag/v4/price?ids=JUP,So11111111111111111111111111111111111111112,85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ,TBTC,ETH,DRIFT,RENDER"
 
 // GOOGLE SHEETS
 export const SPREADSHEET_ID = '1-k6Lv4quwIS-rRck-JYLA0WiuC9x43nDuMa_95q8CIw';

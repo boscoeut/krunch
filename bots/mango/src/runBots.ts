@@ -3,7 +3,8 @@ import { authorize, getBotRunDetails, updateBotRunDetails } from './googleUtils'
 import { checkBalances } from "./getWalletBalances";
 import { getMangoData, updateDrift } from './sniper';
 
-(async () => {const { google } = require('googleapis');
+(async () => {
+    const { google } = require('googleapis');
 
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
@@ -15,7 +16,7 @@ import { getMangoData, updateDrift } from './sniper';
 
                 await Promise.all([
                     checkBalances(),
-                    updateDrift(),
+                    // updateDrift(),
                     getMangoData(true, false, false, false)
                 ])                
                 console.log("UPDATING BOTS")

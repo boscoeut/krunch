@@ -39,7 +39,8 @@ import {
     SOL_MINT,
     SOL_RESERVE,
     USDC_MINT,
-    USE_PRIORITY_FEE
+    USE_PRIORITY_FEE,
+    W_MINT
 } from './constants';
 import * as db from './db';
 import { DB_KEYS } from './db';
@@ -91,13 +92,14 @@ export const fetchJupPrice = async () => {
     try {
         const url = JUP_PRICE_URL
         const response = await axios.get(url)
+        console.log(response.data.data)
         const jupPrice = response.data.data.JUP.price
-        const solPrice = response.data.data.SOL.price
+        const solPrice = response.data.data[SOL_MINT].price
         const btcPrice = response.data.data.TBTC.price
         const renderPrice = response.data.data.RENDER.price
         const ethPrice = response.data.data.ETH.price
         const driftPrice = response.data.data.DRIFT.price
-        const wormholePrice = response.data.data["85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ"].price
+        const wormholePrice = response.data.data[W_MINT].price
         return { jupPrice, solPrice, wormholePrice, ethPrice, btcPrice, driftPrice, renderPrice }
     } catch (e) {
         console.log('Failed to fetch jup price', e)

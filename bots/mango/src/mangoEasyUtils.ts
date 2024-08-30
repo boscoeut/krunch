@@ -16,7 +16,7 @@ import { AccountDefinition } from './types';
 
 
 export async function borrow(borrowAmount: number, mint: string, client: MangoClient,
-    mangoAccount: MangoAccount, group: Group, borrow:boolean=false) {
+    mangoAccount: MangoAccount, group: Group, borrow: boolean = false) {
     const mintPk = new PublicKey(mint)
     const borrowAmountBN = toNative(borrowAmount, group.getMintDecimals(mintPk));
     const result = await client.tokenWithdrawNativeIx(group, mangoAccount!, mintPk, borrowAmountBN, borrow)
@@ -155,12 +155,16 @@ export async function settleFunds(client: MangoClient,
 
 
 export async function postTrades(client: MangoClient, group: Group, tradeInstructions: any, addressLookupTables: any) {
-    const result = await client.sendAndConfirmTransactionForGroup(
-        group,
-        tradeInstructions,
-        { alts: [...group.addressLookupTablesList, ...addressLookupTables] },
-    );
-    console.log('Transaction Complete', result);
+    try {
+        const result = await client.sendAndConfirmTransactionForGroup(
+            group,
+            tradeInstructions,
+            { alts: [...group.addressLookupTablesList, ...addressLookupTables] },
+        );
+        console.log('Transaction Complete', result);
+    } catch (x: any) {
+        console.error('Transaction Failed', x)
+    }
 }
 
 export async function cancelAllOrders(transactionInstructions: Array<any> = [], client: any, limit: number = 10) {
