@@ -5,7 +5,7 @@ import {
 } from '@blockworks-foundation/mango-v4';
 
 import fs from 'fs';
-import { SPREADSHEET_ID } from './constants';
+import { CONNECTION_URL, SPREADSHEET_ID } from './constants';
 import { authorize } from './googleUtils';
 import { cancelOpenOrders, placePerpOrder, postTrades } from './mangoEasyUtils';
 import { setupClient } from './mangoUtils';
@@ -16,20 +16,22 @@ interface AnalyzeProps {
     transactionInstructions: Array<any>
 }
 
+const MAKE_TRADES = true; // New global constant
+
 async function buySell(side: "BUY" | "SELL", spread: number, maxTradeAmount: number, symbol: "SOL-PERP" | "BTC-PERP" | "ETH-PERP",
-    market: PerpMarket, priceSpread: number, client: any, transactionInstructions: Array<any>, minTradeValue:number=5) {
+    market: PerpMarket, priceSpread: number, client: any, transactionInstructions: Array<any>, minTradeValue: number = 5) {
 
     const minTradeSize = Math.min(spread, maxTradeAmount)
     let tradeSize = minTradeSize / market.uiPrice
     const price = market.uiPrice + (side === "BUY" ? -1 : 1) * priceSpread
     let tradeValue = tradeSize * price
 
-    if (tradeValue < minTradeValue){
+    if (tradeValue < minTradeValue) {
         console.log(`${symbol} ${side} Trade Value = ${tradeValue}  Min Trade Value = ${minTradeValue} trade value is too small`)
     }
     else if (tradeSize < 0) {
         console.log(`${symbol} ${side} ${tradeSize} is too small`)
-    } else {        
+    } else {
         const perpMarketSide = side == "BUY" ? PerpOrderSide.bid : PerpOrderSide.ask
         console.log(`${symbol} ${side} ${tradeSize} for ${price} Total = ${tradeSize * price}.  Oracle = ${market.uiPrice} \n`)
         transactionInstructions.push(await placePerpOrder(symbol, client.client, client.mangoAccount!,
@@ -44,124 +46,117 @@ async function analyzeMarket(props: AnalyzeProps) {
 
     const values = client.group.perpMarketsMapByMarketIndex.values()
     const valuesArray = Array.from(values)
-    const solPerpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === 'SOL-PERP');
-    const ethPerpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === 'ETH-PERP');
-    const btcPerpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === 'BTC-PERP');
-    const solPerpPosition = client.mangoAccount!
-        .perpActive()
-        .find((pp: any) => pp.marketIndex === solPerpMarket!.perpMarketIndex);
-    const ethPerpPosition = client.mangoAccount!
-        .perpActive()
-        .find((pp: any) => pp.marketIndex === ethPerpMarket!.perpMarketIndex);
-    const btcPerpPosition = client.mangoAccount!
-        .perpActive()
-        .find((pp: any) => pp.marketIndex === btcPerpMarket!.perpMarketIndex);
+   
+    const markets = [{
+        symbol:'SOL-PERP',
+        side:'LONG',
+        spread:0.20
+    },{
+        symbol:'ETH-PERP',
+        side:'SHORT',
+        spread:1
+    },{
+        symbol:'BTC-PERP',
+        side:'SHORT',
+        spread:25
+    }]
 
-    const solEntryPrice = solPerpPosition?.getAverageEntryPriceUi(solPerpMarket) || 0
-    const solPositionSize = solPerpPosition?.getBasePositionUi(solPerpMarket) || 0
-    const solPnl = solPerpPosition?.getUnRealizedPnlUi(solPerpMarket) || 0
+    let shortPnl = 0
+    let longPnl = 0
+    let longValue = 0
+    let shortValue = 0
 
-    const ethEntryPrice = ethPerpPosition?.getAverageEntryPriceUi(ethPerpMarket) || 0
-    const ethPositionSize = ethPerpPosition?.getBasePositionUi(ethPerpMarket) || 0
-    const ethPnl = ethPerpPosition?.getUnRealizedPnlUi(ethPerpMarket) || 0
+    const positions: Array<any> = []
+    for (const market of markets) {
+        const perpMarket: any = valuesArray.find((perpMarket: any) => perpMarket.name === market.symbol);
 
-    const btcEntryPrice = btcPerpPosition?.getAverageEntryPriceUi(btcPerpMarket) || 0
-    const btcPositionSize = btcPerpPosition?.getBasePositionUi(btcPerpMarket) || 0
-    const btcPnl = btcPerpPosition?.getUnRealizedPnlUi(btcPerpMarket) || 0
+        const perpPosition = client.mangoAccount!
+            .perpActive()
+            .find((pp: any) => pp.marketIndex === perpMarket!.perpMarketIndex);
+        const entryPrice = perpPosition?.getAverageEntryPriceUi(perpMarket) || 0
+        const positionSize = perpPosition?.getBasePositionUi(perpMarket) || 0
+        const pnl = perpPosition?.getUnRealizedPnlUi(perpMarket) || 0
+        const side = market.side
+        const value = positionSize * perpMarket.uiPrice
+        const adjustedValue = value + pnl * (side === "LONG" ? 1 : -1)
+        const price = perpMarket.uiPrice
+        if (side === "SHORT") {
+            shortPnl += pnl
+            shortValue += value;
+        } else {
+            longPnl += pnl
+            longValue += value;
+        }
 
+        positions.push({
+            symbol:market.symbol,
+            pnl,
+            entryPrice,
+            positionSize,
+            side,
+            value,
+            price,
+            perpMarket,
+            perpPosition,
+            spread:market.spread,
+            adjustedValue
+        })
+        console.log(`${market.symbol} ${side} PNL: ${pnl} Value: ${value} Price: ${price} Entry Price: ${entryPrice} Position Size: ${positionSize}`)
+    }
 
-    const shortPnl = ethPnl + btcPnl
-    const longPnl = solPnl
-    const totalPnl = solPnl + ethPnl + btcPnl
+    const totalPnl = shortPnl + longPnl
 
-    const solValue = solPositionSize * solPerpMarket.uiPrice
-    const btcValue = btcPositionSize * btcPerpMarket.uiPrice
-    const ethValue = ethPositionSize * ethPerpMarket.uiPrice
+    const maxLong = 0
+    const totalLongValue = longValue + longPnl - maxLong
+    const totalShortValue = shortValue - shortPnl
 
-    const totalLongValue = solValue + solPnl
-    const totalShortValue = btcValue + ethValue + btcPnl + ethPnl
-
-    const maxTradeAmount = 1000
-    const maxLong = 1000
-    const minTradeValue = 5
-
-    const solSpread = 0.0
-    const ethSpread = 1.5
-    const btcSpread = 50
+    const maxTradeAmount = 250
+    const minTradeValue = 10
     const shouldCancel = true;
 
-    const minSpread = 50
     const totalSpread = totalLongValue + totalShortValue
 
     console.log(`
         total spread:  ${totalSpread}
         maxTradeAmount: ${maxTradeAmount}
 
-        min Spread: ${minSpread}
-
-        SOL PNL  : ${solPnl}
-        ETH PNL  : ${ethPnl}
-        BTC PNL  : ${btcPnl}
         TOTAL PNL: ${totalPnl}
-
-        Sol Price: ${solPerpMarket.uiPrice}
-        Eth Price: ${ethPerpMarket.uiPrice}
-        Btc Price: ${btcPerpMarket.uiPrice}
-
-        Sol Value: ${solValue}
-        Btc Value: ${btcValue}
-        Eth Value: ${ethValue}
 
         Short Pnl: ${shortPnl}
         Long Pnl: ${longPnl}
 
         Total Long Value: ${totalLongValue}
-        Total Short Value: ${totalShortValue}`)
+        Total Short Value: ${totalShortValue}
+        Diff : ${totalSpread}        
+        `)
 
     if (shouldCancel) {
-        transactionInstructions.push(await cancelOpenOrders('SOL-PERP', client.client, client.mangoAccount!, client.group));
-        transactionInstructions.push(await cancelOpenOrders('BTC-PERP', client.client, client.mangoAccount!, client.group));
-        transactionInstructions.push(await cancelOpenOrders('ETH-PERP', client.client, client.mangoAccount!, client.group));
+        for (const market of markets) {
+            transactionInstructions.push(await cancelOpenOrders(market.symbol, client.client, client.mangoAccount!, client.group));
+        }
     }
 
-    if (totalLongValue > maxLong) {
+    if (totalSpread > 0) {
         // longs exceed shorts -- SELL
-        const maxAmount = Math.min(solValue-maxLong, maxTradeAmount)
-        if (longPnl > 0) {
-            // sell long            
-            await buySell("SELL", totalSpread, maxAmount, "SOL-PERP", solPerpMarket, solSpread, client, transactionInstructions,minTradeValue)
-        } else {
-            // sell short
-            if (ethPnl > btcPnl) {
-                // sell btc
-                await buySell("SELL", totalSpread, maxAmount, "BTC-PERP", btcPerpMarket, btcSpread, client, transactionInstructions,minTradeValue)
-            } else {
-                // sell eth
-                await buySell("SELL", totalSpread, maxAmount, "ETH-PERP", ethPerpMarket, ethSpread, client, transactionInstructions,minTradeValue)
-            }
-        }
-    } else{
+        const amt = totalSpread
+        const maxAmount = Math.min(amt, maxTradeAmount)
+        const market = positions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a=>a.side==="SHORT")
+        // SELL
+        await buySell("SELL", amt, maxAmount,market.symbol, market.perpMarket, market.spread, client, transactionInstructions, minTradeValue)        
+    } else {
         // shorts exceeds long -- buy        
-        const amt = maxLong - totalLongValue
-        if (shortPnl > 0 && ethPnl > 0 && ethPnl > btcPnl) {
-            // buy eth
-            const maxAmount = Math.min(Math.abs(ethValue), maxTradeAmount, amt)
-            await buySell("BUY", totalSpread, maxAmount, "ETH-PERP", ethPerpMarket, ethSpread, client, transactionInstructions,minTradeValue)
-        } else if (shortPnl > 0 && btcPnl > 0 && btcPnl > ethPnl) {
-            // buy btc
-            const maxAmount = Math.min(Math.abs(btcValue), maxTradeAmount, amt)
-            await buySell("BUY", totalSpread, maxAmount, "BTC-PERP", btcPerpMarket, btcSpread, client, transactionInstructions,minTradeValue)
-        }else if (totalLongValue < maxLong) {
-            // buy long
-            const maxAmount = maxLong - totalLongValue
-            await buySell("BUY", maxLong, maxAmount, "SOL-PERP", solPerpMarket, solSpread, client, transactionInstructions,minTradeValue)
+        const amt = totalSpread * -1
+        const market = positions.sort((a, b) => a.adjustedValue - b.adjustedValue).find(a=>a.pnl > 0 && Math.abs(a.value) > minTradeValue && a.side==="SHORT")
+        if (market) {
+            const maxAmount = Math.min(Math.abs(market.value), maxTradeAmount, amt)
+            await buySell("BUY", amt, maxAmount, market.symbol, market.perpMarket, market.spread, client, transactionInstructions, minTradeValue)
+        } else {
+            const longMarket = positions.find(a=>a.side === "LONG")
+            await buySell("BUY", amt, maxTradeAmount,longMarket.symbol, longMarket.perpMarket, longMarket.spread, client, transactionInstructions, minTradeValue)
         }
     }
 
-    return {
-        solPnl,
-        ethPnl,
-        btcPnl,
+    return {    
         totalPnl,
         totalLongValue,
         totalShortValue
@@ -173,17 +168,16 @@ async function analyzeMarket(props: AnalyzeProps) {
         const priorityFee = 1;
         const accountName = "SIX"
         const makeTrades = true
-        // await checkDrift("DRIFT");
 
         let accountDefinitions: Array<AccountDefinition> = JSON.parse(fs.readFileSync('./secrets/config.json', 'utf8') as string)
         let transactionInstructions: Array<any> = [];
         const user = accountDefinitions.find(account => account.name === accountName)
 
-        const client = await setupClient(user!, priorityFee);
+        const client = await setupClient(user!, priorityFee, CONNECTION_URL);
         console.log(`Total Instructions = ${transactionInstructions.length}`)
 
         const results = await analyzeMarket({ client, transactionInstructions })
-        if (transactionInstructions.length > 3 && makeTrades) {
+        if (transactionInstructions.length > 3 && MAKE_TRADES) {
             console.log("# of transactionInstructions:", transactionInstructions.length)
             await postTrades(client.client, client.group, transactionInstructions, []);
         }
@@ -204,11 +198,8 @@ async function analyzeMarket(props: AnalyzeProps) {
                     valueInputOption: 'RAW',
                     data: [
                         {
-                            range: `${sheetName}!H9:H12`,
-                            values: [
-                                [results.solPnl],
-                                [results.ethPnl],
-                                [results.btcPnl],
+                            range: `${sheetName}!H12:H12`,
+                            values: [                                
                                 [results.totalPnl]],
                         },
                         {

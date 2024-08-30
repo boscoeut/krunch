@@ -1,7 +1,7 @@
 import { sleep } from "./mangoUtils";
 import { authorize, getBotRunDetails, updateBotRunDetails } from './googleUtils';
 import { checkBalances } from "./getWalletBalances";
-import { getMangoData, updateDrift } from './sniper';
+import { getMangoData } from './mangoBalances';
 
 (async () => {
     const { google } = require('googleapis');

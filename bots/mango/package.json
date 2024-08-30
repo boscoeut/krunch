@@ -6,11 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node src/runBots.ts",
-    "sniper": "ts-node src/runSniper.ts",
     "walletBalances": "ts-node src/getWalletBalances.ts",
     "runBots": "ts-node src/runBots.ts",
-    "marketMaker": "ts-node src/marketMaker.ts",
     "oneTime": "ts-node src/oneTime.ts",
+    "squeeze": "ts-node src/squeeze.ts",
     "nodemon": "nodemon"
   },
   "keywords": [],
@@ -23,7 +22,6 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@drift-labs/sdk": "^2.83.0-beta.8",
     "@blockworks-foundation/mango-v4": "^0.32.12",
     "@google-cloud/local-auth": "^2.1.0",
     "axios": "^1.6.7",

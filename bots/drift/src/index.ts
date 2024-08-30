@@ -1,5 +1,5 @@
 import { Keypair, Connection } from "@solana/web3.js";
-import { Wallet, DriftClient, BN, MarketType, PositionDirection, OrderType, PostOnlyParams } from "@drift-labs/sdk";
+import { Wallet, DriftClient, BN, MarketType, PositionDirection, OrderType, PostOnlyParams, User } from "@drift-labs/sdk";
 import fs from 'fs';
 import axios from 'axios';
 import pkg from 'bs58';
@@ -7,8 +7,8 @@ const { decode } = pkg;
 
 const DRIFT_ENV = 'mainnet-beta';
 const QUOTES_URL = 'https://dlob.drift.trade/l2?depth=3&includeOracle=true&includeVamm=false&marketName=';
-const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0';
-const keyPairFile = `${process.env.ANCHOR_WALLET}`;
+const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/odv67ZxOsKsh9lMdK-_SDDpwj4dmC9P8';
+const keyPairFile = `./secrets/wallet.txt`;
 
 const base64String = fs.readFileSync(keyPairFile, 'utf-8');
 const privateKeyUint8Array = decode(base64String);
@@ -28,15 +28,7 @@ type Market = {
     priceDiff: number
 }
 const MARKETS: Array<Market> = [
-    {
-        direction: PositionDirection.LONG,
-        symbol: "AVAX",
-        marketIndex: 22,
-        tradeSize: 0.6,
-        openAdjustSize: 0.01,
-        closeAdjustSize: 0.1,
-        priceDiff: 0.1
-    },
+
     {
         direction: PositionDirection.LONG,
         symbol: "BTC",
@@ -54,40 +46,6 @@ const MARKETS: Array<Market> = [
         openAdjustSize: 1.5,
         closeAdjustSize: 5,
         priceDiff: 5
-    },
-    {
-        direction: PositionDirection.LONG,
-        symbol: "BNB",
-        marketIndex: 8,
-        tradeSize: 0.07,
-        openAdjustSize: 0.25,
-        closeAdjustSize: 1.5,
-        priceDiff: 1
-    }, {
-        direction: PositionDirection.SHORT,
-        symbol: "XRP",
-        marketIndex: 13,
-        tradeSize: 50,
-        openAdjustSize: 0.0001,
-        closeAdjustSize: 0.0005,
-        priceDiff: 0.0005
-    }, {
-        direction: PositionDirection.SHORT,
-        symbol: "DOGE",
-        marketIndex: 7,
-        tradeSize: 50,
-        openAdjustSize: 0.0001,
-        closeAdjustSize: 0.0003,
-        priceDiff: 0.0003
-    },
-    {
-        symbol: "JUP",
-        direction: PositionDirection.SHORT,
-        marketIndex: 24,
-        tradeSize: 50,
-        openAdjustSize: 0.0000,
-        closeAdjustSize: 0.0005,
-        priceDiff: 0.0005
     },
     {
         direction: PositionDirection.SHORT,
@@ -143,6 +101,11 @@ const driftClient = new DriftClient({
     connection,
     wallet,
     env: DRIFT_ENV,
+    accountSubscription: {
+        resubTimeoutMs: 15000,
+        type: 'websocket'
+
+    }
 });
 console.timeEnd('New Drift Client');
 
@@ -151,7 +114,7 @@ function logOrders(title: string, orders: any, markets: Array<Market>) {
     for (const order of orders) {
         const symbol = markets.find(m => m.marketIndex === order.marketIndex)?.symbol || 'UNKNOWN';
         const amount = order.amount || convertAmount(order.baseAssetAmount.toNumber())
-        const price = order.price.toNumber? convertPrice(order.price.toNumber()) : order.price 
+        const price = order.price.toNumber ? convertPrice(order.price.toNumber()) : order.price
         const direction = order.direction ? (order.direction === PositionDirection.LONG ? 'LONG' : 'SHORT') : 'UNKNOWN';
         console.log(`
             Symbol=${symbol}
@@ -162,13 +125,68 @@ function logOrders(title: string, orders: any, markets: Array<Market>) {
     }
 }
 
-async function checkTrades(markets: Array<Market>) {
+async function getPosition(user: User, marketIndex: number, symbol: string) {
+    const perpPosition = user.getPerpPosition(marketIndex);
+    const baseAssetAmount = perpPosition?.baseAssetAmount?.toNumber() || 0
+    const baseAsset = convertAmount(baseAssetAmount);
 
+    const quoteBreakEvenAmount = perpPosition?.quoteBreakEvenAmount?.toNumber() || 0
+    const quoteEntryAmount = perpPosition?.quoteEntryAmount?.toNumber() || 0
+
+    const breakEvenPrice = convertPrice(AMOUNT_DECIMALS * Math.abs(quoteBreakEvenAmount / baseAssetAmount));
+    const entryPrice = convertPrice(AMOUNT_DECIMALS * Math.abs(quoteEntryAmount / baseAssetAmount || 0));
+    const quotes = await fetchQuotes(symbol);
+    const bid = Math.min(quotes.oraclePrice, quotes.askPrice);
+    const ask = Math.max(quotes.bidPrice, quotes.askPrice);
+    const price = (bid + ask) / 2
+    const baseAmount = entryPrice * baseAsset
+    const currentAmount = price * baseAsset
+    let pnl = currentAmount - baseAmount
+    if (baseAsset < 0) {
+        pnl = baseAmount * -1 + currentAmount
+    }
+
+
+    console.log('--');
+    console.log(symbol, quotes);
+    console.log('*** Break Even Price:', breakEvenPrice);
+    console.log('*** Entry Price:', entryPrice);
+    console.log('*** Price:', price);
+    console.log('*** Oracle Price:', quotes.oraclePrice);
+    console.log('*** Pnl:', pnl);
+    console.log('*** Base Asset:', baseAsset);
+    console.log('*** value:', currentAmount);
+
+
+    return {
+        price,
+        baseAsset,
+        breakEvenPrice,
+        entryPrice,
+        pnl,
+        marketIndex,
+        symbol,
+        value: currentAmount,
+        oracle: quotes.oraclePrice
+    }
+}
+
+function buySell(marketIndex: number, amount: number, newPrice: number) {
+    const orderParams = {
+        orderType: OrderType.LIMIT,
+        marketIndex: marketIndex,
+        marketType: MarketType.PERP,
+        postOnly: PostOnlyParams.MUST_POST_ONLY,
+        direction: PositionDirection.LONG,
+        baseAssetAmount: new BN(amount * AMOUNT_DECIMALS),
+        price: invertPrice(newPrice)
+    }
+}
+async function checkTrades(markets: Array<Market>) {
     if (driftClient.isSubscribed) {
         console.time('unsubscribe');
         await driftClient.unsubscribe();
         console.timeEnd('unsubscribe');
-
     }
 
     console.time('Subscribe');
@@ -179,7 +197,7 @@ async function checkTrades(markets: Array<Market>) {
     const user = driftClient.getUser();
     console.timeEnd('Get User');
 
-    console.time('Get Unrealized PNL');    
+    console.time('Get Unrealized PNL');
     const pnl = user.getUnrealizedPNL(true);
     console.timeEnd('Get Unrealized PNL');
     console.log('Unrealized PNL:', pnl.toString());
@@ -192,87 +210,57 @@ async function checkTrades(markets: Array<Market>) {
     const newOrders: any = []
     const cancelOrders: any[] = []
 
-    for (const market of markets) {
-        const perpPosition = user.getPerpPosition(market.marketIndex);
-        const baseAssetAmount = perpPosition?.baseAssetAmount;
-        const baseAsset = convertAmount(baseAssetAmount?.toNumber() || 0);
-        const breakEvenPrice = convertPrice(AMOUNT_DECIMALS * Math.abs(perpPosition?.quoteBreakEvenAmount.toNumber() / baseAssetAmount?.toNumber() || 0));
-        const entryPrice = convertPrice(AMOUNT_DECIMALS * Math.abs(perpPosition?.quoteEntryAmount.toNumber() / baseAssetAmount?.toNumber() || 0));
-
-       
-
-        const quotes = await fetchQuotes(market.symbol);
-        console.log('--');
-        console.log(market.symbol, quotes);
-        console.log('*** Break Even Price:', breakEvenPrice);
-        console.log('*** Entry Price:', entryPrice);
-        console.log('*** Base Asset:', baseAsset);
-
-        const direction = baseAsset === 0 ? market.direction : baseAsset < 0 ? PositionDirection.LONG : PositionDirection.SHORT;
-        const amount = baseAsset !== 0 ? Math.abs(baseAsset) : market.tradeSize;
-        const closePrice = baseAsset < 0 ? breakEvenPrice - market.closeAdjustSize : breakEvenPrice + market.closeAdjustSize;
-        const bid = Math.min(quotes.bidPrice, quotes.askPrice);
-        const ask = Math.max(quotes.bidPrice, quotes.askPrice);
-        const openPrice = market.direction === (PositionDirection.LONG || baseAsset < 0) ? bid - market.openAdjustSize : ask + market.openAdjustSize;
-        let newPrice = openPrice
-        if (baseAsset < 0) {
-            if (closePrice < openPrice) {
-                newPrice = closePrice
-            }
-        } else if (baseAsset > 0) {
-            if (closePrice > openPrice) {
-                newPrice = closePrice
-            }
-        }
-
-
-        const newOrder = {
-            orderId: -1,
-            price: 0,
-            amount: 0,
-            filled: 0,
-            marketIndex: market.marketIndex,
-        }
-        for (const order of orders) {
-            if (order.marketIndex === market.marketIndex) {
-                const existingLong = order.direction === PositionDirection.LONG && baseAsset > 0 && order.orderId !== -1
-                const existingShort = order.direction === PositionDirection.SHORT && baseAsset < 0 && order.orderId !== -1
-                if (newOrder.orderId !== -1 || existingLong || existingShort) {
-                    console.log('*** Multiple orders for the same market');
-                    console.log('*** Cancelling:', order.orderId);
-                    cancelOrders.push({...order, symbol: market.symbol, direction: market.direction});
-                } else {
-                    newOrder.orderId = order.orderId;
-                    newOrder.price = convertPrice(order.price.toNumber());
-                    newOrder.amount = convertAmount(order.baseAssetAmount.toNumber());
-                    newOrder.filled = convertAmount(order.baseAssetAmountFilled.toNumber());
-                }
-
-            }
-        }
-
-        const priceDiff = Math.abs(newPrice - newOrder.price);
-        const shouldCancel = priceDiff > market.priceDiff && newOrder.orderId !== -1
-
-        const orderParams = {
-            orderType: OrderType.LIMIT,
-            marketIndex: market.marketIndex,
-            marketType: MarketType.PERP,
-            postOnly: PostOnlyParams.MUST_POST_ONLY,
-            direction,
-            baseAssetAmount: new BN(amount * AMOUNT_DECIMALS),
-            price: invertPrice(newPrice)
-        }
-        if (shouldCancel) {
-            cancelOrders.push(newOrder);
-        } else if (newOrder.orderId === -1) {   
-            newOrders.push(orderParams);
-        }
-        console.log('*** priceDiff:', priceDiff);
-        console.log('*** marketDiff:', market.priceDiff );
-        console.log('*** shouldCancel:', shouldCancel);
-        console.log('*** newPrice:', convertPrice(orderParams.price.toNumber()));     
+    for (const order of orders) {
+        cancelOrders.push(order.orderId);
     }
+
+    const solPosition = await getPosition(user, 0, "SOL")
+    const solPnl = solPosition.pnl
+    const ethPosition = await getPosition(user, 2, "ETH")
+    const ethPnl = ethPosition.pnl
+    const btcPosition = await getPosition(user, 1, "BTC")
+    const btcPnl = btcPosition.pnl
+
+    const shortPnl = ethPnl + btcPnl
+    const longPnl = solPnl
+    const totalPnl = solPnl + ethPnl + btcPnl
+
+    const solValue = solPosition.value
+    const btcValue = btcPosition.value
+    const ethValue = ethPosition.value
+
+    const totalLongValue = solValue + solPnl
+    const totalShortValue = (-1 * btcValue) + (-1 * ethValue) + btcPnl + ethPnl
+    const maxTradeAmount = 1000
+    const minSpread = 50
+    const totalSpread = totalLongValue - totalShortValue
+
+    console.log(`
+        total spread:  ${totalSpread}
+        maxTradeAmount: ${maxTradeAmount}
+
+        min Spread: ${minSpread}
+
+        SOL PNL  : ${solPnl}
+        ETH PNL  : ${ethPnl}
+        BTC PNL  : ${btcPnl}
+        TOTAL PNL: ${totalPnl}
+
+        Sol Price: ${solPosition.price}
+        Eth Price: ${ethPosition.price}
+        Btc Price: ${btcPosition.price}
+
+        Sol Value: ${solValue}
+        Btc Value: ${btcValue}
+        Eth Value: ${ethValue}
+
+        Short Pnl: ${shortPnl}
+        Long Pnl: ${longPnl}
+
+        Total Long Value: ${totalLongValue}
+        Total Short Value: ${totalShortValue}
+        Diff: ${totalSpread}
+        `)
 
     if (newOrders.length === 0) {
         console.log('**** No new orders to place');
@@ -301,9 +289,6 @@ async function checkTrades(markets: Array<Market>) {
         }
     }
 }
-
-
-
 
 function sleep(time: number) {
     return new Promise(resolve => setTimeout(resolve, time));
