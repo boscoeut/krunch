@@ -575,8 +575,6 @@ export async function getMangoData(UPDATE_GOOGLE_SHEET: boolean = true, SIMULATE
                     await cancelOpenOrders(client.client, client.mangoAccount!, client.group, "ETH-PERP", accountDefinition.name)
                     await cancelOpenOrders(client.client, client.mangoAccount!, client.group, "SOL-PERP", accountDefinition.name)
                     await cancelOpenOrders(client.client, client.mangoAccount!, client.group, "BTC-PERP", accountDefinition.name)
-
-
                 }
 
                 if (!SIMULATE_TRADES && tradeInstructions.length > 0) {

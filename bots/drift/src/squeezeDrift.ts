@@ -38,13 +38,13 @@ const MARKETS = [{
 }, {
     symbol: 'ETH',
     side: 'LONG',
-    spread: 1,
+    spread: 0,
     marketIndex: 2,
     disabled: false
 }, {
     symbol: 'BTC',
     side: 'LONG',
-    spread: 25,
+    spread: 20,
     marketIndex: 1,
     disabled: false
 }, {
@@ -58,6 +58,10 @@ const MARKETS = [{
 const MAX_LONG = 0
 const MAX_TRADE_AMOUNT = 250
 const MIN_TRADE_VALUE = 10
+const INCREASE_LONG = true
+const DECREASE_LONG = false
+const INCREASE_SHORT = false
+const DECREASE_SHORT = false
 
 interface AnalyzeProps {
     user: any,
@@ -245,22 +249,26 @@ async function analyzeMarket(props: AnalyzeProps) {
         `)
 
     const enabledPositions = positions.filter(a => !a.disabled)
-    if (totalSpread > 0) {
+    if (totalSpread>0) {
         // longs exceed shorts -- SELL
         const amt = totalSpread
         const maxAmount = Math.min(amt, maxTradeAmount)
-        const market = enabledPositions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a => a.side === "SHORT")
-        // SELL
-        await buySell("SELL", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue)
+        if (longPnl > 0 && DECREASE_LONG) {
+            const market = enabledPositions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a => a.side === "LONG" && a.pnl>0)
+            await buySell("SELL", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue)
+        } else if (INCREASE_SHORT) {
+            const market = enabledPositions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a => a.side === "SHORT")
+            await buySell("SELL", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue)
+        }
     } else {
         // shorts exceeds long -- buy        
         const amt = totalSpread * -1
         const market = enabledPositions.sort((a, b) => a.adjustedValue - b.adjustedValue).find(a => a.pnl > 0 && a.value > minTradeValue && a.side === "SHORT")
-        if (market) {
+        if (market && DECREASE_SHORT) {
             const maxAmount = Math.min(Math.abs(market.value), maxTradeAmount, amt)
             await buySell("BUY", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue)
-        } else {
-            const longMarket = enabledPositions.find(a => a.side === "LONG")
+        } else if (INCREASE_LONG) {
+            const longMarket = enabledPositions.sort((a, b) => a.adjustedValue - b.adjustedValue).find(a => a.side === "LONG")
             await buySell("BUY", amt, maxTradeAmount, longMarket.symbol, longMarket.marketIndex, longMarket.spread, transactionInstructions, longMarket.price, minTradeValue)
         }
     }
@@ -412,7 +420,7 @@ function formatUsdc(usdc: any) {
                             ]
                         },
                         {
-                            range: `${sheetName}!J11`,
+                            range: `${sheetName}!J12`,
                             values: [
                                 [BASELINE_PNL]
                             ],
@@ -438,9 +446,13 @@ function formatUsdc(usdc: any) {
             });
             console.log(`Updating Google Complete`)
         }
-
+        console.log(`Closing Drift Client`)
+        await driftClient.unsubscribe()
+        console.log(`Drift Client Closed`)
     } catch (error) {
         // Handle errors here
         console.error(`Error in main loop`, error)
+    } finally {
+        console.log(`Exiting`)
     }
 })();
