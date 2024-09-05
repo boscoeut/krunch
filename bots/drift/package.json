@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node src/squeezeDrift.ts"
+    "start": "ts-node src/squeezeDrift.ts",
+    "cross": "ts-node src/crossSqueeze.ts"
   },
   "keywords": [],
   "author": "",
@@ -15,13 +16,14 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@blockworks-foundation/mango-v4": "^0.33.5",
     "@drift-labs/sdk": "^2.94.0-beta.9",
+    "@google-cloud/local-auth": "^2.1.0",
+    "@project-serum/serum": "^0.13.65",
     "axios": "^1.6.7",
     "bs58": "^5.0.0",
     "cd": "^0.3.3",
-    "got": "^14.2.0",
-    "@google-cloud/local-auth": "^2.1.0",
-    "googleapis": "^105.0.0"
-    
+    "googleapis": "^105.0.0",
+    "got": "^14.2.0"
   }
 }

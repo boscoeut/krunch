@@ -15,7 +15,7 @@ const DRIFT_ENV = 'mainnet-beta';
 const QUOTES_URL = 'https://dlob.drift.trade/l2?depth=3&includeOracle=true&includeVamm=false&marketName=';
 const keyPairFile = `./secrets/wallet.txt`;
 
-const BASELINE_PNL = 180;
+const BASELINE_PNL = -100;
 const UPDATE_GOOGLE = true
 
 const base64String = fs.readFileSync(keyPairFile, 'utf-8');
@@ -34,17 +34,17 @@ const MARKETS = [{
     side: 'SHORT',
     spread: 0.0005,
     marketIndex: 24,
-    disabled: false
+    disabled: true
 }, {
     symbol: 'ETH',
     side: 'LONG',
-    spread: 0,
+    spread: 1,
     marketIndex: 2,
     disabled: false
 }, {
     symbol: 'BTC',
-    side: 'LONG',
-    spread: 20,
+    side: 'SHORT',
+    spread: 10,
     marketIndex: 1,
     disabled: false
 }, {
@@ -56,19 +56,20 @@ const MARKETS = [{
 }]
 
 const MAX_LONG = 0
-const MAX_TRADE_AMOUNT = 250
+const MAX_TRADE_AMOUNT = 1500
 const MIN_TRADE_VALUE = 10
 const INCREASE_LONG = true
-const DECREASE_LONG = false
-const INCREASE_SHORT = false
-const DECREASE_SHORT = false
+const DECREASE_LONG = true
+const INCREASE_SHORT = true
+const DECREASE_SHORT = true
 
 interface AnalyzeProps {
     user: any,
     transactionInstructions: Array<any>,
     maxLong: number,
     maxTradeAmount: number,
-    minTradeValue: number
+    minTradeValue: number,
+    driftClient: DriftClient
 }
 
 async function buySell(
@@ -136,7 +137,7 @@ async function fetchQuotes(market: string) {
     }
 }
 
-async function getPosition(user: User, marketIndex: number, symbol: string) {
+async function getPosition(user: User, marketIndex: number, symbol: string, driftClient: DriftClient) {
     const perpPosition = user.getPerpPosition(marketIndex);
     const baseAssetAmount = perpPosition?.baseAssetAmount?.toNumber() || 0
     const baseAsset = convertAmount(baseAssetAmount);
@@ -151,7 +152,16 @@ async function getPosition(user: User, marketIndex: number, symbol: string) {
     const ask = Math.max(quotes.bidPrice, quotes.askPrice);
     const price = (bid + ask) / 2
     const baseAmount = entryPrice * baseAsset
-    const currentAmount = price * baseAsset
+    
+    const marketAccount = driftClient.getPerpMarketAccount(marketIndex);
+    if (!marketAccount) throw new Error('Market not found');
+    
+    const oraclePrice = marketAccount.amm.lastOracleNormalisedPrice;
+    const oracle= oraclePrice.toNumber() / PRICE_PRECISION.toNumber();
+    const currentAmount = oracle * baseAsset
+
+  
+
     let pnl = currentAmount - baseAmount
     if (baseAsset < 0) {
         pnl = baseAmount * -1 + currentAmount
@@ -163,7 +173,8 @@ async function getPosition(user: User, marketIndex: number, symbol: string) {
     console.log('*** Break Even Price:', breakEvenPrice);
     console.log('*** Entry Price:', entryPrice);
     console.log('*** Price:', price);
-    console.log('*** Oracle Price:', quotes.oraclePrice);
+    console.log('*** Quotes Price:', quotes.oraclePrice);
+    console.log('*** Oracle Price:', oracle);
     console.log('*** Pnl:', pnl);
     console.log('*** Base Asset:', baseAsset);
     console.log('*** value:', currentAmount);
@@ -178,13 +189,13 @@ async function getPosition(user: User, marketIndex: number, symbol: string) {
         marketIndex,
         symbol,
         value: currentAmount,
-        oracle: quotes.oraclePrice
+        oracle
     }
 }
 
 async function analyzeMarket(props: AnalyzeProps) {
 
-    const { user, transactionInstructions, minTradeValue, maxLong, maxTradeAmount } = props;
+    const { user, transactionInstructions, minTradeValue, maxLong, maxTradeAmount, driftClient } = props;
     let shortPnl = 0
     let longPnl = 0
     let longValue = 0
@@ -192,14 +203,14 @@ async function analyzeMarket(props: AnalyzeProps) {
 
     const positions: Array<any> = []
     for (const market of MARKETS) {
-        const position = await getPosition(user, market.marketIndex, market.symbol)
+        const position = await getPosition(user, market.marketIndex, market.symbol, driftClient)
         const entryPrice = position.entryPrice || 0
         const positionSize = position.baseAsset || 0
         const pnl = position.pnl || 0
         const side = market.side
         const value = position.value || 0
         const adjustedValue = value + pnl * (side === "LONG" ? 1 : -1)
-        const price = position.price
+        const price = position.oracle
         if (!market.disabled) {
             if (side === "SHORT") {
                 shortPnl += pnl
@@ -249,12 +260,12 @@ async function analyzeMarket(props: AnalyzeProps) {
         `)
 
     const enabledPositions = positions.filter(a => !a.disabled)
-    if (totalSpread>0) {
+    if (totalSpread > 0) {
         // longs exceed shorts -- SELL
         const amt = totalSpread
         const maxAmount = Math.min(amt, maxTradeAmount)
         if (longPnl > 0 && DECREASE_LONG) {
-            const market = enabledPositions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a => a.side === "LONG" && a.pnl>0)
+            const market = enabledPositions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a => a.side === "LONG" && a.pnl > 0)
             await buySell("SELL", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue)
         } else if (INCREASE_SHORT) {
             const market = enabledPositions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a => a.side === "SHORT")
@@ -264,7 +275,7 @@ async function analyzeMarket(props: AnalyzeProps) {
         // shorts exceeds long -- buy        
         const amt = totalSpread * -1
         const market = enabledPositions.sort((a, b) => a.adjustedValue - b.adjustedValue).find(a => a.pnl > 0 && a.value > minTradeValue && a.side === "SHORT")
-        if (market && DECREASE_SHORT) {
+        if (market && DECREASE_SHORT && shortPnl > 0) {
             const maxAmount = Math.min(Math.abs(market.value), maxTradeAmount, amt)
             await buySell("BUY", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue)
         } else if (INCREASE_LONG) {
@@ -373,7 +384,8 @@ function formatUsdc(usdc: any) {
             transactionInstructions: newOrders,
             maxLong: MAX_LONG,
             maxTradeAmount: MAX_TRADE_AMOUNT,
-            minTradeValue: MIN_TRADE_VALUE
+            minTradeValue: MIN_TRADE_VALUE,
+            driftClient
         })
         if (PLACE_ORDERS && (newOrders.length + cancelOrders.length) > 0) {
             try {

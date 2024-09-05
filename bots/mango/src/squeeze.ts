@@ -56,15 +56,15 @@ async function analyzeMarket(props: AnalyzeProps) {
     const markets = [{
         symbol: 'SOL-PERP',
         side: 'SHORT',
-        spread: 0.20
+        spread: 0.10
     }, {
         symbol: 'ETH-PERP',
         side: 'LONG',
-        spread: 1.5
+        spread: 0.75
     }, {
         symbol: 'BTC-PERP',
         side: 'LONG',
-        spread: 40
+        spread: 50
     }]
 
     let shortPnl = 0
@@ -116,7 +116,7 @@ async function analyzeMarket(props: AnalyzeProps) {
     const totalLongValue = longValue + longPnl - maxLong 
     const totalShortValue = shortValue - shortPnl
 
-    const maxTradeAmount = 255
+    const maxTradeAmount = 150
     const minTradeValue = 10
     const shouldCancel = true;
 
@@ -157,7 +157,7 @@ async function analyzeMarket(props: AnalyzeProps) {
         // shorts exceeds long -- buy        
         const amt = totalSpread * -1
         const market = positions.sort((a, b) => a.adjustedValue - b.adjustedValue).find(a => a.pnl > 0 && Math.abs(a.value) > minTradeValue && a.side === "SHORT")
-        if (market && DECREASE_SHORT) {
+        if (market && DECREASE_SHORT && shortPnl > 0 ) {
             const maxAmount = Math.min(Math.abs(market.value), maxTradeAmount, amt)
             await buySell("BUY", amt, maxAmount, market.symbol, market.perpMarket, market.spread, client, transactionInstructions, minTradeValue)
         } else if (INCREASE_LONG) {

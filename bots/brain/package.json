@@ -1,0 +1,23 @@
+{
+    "name": "drift",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+      "start": "ts-node src/index.ts"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+      "ts-node": "^10.9.2",
+      "typescript": "^5.3.3"
+    },
+    "dependencies": {
+      "axios": "^1.6.7",
+      "bs58": "^5.0.0",
+      "cd": "^0.3.3",
+      "got": "^14.2.0"
+    }
+  }
+  
