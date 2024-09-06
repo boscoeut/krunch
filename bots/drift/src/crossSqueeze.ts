@@ -46,10 +46,6 @@ const DRIFT_MARKETS = {
 }
 
 const MAX_LONG = 0
-const INCREASE_LONG = true
-const DECREASE_LONG = true
-const INCREASE_SHORT = true
-const DECREASE_SHORT = true
 
 interface Market {
     symbol: string,
@@ -57,20 +53,22 @@ interface Market {
     exchange: 'DRIFT' | 'Mango',
     spread: number,
     baseValue: number,
-    basePnl: number
+    basePnl: number,
+    canIncrease: boolean,
+    canDecrease: boolean
 }
 
 interface AnalyzeProps {
     driftUser: any,
     transactionInstructions: Array<any>,
-    maxLong: number,
     maxTradeAmount: number,
     minTradeValue: number,
     driftClient: DriftClient,
     markets: Array<Market>,
     mangoAccount: MangoAccount,
     mangoClient: MangoClient,
-    mangoGroup: Group
+    mangoGroup: Group,
+    multiplier: number
 }
 
 async function buySell(
@@ -207,7 +205,7 @@ async function getMangoPosition(marketIndex: number, symbol: string, mangoGroup:
 }
 
 async function analyzeMarket(props: AnalyzeProps) {
-    const { driftUser, transactionInstructions, minTradeValue, maxLong, maxTradeAmount, driftClient } = props;
+    const { driftUser, transactionInstructions, minTradeValue, maxTradeAmount, driftClient, multiplier } = props;
     let shortPnl = 0
     let longPnl = 0
     let longValue = 0
@@ -246,19 +244,23 @@ async function analyzeMarket(props: AnalyzeProps) {
             adjustedValue,
             marketIndex,
             exchange: market.exchange,
-            existingOrders: position.existingOrders
+            existingOrders: position.existingOrders,
+            canIncrease: market.canIncrease,
+            canDecrease: market.canDecrease
         })
         console.log(`${market.exchange}: ${market.symbol} ${side} PNL: ${pnl} Value: ${value} Price: ${price} Entry Price: ${entryPrice} Position Size: ${positionSize}`)
     }
 
     const totalPnl = shortPnl + longPnl
-    const totalLongValue = longValue + longPnl - maxLong
+    const totalLongValue = longValue + longPnl 
     const totalShortValue = shortValue - shortPnl
-    const totalSpread = totalLongValue + totalShortValue
+    const totalSpreadWithoutMultiplier = (totalLongValue + totalShortValue) 
+    const totalSpread = totalSpreadWithoutMultiplier * multiplier
 
     console.log(`
         total spread:  ${totalSpread}
         maxTradeAmount: ${maxTradeAmount}
+        multiplier: ${multiplier}
 
         TOTAL PNL: ${totalPnl}
 
@@ -267,6 +269,7 @@ async function analyzeMarket(props: AnalyzeProps) {
 
         Total Long Value: ${totalLongValue}
         Total Short Value: ${totalShortValue}
+        Diff without multiplier : ${totalSpreadWithoutMultiplier}   
         Diff : ${totalSpread}   
     `)
 
@@ -275,22 +278,22 @@ async function analyzeMarket(props: AnalyzeProps) {
         // longs exceed shorts -- SELL
         const amt = totalSpread
         const maxAmount = Math.min(amt, maxTradeAmount)
-        if (longPnl > 0 && DECREASE_LONG) {
-            const market = enabledPositions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a => a.side === "LONG" && a.value > minTradeValue && a.pnl > 0)
-            await buySell("SELL", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue, market.exchange)
-        } else if (INCREASE_SHORT) {
-            const market = enabledPositions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a => a.side === "SHORT")
-            await buySell("SELL", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue, market.exchange)
+        const longMarket = enabledPositions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a => a.side === "LONG" && a.value > minTradeValue && a.pnl > 0)
+        const shortMarket = enabledPositions.sort((a, b) => b.adjustedValue - a.adjustedValue).find(a => a.side === "SHORT")
+        if (longPnl > 0 && longMarket?.canDecrease) {
+            await buySell("SELL", amt, maxAmount, longMarket.symbol, longMarket.marketIndex, longMarket.spread, transactionInstructions, longMarket.price, minTradeValue, longMarket.exchange)
+        } else if (shortMarket?.canIncrease) {
+            await buySell("SELL", amt, maxAmount, shortMarket.symbol, shortMarket.marketIndex, shortMarket.spread, transactionInstructions, shortMarket.price, minTradeValue, shortMarket.exchange)
         }
     } else {
         // shorts exceeds long -- buy        
         const amt = totalSpread * -1
-        const market = enabledPositions.sort((a, b) => a.adjustedValue - b.adjustedValue).find(a => a.pnl > 0 && Math.abs(a.value) > minTradeValue && a.side === "SHORT")
-        if (market && DECREASE_SHORT && shortPnl > 0) {
-            const maxAmount = Math.min(Math.abs(market.value), maxTradeAmount, amt)
-            await buySell("BUY", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue, market.exchange)
-        } else if (INCREASE_LONG) {
-            const longMarket = enabledPositions.sort((a, b) => a.adjustedValue - b.adjustedValue).find(a => a.side === "LONG")
+        const shortMarket = enabledPositions.sort((a, b) => a.adjustedValue - b.adjustedValue).find(a => a.pnl > 0 && Math.abs(a.value) > minTradeValue && a.side === "SHORT")
+        const longMarket = enabledPositions.sort((a, b) => a.adjustedValue - b.adjustedValue).find(a => a.side === "LONG")
+        if (shortMarket?.canDecrease && shortPnl > 0) {
+            const maxAmount = Math.min(Math.abs(shortMarket.value), maxTradeAmount, amt)
+            await buySell("BUY", amt, maxAmount, shortMarket.symbol, shortMarket.marketIndex, shortMarket.spread, transactionInstructions, shortMarket.price, minTradeValue, shortMarket.exchange)
+        } else if (longMarket?.canIncrease) {
             await buySell("BUY", amt, maxTradeAmount, longMarket.symbol, longMarket.marketIndex, longMarket.spread, transactionInstructions, longMarket.price, minTradeValue, longMarket.exchange)
         }
     }
@@ -309,12 +312,12 @@ async function retryTransaction(driftClient: DriftClient, newOrders: any[],
     maxRetries = 3, marketIndex: number, oldDriftOrders: any) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            if (newOrders.length === 0 && oldDriftOrders.length > 0) {
+            if (oldDriftOrders.length > 0) {
                 console.log('orders cancelled');
-                const tx = await driftClient.cancelOrders({ marketIndex });
-                return
-            } else if (newOrders.length > 0) {
-                const tx = await driftClient.cancelAndPlaceOrders({ marketIndex }, newOrders);
+                const tx = await driftClient.cancelOrdersByIds(oldDriftOrders.map((a: any) => a.orderId));                
+            } 
+            if (newOrders.length > 0) {
+                const tx = await driftClient.placeOrders( newOrders);
                 console.log('SUCCESSS: New Orders Placed:', newOrders.length);
                 console.log('New Orders Tx:', `https://solscan.io/tx/${tx}`);
                 return tx;
@@ -463,6 +466,95 @@ export async function postTrades(client: MangoClient, group: Group, tradeInstruc
     }
 }
 
+async function placeDriftOrders(
+    newOrders: any,
+    driftClient: DriftClient,
+    markets: Array<Market>,
+    driftOrders: any
+){
+    try {
+        console.time('Place Drift Orders');
+        const transactionInstructions: Array<any> = []
+        const newDriftOrders = newOrders.filter((a: any) => a.exchange === 'DRIFT')
+        if (newDriftOrders.length > 0) {
+            console.log('Placing Drift Orders #', newOrders.length);
+            for (const order of newDriftOrders) {
+                const baseAssetAmount = new BN(order.tradeSize * BASE_PRECISION.toNumber())
+                console.log(`baseAssetAmount: ${baseAssetAmount.toNumber()}`)
+                const direction = order.side === "BUY" ? PositionDirection.LONG : PositionDirection.SHORT
+                const newPrice = new BN(order.price * PRICE_PRECISION.toNumber())
+                transactionInstructions.push({
+                    orderType: OrderType.LIMIT,
+                    marketIndex: order.marketIndex,
+                    marketType: MarketType.PERP,
+                    postOnly: PostOnlyParams.MUST_POST_ONLY,
+                    direction,
+                    baseAssetAmount,
+                    price: newPrice
+                });
+            }
+
+        }
+        const marketIndex = (DRIFT_MARKETS as any)[markets[0].symbol]
+        const existingOrders = driftOrders.filter((a: any) => a.marketIndex === marketIndex)
+        if(transactionInstructions.length+existingOrders.length > 0){
+            await retryTransaction(driftClient, transactionInstructions, 5, marketIndex, existingOrders);
+        }
+    } catch (x: any) {
+        console.log('Error Creating Orders:', x)
+        if (x?.logs?.length > 0) {
+            console.log('Logs:', x.logs);
+        }
+        console.log(`Place Orders failed`)
+    } finally {
+        console.timeEnd('Place Drift Orders');
+    }
+
+}
+async function placeMangoOrders(
+    newOrders: any,
+    mangoClient: MangoClient,
+    mangoAccount: MangoAccount,
+    mangoGroup: Group,
+    markets: Array<Market>,
+    hasExistingMangoOrders: boolean
+) {
+    try {
+        console.time('Place Mango Orders');
+        const mangoOrders = newOrders.filter((a: any) => a.exchange === 'Mango')
+        const transactionInstructions: Array<any> = []
+        if (hasExistingMangoOrders) {
+            transactionInstructions.push(await cancelOpenOrders(`${markets[0].symbol}-PERP`, mangoClient, mangoAccount!, mangoGroup));
+        }
+        if (mangoOrders.length > 0) {
+            console.log('Placing Mango Orders #', newOrders.length);
+            for (const order of mangoOrders) {
+                transactionInstructions.push(await placePerpOrder(
+                    `${order.symbol}-PERP`,
+                    mangoClient,
+                    mangoAccount!,
+                    mangoGroup,
+                    order.side === "BUY" ? PerpOrderSide.bid : PerpOrderSide.ask,
+                    order.tradeSize,
+                    order.price,
+                    new Date().getTime(), PerpOrderType.postOnly));
+            }
+        }
+        if (transactionInstructions.length > 0) {
+            await postTrades(mangoClient, mangoGroup, transactionInstructions, []);
+        }
+    } catch (x: any) {
+        console.log('Error Creating Orders:', x)
+        if (x?.logs?.length > 0) {
+            console.log('Logs:', x.logs);
+        }
+        console.log(`Place Mango failed`)
+    } finally {
+        console.timeEnd('Place Mango Orders');
+    }
+    
+}
+
 async function checkPair({
     driftUser,
     driftClient,
@@ -473,7 +565,8 @@ async function checkPair({
     placeOrders,
     minTradeValue,
     maxTradeAmount,
-    driftOrders
+    driftOrders,
+    multiplier = 1
 
 }: {
     driftUser: User,
@@ -485,94 +578,27 @@ async function checkPair({
     placeOrders: boolean,
     minTradeValue: number,
     maxTradeAmount: number,
-    driftOrders: any
+    driftOrders: any,
+    multiplier: number
 }) {
     const newOrders: any = []
     const { hasExistingMangoOrders } = await analyzeMarket({
         driftUser,
         transactionInstructions: newOrders,
-        maxLong: MAX_LONG,
         maxTradeAmount,
         minTradeValue,
         driftClient,
         markets,
         mangoAccount,
         mangoClient,
-        mangoGroup
+        mangoGroup,
+        multiplier
     })
     if (placeOrders && newOrders.length > 0) {
-        // Place Drift Orders
-        try {
-            console.time('Place Drift Orders');
-            const transactionInstructions: Array<any> = []
-            const newDriftOrders = newOrders.filter((a: any) => a.exchange === 'DRIFT')
-            if (newDriftOrders.length > 0) {
-                console.log('Placing Drift Orders #', newOrders.length);
-                for (const order of newDriftOrders) {
-                    const baseAssetAmount = new BN(order.tradeSize * BASE_PRECISION.toNumber())
-                    console.log(`baseAssetAmount: ${baseAssetAmount.toNumber()}`)
-                    const direction = order.side === "BUY" ? PositionDirection.LONG : PositionDirection.SHORT
-                    const newPrice = new BN(order.price * PRICE_PRECISION.toNumber())
-                    transactionInstructions.push({
-                        orderType: OrderType.LIMIT,
-                        marketIndex: order.marketIndex,
-                        marketType: MarketType.PERP,
-                        postOnly: PostOnlyParams.MUST_POST_ONLY,
-                        direction,
-                        baseAssetAmount,
-                        price: newPrice
-                    });
-                }
-
-            }
-            const marketIndex = (DRIFT_MARKETS as any)[markets[0].symbol]
-            const existingOrders = driftOrders.filter((a: any) => a.marketIndex === marketIndex)
-            if(transactionInstructions.length+existingOrders.length > 0){
-                await retryTransaction(driftClient, transactionInstructions, 5, marketIndex, existingOrders);
-            }
-        } catch (x: any) {
-            console.log('Error Creating Orders:', x)
-            if (x?.logs?.length > 0) {
-                console.log('Logs:', x.logs);
-            }
-            console.log(`Place Orders failed`)
-        } finally {
-            console.timeEnd('Place Drift Orders');
-        }
-
-        try {
-            console.time('Place Mango Orders');
-            const mangoOrders = newOrders.filter((a: any) => a.exchange === 'Mango')
-            const transactionInstructions: Array<any> = []
-            if (hasExistingMangoOrders) {
-                transactionInstructions.push(await cancelOpenOrders(`${markets[0].symbol}-PERP`, mangoClient, mangoAccount!, mangoGroup));
-            }
-            if (mangoOrders.length > 0) {
-                console.log('Placing Mango Orders #', newOrders.length);
-                for (const order of mangoOrders) {
-                    transactionInstructions.push(await placePerpOrder(
-                        `${order.symbol}-PERP`,
-                        mangoClient,
-                        mangoAccount!,
-                        mangoGroup,
-                        order.side === "BUY" ? PerpOrderSide.bid : PerpOrderSide.ask,
-                        order.tradeSize,
-                        order.price,
-                        new Date().getTime(), PerpOrderType.postOnly));
-                }
-            }
-            if (transactionInstructions.length > 0) {
-                await postTrades(mangoClient, mangoGroup, transactionInstructions, []);
-            }
-        } catch (x: any) {
-            console.log('Error Creating Orders:', x)
-            if (x?.logs?.length > 0) {
-                console.log('Logs:', x.logs);
-            }
-            console.log(`Place Mango failed`)
-        } finally {
-            console.timeEnd('Place Mango Orders');
-        }
+        await Promise.all([
+            placeDriftOrders(newOrders, driftClient, markets, driftOrders),
+            placeMangoOrders(newOrders, mangoClient, mangoAccount, mangoGroup, markets, hasExistingMangoOrders)
+        ])
     }
 }
 
@@ -585,30 +611,36 @@ async function checkPair({
         const { driftClient, user: driftUser, cancelOrders } = await getDriftClient(connection, 'driftWallet')
         const { client: mangoClient, group, mangoAccount } = await getMangoClient(connection, 'sixWallet', 'HpBSY6mP4khefkaDaWHVBKN9q4w7DMfV1PkCwPQudUMw')
 
+        const PLACE_ORDERS = true
         await checkPair({
             driftUser,
             driftClient,
             mangoClient,
             mangoAccount,
             mangoGroup: group,
-            placeOrders: true,
-            minTradeValue: 100,
+            placeOrders: PLACE_ORDERS,
+            minTradeValue: 20,
             maxTradeAmount: 350,
+            multiplier: 1.0,
             driftOrders: cancelOrders,
             markets: [{
-                symbol: 'SOL',
+                symbol: 'ETH',
                 side: 'SHORT',
                 exchange: 'Mango',
-                spread: 0.15,
-                baseValue: 0,
-                basePnl: 0
+                spread: 0.05,
+                baseValue: 2258,
+                basePnl: -119,
+                canIncrease: true,
+                canDecrease: true
             }, {
-                symbol: 'SOL',
+                symbol: 'ETH',
                 side: 'LONG',
                 exchange: 'DRIFT',
-                spread: 0.15,
-                baseValue: 53681.08 + -744.06,
-                basePnl: -9099.07 + -5.73
+                spread: 0.05,
+                baseValue: 2884.80 ,
+                basePnl: -113.51,
+                canIncrease: true,
+                canDecrease: false
             }]
         })
 
@@ -618,24 +650,61 @@ async function checkPair({
             mangoClient,
             mangoAccount,
             mangoGroup: group,
-            placeOrders: true,
-            minTradeValue: 10,
+            placeOrders: PLACE_ORDERS,
+            minTradeValue: 50,
+            maxTradeAmount: 500,
+            driftOrders: cancelOrders,
+            multiplier: 1.0,
+            markets: [{
+                symbol: 'SOL',
+                side: 'SHORT',
+                exchange: 'Mango',
+                spread: 0.1,
+                baseValue: 0,
+                basePnl: 0,
+                canIncrease: true,
+                canDecrease: true
+            }, {
+                symbol: 'SOL',
+                side: 'LONG',
+                exchange: 'DRIFT',
+                spread: 0.05,
+                baseValue: 53681.08 + -744.06,
+                basePnl: -9099.07 + -5.73,
+                canIncrease: true,
+                canDecrease: true
+            }]
+        })
+
+        await checkPair({
+            driftUser,
+            driftClient,
+            mangoClient,
+            mangoAccount,
+            mangoGroup: group,
+            placeOrders: PLACE_ORDERS,
+            minTradeValue: 20,
             maxTradeAmount: 1000,
             driftOrders: cancelOrders,
+            multiplier: 1.0,
             markets: [{
                 symbol: 'BTC',
-                side: 'SHORT',
+                side: 'LONG',
                 exchange: 'DRIFT',
-                spread: 50,
+                spread: 40,
                 baseValue: 0,
-                basePnl: 0
+                basePnl: 0,
+                canIncrease: true,
+                canDecrease: false
             }, {
                 symbol: 'BTC',
-                side: 'LONG',
+                side: 'SHORT',
                 exchange: 'Mango',
-                spread: 50,
-                baseValue: 0,
-                basePnl: 0
+                spread: 40,
+                baseValue: 300,
+                basePnl: 0,
+                canIncrease: true,
+                canDecrease: false
             }]
         })
         console.log(`Closing Drift Client`)
