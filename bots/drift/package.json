@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node src/squeezeDrift.ts",
-    "cross": "ts-node src/crossSqueeze.ts"
+    "cross": "ts-node src/crossSqueeze.ts",
+    "buckets": "ts-node src/buckets.ts"
   },
   "keywords": [],
   "author": "",
