@@ -26,6 +26,7 @@ import fs from 'fs';
 import { CONNECTION_URL, SPREADSHEET_ID } from '../../mango/src/constants';
 const { decode } = pkg;
 import { authorize } from '../../mango/src/googleUtils';
+import { fetchFundingData, getFundingRate } from '../../mango/src/mangoUtils';
 
 const DRIFT_ENV = 'mainnet-beta';
 
@@ -47,7 +48,9 @@ const dbStatus = {
     DRIFT_HEALTH: 0,
     MANGO_HEALTH: 0,
     DRIFT_FUNDING: 0,
-    MANGO_FUNDING: 0
+    MANGO_FUNDING: 0,
+    SOL_FUNDING: 0,
+    MANGO_FUNDING_RATE: 0
 }
 
 function getKeyPair(file: string) {
@@ -189,6 +192,12 @@ async function getMangoPosition(marketIndex: number, symbol: string, mangoGroup:
     const value = positionSize * perpMarket.uiPrice
     const price = perpMarket.uiPrice
 
+    const funding = perpPosition?.getCumulativeFunding(perpMarket)
+    if (value !== 0){
+        const fundingAmount = ((funding?.cumulativeShortFunding || 0) - (funding!.cumulativeLongFunding || 0)) / 10 ** 6
+        dbStatus.MANGO_FUNDING += fundingAmount
+    }
+
     const existingOrders = await mangoAccount!.loadPerpOpenOrdersForMarket(
         mangoClient,
         mangoGroup,
@@ -305,17 +314,17 @@ async function analyzeMarket(props: AnalyzeProps) {
         const maxAmount = Math.min(amt, maxTradeAmount)
         const market = enabledPositions[0]
         const canTrade = baseline < 0 || totalPnl > 0
-        if (canTrade) {
+        // if (canTrade) {
             await buySell("SELL", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue, market.exchange)
-        }
+        // }
     } else {
         // shorts exceeds long -- buy        
         const amt = baseline - totalSpread
         const market = enabledPositions[0]
         const canTrade = baseline > 0 || totalPnl > 0
-        if (canTrade) {
+        // if (canTrade) {
             await buySell("BUY", amt, maxTradeAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue, market.exchange)
-        }
+        // }
     }
 
     const hasExistingMangoOrders = positions.some((a: any) => a.exchange === 'MANGO' && a.existingOrders.length > 0)
@@ -660,8 +669,8 @@ async function updateGoogleSheet(db: any) {
                     }).map((a: DBItem) => [a.MARKET, a.EXCHANGE, a.VALUE, a.PNL, a.ADJUSTED_VALUE, a.BASELINE, a.ORDER, a.PRICE, a.PLACE_ORDERS])
                 },
                 {
-                    range: `${sheetName}!M1:M3`,
-                    values: [[dbStatus.DRIFT_HEALTH], [dbStatus.DRIFT_FUNDING], [dbStatus.MANGO_HEALTH]]
+                    range: `${sheetName}!O1:O5`,
+                    values: [[dbStatus.DRIFT_HEALTH], [dbStatus.DRIFT_FUNDING], [dbStatus.MANGO_HEALTH], [dbStatus.MANGO_FUNDING], [dbStatus.MANGO_FUNDING_RATE]]
                 },
             ]
         }
@@ -677,80 +686,91 @@ async function updateGoogleSheet(db: any) {
         const { driftClient, user: driftUser, cancelOrders } = await getDriftClient(connection, 'driftWallet')
         const { client: mangoClient, group, mangoAccount } = await getMangoClient(connection, 'sixWallet', SIX_PUBLIC_KEY)
 
+        const currentFunding = await getFundingRate()
+        console.log('CURRENT FUNDING:', currentFunding.solFundingRate)
+        dbStatus.MANGO_FUNDING_RATE = currentFunding.solFundingRate
+
         const defaultParams = {
             driftUser,
             driftClient,
             mangoClient,
             mangoAccount,
             mangoGroup: group,
-            placeOrders: true,
-            minTradeValue: 15,
-            maxTradeAmount: 9500,
+            placeOrders: false,
+            minTradeValue: 25,
+            maxTradeAmount: 1200,
             driftOrders: cancelOrders,
         }
 
         await Promise.all([
             checkPair({
                 ...defaultParams,
+                placeOrders: true,
                 market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
-                    spread: 0.25,
-                    baseline: 59000
+                    spread: 0.05,
+                    baseline: 60000
                 }
             }),
             checkPair({
                 ...defaultParams,
+                placeOrders: true,
                 market: {
                     symbol: 'SOL',
                     exchange: 'MANGO',
                     spread: 0.30,
-                    baseline: -2500
+                    baseline: -10000
                 }
             }),
             checkPair({
                 ...defaultParams,
+                placeOrders: false,
                 market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -3000
+                    baseline: -4000
                 }
             }),
             checkPair({
                 ...defaultParams,
+                placeOrders: false,
                 market: {
                     symbol: 'BTC',
                     exchange: 'MANGO',
                     spread: 30,
-                    baseline: -2000
+                    baseline: 0
                 }
             }),
             checkPair({
                 ...defaultParams,
+                placeOrders: false,
                 market: {
                     symbol: 'ETH',
                     exchange: 'MANGO',
                     spread: 1.5,
-                    baseline: -1000
+                    baseline: 0
                 }
             }),
              checkPair({
                 ...defaultParams,
+                placeOrders: false,
                 market: {
                     symbol: 'BTC',
                     exchange: 'DRIFT',
                     spread: 30,
-                    baseline: -1000
+                    baseline: 0
                 }
             }),
             checkPair({
                 ...defaultParams,
+                placeOrders: false,
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
                     spread: 1,
-                    baseline: -1000
+                    baseline: 0
                 }
             }),
         ])
