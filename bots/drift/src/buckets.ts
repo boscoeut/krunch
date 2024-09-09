@@ -25,7 +25,7 @@ import pkg from 'bs58';
 import fs from 'fs';
 import { CONNECTION_URL, SPREADSHEET_ID } from '../../mango/src/constants';
 const { decode } = pkg;
-import { authorize } from '../../mango/src/googleUtils';
+import { authorize, toGoogleSheetsDate } from '../../mango/src/googleUtils';
 import { fetchFundingData, getFundingRate } from '../../mango/src/mangoUtils';
 
 const DRIFT_ENV = 'mainnet-beta';
@@ -50,7 +50,8 @@ const dbStatus = {
     DRIFT_FUNDING: 0,
     MANGO_FUNDING: 0,
     SOL_FUNDING: 0,
-    MANGO_FUNDING_RATE: 0
+    MANGO_FUNDING_RATE: 0,
+    LAST_UPDATED: new Date()
 }
 
 function getKeyPair(file: string) {
@@ -637,8 +638,6 @@ async function checkPair({
         }
     }
     if (placeOrders && newOrders.length > 0) {
-        
-
         await Promise.all([
             placeDriftOrders(newOrders, driftClient, market, driftOrders),
             placeMangoOrders(newOrders, mangoClient, mangoAccount, mangoGroup, market, hasExistingMangoOrders)
@@ -648,7 +647,6 @@ async function checkPair({
 
 async function updateGoogleSheet(db: any) {
     const { google } = require('googleapis');
-
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
     const sheetName = "Buckets"
@@ -669,8 +667,13 @@ async function updateGoogleSheet(db: any) {
                     }).map((a: DBItem) => [a.MARKET, a.EXCHANGE, a.VALUE, a.PNL, a.ADJUSTED_VALUE, a.BASELINE, a.ORDER, a.PRICE, a.PLACE_ORDERS])
                 },
                 {
-                    range: `${sheetName}!O1:O5`,
-                    values: [[dbStatus.DRIFT_HEALTH], [dbStatus.DRIFT_FUNDING], [dbStatus.MANGO_HEALTH], [dbStatus.MANGO_FUNDING], [dbStatus.MANGO_FUNDING_RATE]]
+                    range: `${sheetName}!O1:O6`,
+                    values: [[dbStatus.DRIFT_HEALTH], 
+                    [dbStatus.DRIFT_FUNDING], 
+                    [dbStatus.MANGO_HEALTH], 
+                    [dbStatus.MANGO_FUNDING], 
+                    [dbStatus.MANGO_FUNDING_RATE], 
+                    [toGoogleSheetsDate(dbStatus.LAST_UPDATED)]]
                 },
             ]
         }
@@ -710,7 +713,7 @@ async function updateGoogleSheet(db: any) {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
                     spread: 0.05,
-                    baseline: 60000
+                    baseline: 60_500
                 }
             }),
             checkPair({
@@ -720,12 +723,12 @@ async function updateGoogleSheet(db: any) {
                     symbol: 'SOL',
                     exchange: 'MANGO',
                     spread: 0.30,
-                    baseline: -10000
+                    baseline: -13_000
                 }
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: false,
+                placeOrders: true,
                 market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',

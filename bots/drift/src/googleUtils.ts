@@ -16,6 +16,12 @@ export function loadSavedCredentialsIfExist() {
     }
 }
 
+export function toGoogleSheetsDate(date: Date) {
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+    const zeroDate = new Date('1899-12-30T00:00:00Z');
+    return (date.getTime() - zeroDate.getTime()) / MS_PER_DAY;
+}
+
 export function saveCredentials(client: any) {
     const content = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8') as string);
     const key = content.installed || content.web;

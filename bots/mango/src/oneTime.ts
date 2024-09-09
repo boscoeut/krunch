@@ -159,7 +159,7 @@ async function executeTrade() {
             //  transactionInstructions.push(...await borrow(60.50226285,RENDER_MINT,client.client,client.mangoAccount!,client.group, false))
 
             // DEPOSIT
-            // promises.push(makeDeposits([{ amount: 1189.15, mint: USDC_MINT, user: accountName }]))
+            // promises.push(makeDeposits([{ amount: 16058.630583, mint: USDC_MINT, user: accountName }]))
             // promises.push(makeDeposits([{ amount:0.98777865, mint: ETH_WORMHOLE_MINT, user: accountName }]))
             // promises.push(makeDeposits([{ amount: 5, mint: SOL_MINT, user: accountName }]))
             // promises.push(makeDeposits([{ amount:0.01005165, mint: BTC_WORMHOLE_MINT, user: accountName }]))
@@ -181,7 +181,7 @@ async function executeTrade() {
             // transactionInstructions.push(await cancelOpenOrders("BTC-PERP", client.client, client.mangoAccount!, client.group));   
             // transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group));               
             // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 92.67, 148.5,   new Date().getTime(),PerpOrderType.postOnly));        
-            // transactionInstructions.push(...await borrow(15,SOL_MINT,client.client,client.mangoAccount!,client.group, false))
+            // transactionInstructions.push(...await borrow(25,SOL_MINT,client.client,client.mangoAccount!,client.group, false))
             // promises.push(makeDeposits([{ amount: 1576.56, mint: USDC_MINT, user: accountName }]))
             // transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.2965, 2243,   new Date().getTime(),PerpOrderType.postOnly));        
             // transactionInstructions.push(await placePerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.1967, 61950,   new Date().getTime(),PerpOrderType.postOnly));        
