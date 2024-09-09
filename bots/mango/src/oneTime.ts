@@ -6,7 +6,7 @@ import fs from 'fs';
 import { cancelOpenOrders, placePeggedPerpOrder, placePerpOrder, postTrades,makeDeposits, borrow } from './mangoEasyUtils';
 import { setupClient } from './mangoUtils';
 import { AccountDefinition } from './types';
-import { BTC_WORMHOLE_MINT, ETH_WORMHOLE_MINT, SOL_MINT ,USDC_MINT} from './constants';
+import { BTC_WORMHOLE_MINT, ETH_WORMHOLE_MINT, JUP_MINT, SOL_MINT ,USDC_MINT} from './constants';
 
 
 async function refreshOrders() {
@@ -181,8 +181,8 @@ async function executeTrade() {
             // transactionInstructions.push(await cancelOpenOrders("BTC-PERP", client.client, client.mangoAccount!, client.group));   
             // transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group));               
             // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 92.67, 148.5,   new Date().getTime(),PerpOrderType.postOnly));        
-            // transactionInstructions.push(...await borrow(25,SOL_MINT,client.client,client.mangoAccount!,client.group, false))
-            // promises.push(makeDeposits([{ amount: 1576.56, mint: USDC_MINT, user: accountName }]))
+            // transactionInstructions.push(...await borrow(3000,JUP_MINT,client.client,client.mangoAccount!,client.group, false))
+            // promises.push(makeDeposits([{ amount: 2950, mint: JUP_MINT, user: accountName }]))
             // transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.2965, 2243,   new Date().getTime(),PerpOrderType.postOnly));        
             // transactionInstructions.push(await placePerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.1967, 61950,   new Date().getTime(),PerpOrderType.postOnly));        
             // await settleFunds(client.client,client.mangoAccount!,client.group,"SOL-PERP");

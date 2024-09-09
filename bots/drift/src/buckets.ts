@@ -27,6 +27,7 @@ import { CONNECTION_URL, SPREADSHEET_ID } from '../../mango/src/constants';
 const { decode } = pkg;
 import { authorize, toGoogleSheetsDate } from '../../mango/src/googleUtils';
 import { fetchFundingData, getFundingRate } from '../../mango/src/mangoUtils';
+import { checkBalances } from '../../mango/src/getWalletBalances';
 
 const DRIFT_ENV = 'mainnet-beta';
 
@@ -51,7 +52,12 @@ const dbStatus = {
     MANGO_FUNDING: 0,
     SOL_FUNDING: 0,
     MANGO_FUNDING_RATE: 0,
-    LAST_UPDATED: new Date()
+    LAST_UPDATED: new Date(),
+    DRIFT_VALUE:0,
+    MANGO_VALUE:0,
+    DRIFT_PRICE:0,
+    SOL_PRICE:0,
+    JUP_PRICE:0
 }
 
 function getKeyPair(file: string) {
@@ -407,6 +413,7 @@ async function getDriftClient(connection: Connection, wallet: string) {
     console.log('Net USD Value:', formatUsdc(usdValue));
     const totalValue = user.getTotalAssetValue();
     console.log('Total Value:', formatUsdc(totalValue));
+    dbStatus.DRIFT_VALUE = formatUsdc(totalValue)
 
     const health = user.getHealth()
     console.log('Health:', health)
@@ -445,7 +452,12 @@ async function getMangoClient(connection: Connection, wallet: string, accountPub
         const mangoHealth = mangoAccount!.getHealthRatioUi(group, HealthType.maint);
         console.log('Mango Health:', mangoHealth);
         dbStatus.MANGO_HEALTH = mangoHealth
-        
+
+        // get mango value
+        const mangoValue = mangoAccount!.getEquity(group).toNumber() / 10 ** 6
+        console.log('Mango Value:', mangoValue)
+        dbStatus.MANGO_VALUE = mangoValue
+
         return {
             client, group, ids, mangoAccount
         }
@@ -652,6 +664,10 @@ async function updateGoogleSheet(db: any) {
     const sheetName = "Buckets"
     console.log(`Updating Google`)
 
+    const solPrice = db.find((a: DBItem) => a.MARKET === 'SOL' && a.PRICE> 0)?.PRICE || 0
+    const jupPrice = db.find((a: DBItem) => a.MARKET === 'JUP' && a.PRICE> 0)?.PRICE || 0
+    const driftPrice = db.find((a: DBItem) => a.MARKET === 'DRIFT' && a.PRICE> 0)?.PRICE || 0
+
     await googleSheets.spreadsheets.values.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
         resource: {
@@ -675,6 +691,24 @@ async function updateGoogleSheet(db: any) {
                     [dbStatus.MANGO_FUNDING_RATE], 
                     [toGoogleSheetsDate(dbStatus.LAST_UPDATED)]]
                 },
+                {
+                    range: `${sheetName}!O9:O10`,
+                    values: [[dbStatus.DRIFT_VALUE], 
+                    [dbStatus.MANGO_VALUE]]
+                },
+                {
+                    range: `Market_Data!D_SOL_PRICE`,
+                    values: [[solPrice]]
+                },
+                {
+                    range: `Market_Data!D_JUP_PRICE`,
+                    values: [[jupPrice]]
+                },
+                {
+                    range: `Market_Data!D_DRIFT_PRICE`,
+                    values: [[driftPrice]]
+                },
+
             ]
         }
     });
@@ -682,6 +716,9 @@ async function updateGoogleSheet(db: any) {
 
 (async () => {
     try {
+        // update wallets
+        await checkBalances('../mango/secrets/accounts.json')
+          
         console.time('Connection to Solana');
         const connection = new Connection(CONNECTION_URL);
         console.timeEnd('Connection to Solana');
@@ -700,8 +737,8 @@ async function updateGoogleSheet(db: any) {
             mangoAccount,
             mangoGroup: group,
             placeOrders: false,
-            minTradeValue: 25,
-            maxTradeAmount: 1200,
+            minTradeValue: 100,
+            maxTradeAmount: 2000,
             driftOrders: cancelOrders,
         }
 
@@ -712,8 +749,8 @@ async function updateGoogleSheet(db: any) {
                 market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
-                    spread: 0.05,
-                    baseline: 60_500
+                    spread: 0.1,
+                    baseline: 61_500
                 }
             }),
             checkPair({
@@ -722,18 +759,18 @@ async function updateGoogleSheet(db: any) {
                 market: {
                     symbol: 'SOL',
                     exchange: 'MANGO',
-                    spread: 0.30,
-                    baseline: -13_000
+                    spread: 0.35,
+                    baseline: -20_000
                 }
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: true,
+                placeOrders: false,
                 market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -4000
+                    baseline: 0
                 }
             }),
             checkPair({
@@ -780,6 +817,8 @@ async function updateGoogleSheet(db: any) {
 
         console.log(dbPositions)
         await updateGoogleSheet(dbPositions)
+
+      
 
         console.log(`Closing Drift Client`)
         await driftClient.unsubscribe()

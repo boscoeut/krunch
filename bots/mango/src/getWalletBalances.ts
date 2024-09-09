@@ -4,11 +4,11 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { CLUSTER_URL, COMMITTMENT, SOL_MINT, USDC_MINT, JUP_MINT, W_MINT, DRIFT_MINT } from "./constants";
 import fs from 'fs';
 import { updateWallets } from "./googleUtils";
-export async function checkBalances() {
+export async function checkBalances(path = './secrets/accounts.json') {
     const connection = new Connection(CLUSTER_URL!, {
         commitment: COMMITTMENT
     });
-    let accounts: Array<any> = JSON.parse(fs.readFileSync('./secrets/accounts.json', 'utf8') as string)
+    let accounts: Array<any> = JSON.parse(fs.readFileSync(path, 'utf8') as string)
 
     let allItems =[...accounts]
 
