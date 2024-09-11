@@ -182,7 +182,7 @@ async function executeTrade() {
             // transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group));               
             // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 92.67, 148.5,   new Date().getTime(),PerpOrderType.postOnly));        
             // transactionInstructions.push(...await borrow(3000,JUP_MINT,client.client,client.mangoAccount!,client.group, false))
-            // promises.push(makeDeposits([{ amount: 2950, mint: JUP_MINT, user: accountName }]))
+            // promises.push(makeDeposits([{ amount: 34, mint: SOL_MINT, user: accountName }]))
             // transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.2965, 2243,   new Date().getTime(),PerpOrderType.postOnly));        
             // transactionInstructions.push(await placePerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.1967, 61950,   new Date().getTime(),PerpOrderType.postOnly));        
             // await settleFunds(client.client,client.mangoAccount!,client.group,"SOL-PERP");
