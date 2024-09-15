@@ -59,15 +59,23 @@ const dbStatus = {
     DRIFT_FUNDING: 0,
     MANGO_FUNDING: 0,
     SOL_FUNDING: 0,
-    MANGO_FUNDING_RATE: 0,
+    MANGO_SOL_FUNDING_RATE: 0,
+    MANGO_ETH_FUNDING_RATE: 0,
+    MANGO_BTC_FUNDING_RATE: 0,
+    DRIFT_SOL_FUNDING_RATE: 0,
+    DRIFT_ETH_FUNDING_RATE: 0,
+    DRIFT_BTC_FUNDING_RATE: 0,
+    MANGO_ETH_FUNDING: 0,
+    MANGO_SOL_FUNDING: 0,
+    MANGO_BTC_FUNDING: 0,
     LAST_UPDATED: new Date(),
     DRIFT_VALUE: 0,
     MANGO_VALUE: 0,
     DRIFT_PRICE: 0,
     SOL_PRICE: 0,
     JUP_PRICE: 0,
-    DRIFT_USDC:0,
-    MANGO_USDC:0
+    DRIFT_USDC: 0,
+    MANGO_USDC: 0
 }
 
 function getKeyPair(file: string) {
@@ -174,6 +182,19 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
     if (baseAsset < 0) {
         pnl = baseAmount * -1 + currentAmount
     }
+    const perpMarketAccount = driftClient.getPerpMarketAccount(marketIndex);
+    const fundingRate24H = perpMarketAccount!.amm.last24HAvgFundingRate.toNumber()
+
+    if (symbol === "ETH") {
+        dbStatus.DRIFT_ETH_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 11
+        console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_ETH_FUNDING_RATE)
+    } else if (symbol === "SOL") {
+        dbStatus.DRIFT_SOL_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 9
+        console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_SOL_FUNDING_RATE)
+    } else if (symbol === "BTC") {
+        dbStatus.DRIFT_BTC_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 11
+        console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_BTC_FUNDING_RATE)
+    }
 
     console.log('--');
     console.log('*** Break Even Price:', breakEvenPrice);
@@ -213,6 +234,13 @@ async function getMangoPosition(marketIndex: number, symbol: string, mangoGroup:
     if (value !== 0) {
         const fundingAmount = ((funding?.cumulativeShortFunding || 0) - (funding!.cumulativeLongFunding || 0)) / 10 ** 6
         dbStatus.MANGO_FUNDING += fundingAmount
+        if (symbol === "ETH") {
+            dbStatus.MANGO_ETH_FUNDING = fundingAmount
+        } else if (symbol === "SOL") {
+            dbStatus.MANGO_SOL_FUNDING = fundingAmount
+        } else if (symbol === "BTC") {
+            dbStatus.MANGO_BTC_FUNDING = fundingAmount
+        } 
     }
 
     const existingOrders = await mangoAccount!.loadPerpOpenOrdersForMarket(
@@ -666,8 +694,8 @@ async function updateGoogleSheet(db: any) {
     const driftPrice = db.find((a: DBItem) => a.MARKET === 'DRIFT' && a.PRICE > 0)?.PRICE || 0
 
     const transValues = solTransactions.map((a: SolanaTransaction) => [a.exchange, a.market, a.signature, a.error])
-    for (let i = 0; i < (4-transValues.length); i++) {
-        transValues.push(["","","",""])
+    for (let i = 0; i < (6 - transValues.length); i++) {
+        transValues.push(["", "", "", ""])
     }
 
     await googleSheets.spreadsheets.values.batchUpdate({
@@ -683,7 +711,7 @@ async function updateGoogleSheet(db: any) {
                         }
                         return a.EXCHANGE.localeCompare(b.EXCHANGE);
                     }).map((a: DBItem) => [
-                        a.MARKET, a.EXCHANGE, a.VALUE, a.PNL, 
+                        a.MARKET, a.EXCHANGE, a.VALUE, a.PNL,
                         a.ADJUSTED_VALUE, a.BASELINE, a.ORDER, a.PRICE, a.PLACE_ORDERS
                     ])
                 },
@@ -693,16 +721,33 @@ async function updateGoogleSheet(db: any) {
                     [dbStatus.DRIFT_FUNDING],
                     [dbStatus.MANGO_HEALTH],
                     [dbStatus.MANGO_FUNDING],
-                    [dbStatus.MANGO_FUNDING_RATE],
+                    [dbStatus.MANGO_SOL_FUNDING_RATE],
                     [toGoogleSheetsDate(dbStatus.LAST_UPDATED)]]
                 },
+                
+
+                {
+                    range: `${sheetName}!C18:E19`,
+                    values: [
+                        [dbStatus.DRIFT_SOL_FUNDING_RATE,dbStatus.DRIFT_ETH_FUNDING_RATE,dbStatus.DRIFT_BTC_FUNDING_RATE],
+                        [dbStatus.MANGO_SOL_FUNDING_RATE,dbStatus.MANGO_ETH_FUNDING_RATE,dbStatus.MANGO_BTC_FUNDING_RATE]
+                    ]
+                },
+
+                {
+                    range: `${sheetName}!C23:E23`,
+                    values: [
+                        [dbStatus.MANGO_SOL_FUNDING, dbStatus.MANGO_ETH_FUNDING,dbStatus.MANGO_BTC_FUNDING]
+                    ]
+                },
+
                 {
                     range: `${sheetName}!O9:O10`,
                     values: [[dbStatus.DRIFT_VALUE],
                     [dbStatus.MANGO_VALUE]]
                 },
                 {
-                    range: `${sheetName}!A13:D${transValues.length + 13}`,
+                    range: `${sheetName}!A28:D${transValues.length + 28}`,
                     values: transValues
                 },
                 {
@@ -721,7 +766,7 @@ async function updateGoogleSheet(db: any) {
                     range: `${sheetName}!R9:R10`,
                     values: [[dbStatus.DRIFT_USDC], [dbStatus.MANGO_USDC]]
                 },
-                
+
             ]
         }
     });
@@ -746,9 +791,6 @@ async function checkTrades() {
         const { driftClient, user: driftUser } = await getDriftClient(connection, 'driftWallet')
         const { client: mangoClient, group, mangoAccount } = await getMangoClient(connection, 'sixWallet', SIX_PUBLIC_KEY)
 
-        const currentFunding = await getFundingRate()
-        console.log('CURRENT FUNDING:', currentFunding.solFundingRate)
-        dbStatus.MANGO_FUNDING_RATE = currentFunding.solFundingRate
 
         const cancelOrders = driftUser.getOpenOrders();
         console.log('# Open Orders:', cancelOrders.length);
@@ -767,7 +809,13 @@ async function checkTrades() {
         const mangoHealth = mangoAccount!.getHealthRatioUi(group, HealthType.maint);
         dbStatus.MANGO_HEALTH = mangoHealth
         dbStatus.MANGO_FUNDING = 0
-        dbStatus.MANGO_FUNDING_RATE = 0
+
+        const currentFunding = await getFundingRate()
+        console.log('CURRENT FUNDING:', currentFunding.solFundingRate)
+        dbStatus.MANGO_SOL_FUNDING_RATE = currentFunding.solFundingRate
+        dbStatus.MANGO_ETH_FUNDING_RATE = currentFunding.ethFundingRate
+        dbStatus.MANGO_BTC_FUNDING_RATE = currentFunding.btcFundingRate
+
         const mangoValue = mangoAccount!.getEquity(group).toNumber() / 10 ** 6
         console.log('Mango Value:', mangoValue)
         dbStatus.MANGO_VALUE = mangoValue
@@ -788,8 +836,8 @@ async function checkTrades() {
             mangoAccount,
             mangoGroup: group,
             placeOrders: false,
-            minTradeValue: 75,
-            maxTradeAmount: 2000,
+            minTradeValue: 100,
+            maxTradeAmount: 2500,
             driftOrders: cancelOrders,
         }
 
@@ -801,17 +849,19 @@ async function checkTrades() {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
                     spread: 0.15,
-                    baseline: 61_500
+                    baseline: 80_000
                 }
             }),
             checkPair({
                 ...defaultParams,
                 placeOrders: true,
+                minTradeValue: 250,
                 market: {
                     symbol: 'SOL',
                     exchange: 'MANGO',
                     spread: 0.30,
-                    baseline: -21_000
+                    baseline: -37_500
+                    
                 }
             }),
             checkPair({
@@ -826,22 +876,24 @@ async function checkTrades() {
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: false,
+                placeOrders: true,
+                minTradeValue: 250,
                 market: {
                     symbol: 'BTC',
                     exchange: 'MANGO',
-                    spread: 30,
-                    baseline: 0
+                    spread: 40,
+                    baseline: 11_500
                 }
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: false,
+                placeOrders: true,
+                minTradeValue: 250,
                 market: {
                     symbol: 'ETH',
                     exchange: 'MANGO',
-                    spread: 1,
-                    baseline: 0
+                    spread: 0.25,
+                    baseline: 1_000
                 }
             }),
             checkPair({
@@ -850,8 +902,8 @@ async function checkTrades() {
                 market: {
                     symbol: 'BTC',
                     exchange: 'DRIFT',
-                    spread: 60,
-                    baseline: -26_000
+                    spread: 40,
+                    baseline: -11_500
                 }
             }),
             checkPair({
@@ -860,8 +912,8 @@ async function checkTrades() {
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
-                    spread: 2,
-                    baseline: 26_000
+                    spread:0.0,
+                    baseline: -1_000
                 }
             }),
         ])
@@ -883,10 +935,10 @@ async function checkTrades() {
 }
 
 (async () => {
-    const timeout = 60 * 1000 * 6
+    const timeout = 60 * 1000 * 3
     while (true) {
         await checkTrades()
-        console.log(`Sleeping for ${timeout / 1000} seconds. ${new Date().toLocaleDateString()}`)
+        console.log(`Sleeping for ${timeout / 1000} seconds. ${new Date().toLocaleTimeString()}`)
         await new Promise(resolve => setTimeout(resolve, timeout));
     }
 })();
