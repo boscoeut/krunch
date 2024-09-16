@@ -155,7 +155,7 @@ async function executeTrade() {
             /// HOW TO BORROW
             //  transactionInstructions.push(...await borrow(0.125,ETH_WORMHOLE_MINT,client.client,client.mangoAccount!,client.group, true))
             //  transactionInstructions.push(...await borrow(0.002,BTC_WORMHOLE_MINT,client.client,client.mangoAccount!,client.group, true))
-            //  transactionInstructions.push(...await borrow(600,USDC_MINT,client.client,client.mangoAccount!,client.group,true))
+            //  transactionInstructions.push(...await borrow(900,USDC_MINT,client.client,client.mangoAccount!,client.group,false))
             //  transactionInstructions.push(...await borrow(60.50226285,RENDER_MINT,client.client,client.mangoAccount!,client.group, false))
 
             // DEPOSIT
@@ -188,7 +188,7 @@ async function executeTrade() {
             // await settleFunds(client.client,client.mangoAccount!,client.group,"SOL-PERP");
 
             // transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group));   
-            // transactionInstructions.push(await cancelOpenOrders("BTC-PERP", client.client, client.mangoAccount!, client.group));   
+            // transactionInstructions.push(await cancelOpenOrders("ETH-PERP", client.client, client.mangoAccount!, client.group));   
             // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 164.26, 128,   new Date().getTime(),PerpOrderType.postOnly));        
             // transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.4391,  2267.56,   new Date().getTime(),PerpOrderType.postOnly));        
             

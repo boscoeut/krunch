@@ -837,7 +837,7 @@ async function checkTrades() {
             mangoGroup: group,
             placeOrders: false,
             minTradeValue: 100,
-            maxTradeAmount: 2500,
+            maxTradeAmount: 5000,
             driftOrders: cancelOrders,
         }
 
@@ -849,18 +849,17 @@ async function checkTrades() {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
                     spread: 0.15,
-                    baseline: 80_000
+                    baseline: 101_000
                 }
             }),
             checkPair({
                 ...defaultParams,
                 placeOrders: true,
-                minTradeValue: 250,
                 market: {
                     symbol: 'SOL',
                     exchange: 'MANGO',
-                    spread: 0.30,
-                    baseline: -37_500
+                    spread: 0.31,
+                    baseline: -58_500
                     
                 }
             }),
@@ -876,44 +875,43 @@ async function checkTrades() {
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: true,
-                minTradeValue: 250,
+                placeOrders: false,
                 market: {
                     symbol: 'BTC',
                     exchange: 'MANGO',
-                    spread: 40,
-                    baseline: 11_500
+                    spread: 20,
+                    baseline: 0
                 }
             }),
             checkPair({
                 ...defaultParams,
                 placeOrders: true,
-                minTradeValue: 250,
+                market: {
+                    symbol: 'BTC',
+                    exchange: 'DRIFT',
+                    spread: 15,
+                    baseline: -0
+                }
+            }),
+            checkPair({
+                ...defaultParams,
+                placeOrders: false,
                 market: {
                     symbol: 'ETH',
                     exchange: 'MANGO',
                     spread: 0.25,
-                    baseline: 1_000
+                    baseline: 0
                 }
             }),
+           
             checkPair({
                 ...defaultParams,
-                placeOrders: true,
-                market: {
-                    symbol: 'BTC',
-                    exchange: 'DRIFT',
-                    spread: 40,
-                    baseline: -11_500
-                }
-            }),
-            checkPair({
-                ...defaultParams,
-                placeOrders: true,
+                placeOrders: false,
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
-                    spread:0.0,
-                    baseline: -1_000
+                    spread:0.25,
+                    baseline: -0
                 }
             }),
         ])
