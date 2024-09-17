@@ -17,7 +17,7 @@ import {
     OrderType,
     PRICE_PRECISION,
     PositionDirection,
-    PostOnlyParams, User,
+    PostOnlyParams, User, decodeName,
     Wallet
 } from "@drift-labs/sdk";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
@@ -92,7 +92,8 @@ const DRIFT_MARKETS = {
     JUP: 24,
     ETH: 2,
     BTC: 1,
-    SOL: 0
+    SOL: 0,
+    DRIFT: 30
 }
 
 interface Market {
@@ -157,6 +158,14 @@ const convertPrice = (price: number) => {
 
 const convertAmount = (price: number) => {
     return price / AMOUNT_DECIMALS;
+}
+
+async function getDriftMakretPrice(driftClient: DriftClient, marketIndex: number) {
+    const marketAccount = driftClient.getPerpMarketAccount(marketIndex);
+    if (!marketAccount) throw new Error('Market not found');
+    const oraclePrice = marketAccount.amm.lastOracleNormalisedPrice;
+    const oracle = oraclePrice.toNumber() / PRICE_PRECISION.toNumber();
+    return oracle;
 }
 
 async function getDriftPosition(user: User, marketIndex: number, symbol: string, driftClient: DriftClient) {
@@ -240,7 +249,7 @@ async function getMangoPosition(marketIndex: number, symbol: string, mangoGroup:
             dbStatus.MANGO_SOL_FUNDING = fundingAmount
         } else if (symbol === "BTC") {
             dbStatus.MANGO_BTC_FUNDING = fundingAmount
-        } 
+        }
     }
 
     const existingOrders = await mangoAccount!.loadPerpOpenOrdersForMarket(
@@ -682,7 +691,7 @@ async function checkPair({
     }
 }
 
-async function updateGoogleSheet(db: any) {
+async function updateGoogleSheet(db: any, driftClient: DriftClient) {
     const { google } = require('googleapis');
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
@@ -691,7 +700,7 @@ async function updateGoogleSheet(db: any) {
 
     const solPrice = db.find((a: DBItem) => a.MARKET === 'SOL' && a.PRICE > 0)?.PRICE || 0
     const jupPrice = db.find((a: DBItem) => a.MARKET === 'JUP' && a.PRICE > 0)?.PRICE || 0
-    const driftPrice = db.find((a: DBItem) => a.MARKET === 'DRIFT' && a.PRICE > 0)?.PRICE || 0
+    const driftPrice = await getDriftMakretPrice(driftClient, (DRIFT_MARKETS as any)["DRIFT"])
 
     const transValues = solTransactions.map((a: SolanaTransaction) => [a.exchange, a.market, a.signature, a.error])
     for (let i = 0; i < (6 - transValues.length); i++) {
@@ -724,20 +733,20 @@ async function updateGoogleSheet(db: any) {
                     [dbStatus.MANGO_SOL_FUNDING_RATE],
                     [toGoogleSheetsDate(dbStatus.LAST_UPDATED)]]
                 },
-                
+
 
                 {
                     range: `${sheetName}!C18:E19`,
                     values: [
-                        [dbStatus.DRIFT_SOL_FUNDING_RATE,dbStatus.DRIFT_ETH_FUNDING_RATE,dbStatus.DRIFT_BTC_FUNDING_RATE],
-                        [dbStatus.MANGO_SOL_FUNDING_RATE,dbStatus.MANGO_ETH_FUNDING_RATE,dbStatus.MANGO_BTC_FUNDING_RATE]
+                        [dbStatus.DRIFT_SOL_FUNDING_RATE, dbStatus.DRIFT_ETH_FUNDING_RATE, dbStatus.DRIFT_BTC_FUNDING_RATE],
+                        [dbStatus.MANGO_SOL_FUNDING_RATE, dbStatus.MANGO_ETH_FUNDING_RATE, dbStatus.MANGO_BTC_FUNDING_RATE]
                     ]
                 },
 
                 {
                     range: `${sheetName}!C23:E23`,
                     values: [
-                        [dbStatus.MANGO_SOL_FUNDING, dbStatus.MANGO_ETH_FUNDING,dbStatus.MANGO_BTC_FUNDING]
+                        [dbStatus.MANGO_SOL_FUNDING, dbStatus.MANGO_ETH_FUNDING, dbStatus.MANGO_BTC_FUNDING]
                     ]
                 },
 
@@ -781,8 +790,6 @@ function formatPerp(usdc: any) {
 
 async function checkTrades() {
     try {
-        // update wallets
-        await checkBalances('../mango/secrets/accounts.json')
 
         console.time('Connection to Solana');
         const connection = new Connection(CONNECTION_URL);
@@ -791,6 +798,8 @@ async function checkTrades() {
         const { driftClient, user: driftUser } = await getDriftClient(connection, 'driftWallet')
         const { client: mangoClient, group, mangoAccount } = await getMangoClient(connection, 'sixWallet', SIX_PUBLIC_KEY)
 
+        // update wallets
+        await checkBalances('../mango/secrets/accounts.json')
 
         const cancelOrders = driftUser.getOpenOrders();
         console.log('# Open Orders:', cancelOrders.length);
@@ -821,9 +830,8 @@ async function checkTrades() {
         dbStatus.MANGO_VALUE = mangoValue
         dbStatus.DRIFT_VALUE = formatUsdc(driftUser.getTotalAssetValue())
 
-        let spotPositions = driftUser.getUserAccount().spotPositions
-        const driftUSDC = formatPerp(spotPositions.find(x => x.marketIndex === 0)?.scaledBalance) * (isDeposit(spotPositions.find(x => x.marketIndex === 0)?.balanceType) ? 1 : -1) || 0
-        dbStatus.DRIFT_USDC = driftUSDC
+        let usdcAmount =  driftUser.getTokenAmount(0)
+        dbStatus.DRIFT_USDC = usdcAmount.toNumber()/ 10 ** 6
 
         const banks = Array.from(group.banksMapByName.values()).flat();
         const usdcBank: any = banks.find((bank: any) => bank.name === 'USDC');
@@ -837,7 +845,7 @@ async function checkTrades() {
             mangoGroup: group,
             placeOrders: false,
             minTradeValue: 100,
-            maxTradeAmount: 5000,
+            maxTradeAmount: 1500,
             driftOrders: cancelOrders,
         }
 
@@ -848,8 +856,8 @@ async function checkTrades() {
                 market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
-                    spread: 0.15,
-                    baseline: 101_000
+                    spread: 0.05,
+                    baseline: 120_000
                 }
             }),
             checkPair({
@@ -858,9 +866,9 @@ async function checkTrades() {
                 market: {
                     symbol: 'SOL',
                     exchange: 'MANGO',
-                    spread: 0.31,
-                    baseline: -58_500
-                    
+                    spread: 0.20,
+                    baseline: -77_500
+
                 }
             }),
             checkPair({
@@ -903,21 +911,21 @@ async function checkTrades() {
                     baseline: 0
                 }
             }),
-           
+
             checkPair({
                 ...defaultParams,
                 placeOrders: false,
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
-                    spread:0.25,
+                    spread: 0.25,
                     baseline: -0
                 }
             }),
         ])
 
         console.log(dbPositions)
-        await updateGoogleSheet(dbPositions)
+        await updateGoogleSheet(dbPositions, driftClient)
 
 
 
