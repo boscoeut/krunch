@@ -402,7 +402,7 @@ async function analyzeMarket(props: AnalyzeProps) {
 }
 
 async function retryTransaction(driftClient: DriftClient, newOrders: any[],
-    maxRetries = 3, marketIndex: number, oldDriftOrders: any) {
+     marketIndex: number, oldDriftOrders: any,maxRetries = 10) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             if (oldDriftOrders.length > 0) {
@@ -592,7 +592,8 @@ async function placeDriftOrders(
         const marketIndex = (DRIFT_MARKETS as any)[market.symbol]
         const existingOrders = driftOrders.filter((a: any) => a.marketIndex === marketIndex)
         if (transactionInstructions.length + existingOrders.length > 0) {
-            await retryTransaction(driftClient, transactionInstructions, 5, marketIndex, existingOrders);
+            await retryTransaction(driftClient, transactionInstructions, 
+                marketIndex, existingOrders, 10);
         }
     } catch (x: any) {
         console.log('Error Creating Orders:', x)
@@ -911,8 +912,8 @@ async function checkTrades() {
             mangoAccount,
             mangoGroup: group,
             placeOrders: false,
-            minTradeValue: 100,
-            maxTradeAmount: 2000,
+            minTradeValue: 200,
+            maxTradeAmount: 5000,
             driftOrders: cancelOrders,
         }
 
@@ -921,10 +922,20 @@ async function checkTrades() {
                 ...defaultParams,
                 placeOrders: true,
                 market: {
+                    symbol: 'JUP',
+                    exchange: 'DRIFT',
+                    spread: 0.0001,
+                    baseline: -8_000
+                }
+            }),
+            checkPair({
+                ...defaultParams,
+                placeOrders: true,
+                market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
-                    spread: 0.1,
-                    baseline: 128_750
+                    spread: 0.10,
+                    baseline: -51_000
                 }
             }),
             checkPair({
@@ -938,16 +949,7 @@ async function checkTrades() {
 
                 }
             }),
-            checkPair({
-                ...defaultParams,
-                placeOrders: true,
-                market: {
-                    symbol: 'JUP',
-                    exchange: 'DRIFT',
-                    spread: 0.0001,
-                    baseline: -27_500
-                }
-            }),
+           
             checkPair({
                 ...defaultParams,
                 placeOrders: false,
@@ -964,8 +966,8 @@ async function checkTrades() {
                 market: {
                     symbol: 'BTC',
                     exchange: 'DRIFT',
-                    spread: 35,
-                    baseline: -25_000
+                    spread: 25,
+                    baseline: -51_000
                 }
             }),
             checkPair({
@@ -974,7 +976,7 @@ async function checkTrades() {
                 market: {
                     symbol: 'ETH',
                     exchange: 'MANGO',
-                    spread: 0.25,
+                    spread: 0.5,
                     baseline: 0
                 }
             }),
@@ -985,8 +987,8 @@ async function checkTrades() {
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
-                    spread: 0.7,
-                    baseline: -30_000
+                    spread: 0.5,
+                    baseline: 140_000
                 }
             }),
         ])
