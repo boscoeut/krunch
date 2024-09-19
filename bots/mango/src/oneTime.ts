@@ -3,7 +3,7 @@ import {
     PerpOrderType,
 } from '@blockworks-foundation/mango-v4';
 import fs from 'fs';
-import { cancelOpenOrders, placePeggedPerpOrder, placePerpOrder, postTrades,makeDeposits, borrow } from './mangoEasyUtils';
+import { cancelOpenOrders, placePeggedPerpOrder,settleFunds, placePerpOrder, postTrades,makeDeposits, borrow } from './mangoEasyUtils';
 import { setupClient } from './mangoUtils';
 import { AccountDefinition } from './types';
 import { BTC_WORMHOLE_MINT, ETH_WORMHOLE_MINT, JUP_MINT, SOL_MINT ,USDC_MINT} from './constants';
@@ -103,7 +103,7 @@ async function refreshOrders() {
 
 async function executeTrade() {
     try {
-        const priorityFee = 30_000;
+        const priorityFee = 20_000;
         // const accounts: Array<string> = ["ACCOUNT2", "BIRD", "BUCKET", "DRIFT", "FIVE", "SEVEN", "SIX", "SOL_FLARE", "PRIVATE3"]
         // const accounts: Array<string> = [ "BIRD", "BUCKET", "DRIFT", "FIVE", "SEVEN", "SIX", "SOL_FLARE", "PRIVATE3"]
         // const accounts:Array<string> = ["BIRD","ACCOUNT2","SOL_FLARE","BUCKET"]
@@ -155,11 +155,11 @@ async function executeTrade() {
             /// HOW TO BORROW
             //  transactionInstructions.push(...await borrow(0.125,ETH_WORMHOLE_MINT,client.client,client.mangoAccount!,client.group, true))
             //  transactionInstructions.push(...await borrow(0.002,BTC_WORMHOLE_MINT,client.client,client.mangoAccount!,client.group, true))
-            //  transactionInstructions.push(...await borrow(900,USDC_MINT,client.client,client.mangoAccount!,client.group,false))
+            //  transactionInstructions.push(...await borrow(0.272381,USDC_MINT,client.client,client.mangoAccount!,client.group,false))
             //  transactionInstructions.push(...await borrow(60.50226285,RENDER_MINT,client.client,client.mangoAccount!,client.group, false))
 
             // DEPOSIT
-            // promises.push(makeDeposits([{ amount: 16058.630583, mint: USDC_MINT, user: accountName }]))
+            // promises.push(makeDeposits([{ amount: 1750, mint: USDC_MINT, user: accountName }]))
             // promises.push(makeDeposits([{ amount:0.98777865, mint: ETH_WORMHOLE_MINT, user: accountName }]))
             // promises.push(makeDeposits([{ amount: 5, mint: SOL_MINT, user: accountName }]))
             // promises.push(makeDeposits([{ amount:0.01005165, mint: BTC_WORMHOLE_MINT, user: accountName }]))
@@ -181,7 +181,7 @@ async function executeTrade() {
             // transactionInstructions.push(await cancelOpenOrders("BTC-PERP", client.client, client.mangoAccount!, client.group));   
             // transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group));               
             // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 92.67, 148.5,   new Date().getTime(),PerpOrderType.postOnly));        
-            // transactionInstructions.push(...await borrow(8,SOL_MINT,client.client,client.mangoAccount!,client.group, false))
+            // transactionInstructions.push(...await borrow(440,USDC_MINT,client.client,client.mangoAccount!,client.group, false))
             // promises.push(makeDeposits([{ amount: 34, mint: SOL_MINT, user: accountName }]))
             // transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.2965, 2243,   new Date().getTime(),PerpOrderType.postOnly));        
             // transactionInstructions.push(await placePerpOrder("BTC-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.1967, 61950,   new Date().getTime(),PerpOrderType.postOnly));        
@@ -189,7 +189,7 @@ async function executeTrade() {
 
             // transactionInstructions.push(await cancelOpenOrders("SOL-PERP", client.client, client.mangoAccount!, client.group));   
             // transactionInstructions.push(await cancelOpenOrders("ETH-PERP", client.client, client.mangoAccount!, client.group));   
-            // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 164.26, 128,   new Date().getTime(),PerpOrderType.postOnly));        
+            // transactionInstructions.push(await placePerpOrder("SOL-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.ask, 68.35, 131.32,   new Date().getTime(),PerpOrderType.limit));        
             // transactionInstructions.push(await placePerpOrder("ETH-PERP", client.client, client.mangoAccount!, client.group, PerpOrderSide.bid, 0.4391,  2267.56,   new Date().getTime(),PerpOrderType.postOnly));        
             
 

@@ -15,8 +15,11 @@ import {
     DriftClient,
     MarketType,
     OrderType,
+    PerpMarketAccount,
+    SpotMarketAccount, OraclePriceData,
     PRICE_PRECISION,
     PositionDirection,
+    calculateClaimablePnl,
     PostOnlyParams, User, decodeName,
     Wallet
 } from "@drift-labs/sdk";
@@ -54,6 +57,7 @@ interface DBItem {
 const dbPositions: Array<DBItem> = []
 const solTransactions: Array<SolanaTransaction> = []
 const dbStatus = {
+    DRIFT_UNSETTLED_PNL:0,
     DRIFT_HEALTH: 0,
     MANGO_HEALTH: 0,
     DRIFT_FUNDING: 0,
@@ -65,6 +69,7 @@ const dbStatus = {
     DRIFT_SOL_FUNDING_RATE: 0,
     DRIFT_ETH_FUNDING_RATE: 0,
     DRIFT_BTC_FUNDING_RATE: 0,
+    DRIFT_JUP_FUNDING_RATE: 0,
     MANGO_ETH_FUNDING: 0,
     MANGO_SOL_FUNDING: 0,
     MANGO_BTC_FUNDING: 0,
@@ -192,7 +197,8 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
         pnl = baseAmount * -1 + currentAmount
     }
     const perpMarketAccount = driftClient.getPerpMarketAccount(marketIndex);
-    const fundingRate24H = perpMarketAccount!.amm.last24HAvgFundingRate.toNumber()
+    // const fundingRate24H = perpMarketAccount!.amm.last24HAvgFundingRate.toNumber()
+    const fundingRate24H = perpMarketAccount!.amm.lastFundingRate.toNumber()
 
     if (symbol === "ETH") {
         dbStatus.DRIFT_ETH_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 11
@@ -201,8 +207,12 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
         dbStatus.DRIFT_SOL_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 9
         console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_SOL_FUNDING_RATE)
     } else if (symbol === "BTC") {
-        dbStatus.DRIFT_BTC_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 11
+        dbStatus.DRIFT_BTC_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 12
         console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_BTC_FUNDING_RATE)
+    }
+    else if (symbol === "JUP") {
+        dbStatus.DRIFT_JUP_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
+        console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_JUP_FUNDING_RATE)
     }
 
     console.log('--');
@@ -736,10 +746,16 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
 
 
                 {
-                    range: `${sheetName}!C18:E19`,
+                    range: `${sheetName}!C18:F19`,
                     values: [
-                        [dbStatus.DRIFT_SOL_FUNDING_RATE, dbStatus.DRIFT_ETH_FUNDING_RATE, dbStatus.DRIFT_BTC_FUNDING_RATE],
-                        [dbStatus.MANGO_SOL_FUNDING_RATE, dbStatus.MANGO_ETH_FUNDING_RATE, dbStatus.MANGO_BTC_FUNDING_RATE]
+                        [dbStatus.DRIFT_SOL_FUNDING_RATE, dbStatus.DRIFT_ETH_FUNDING_RATE, dbStatus.DRIFT_BTC_FUNDING_RATE, dbStatus.DRIFT_JUP_FUNDING_RATE],
+                        [dbStatus.MANGO_SOL_FUNDING_RATE, dbStatus.MANGO_ETH_FUNDING_RATE, dbStatus.MANGO_BTC_FUNDING_RATE, ""]
+                    ]
+                },
+                {
+                    range: `${sheetName}!H14`,
+                    values: [
+                        [dbStatus.DRIFT_UNSETTLED_PNL],
                     ]
                 },
 
@@ -798,6 +814,57 @@ async function checkTrades() {
         const { driftClient, user: driftUser } = await getDriftClient(connection, 'driftWallet')
         const { client: mangoClient, group, mangoAccount } = await getMangoClient(connection, 'sixWallet', SIX_PUBLIC_KEY)
 
+
+        // get unsettled pnl   
+        const perpMarketAndOracleData: {
+            [marketIndex: number]: {
+                marketAccount: PerpMarketAccount;
+                oraclePriceData: OraclePriceData;
+            };
+        } = {};
+        const spotMarketAndOracleData: {
+            [marketIndex: number]: {
+                marketAccount: SpotMarketAccount;
+                oraclePriceData: OraclePriceData;
+            };
+        } = {};
+
+        for (const perpMarket of driftClient.getPerpMarketAccounts()) {
+            perpMarketAndOracleData[perpMarket.marketIndex] = {
+                marketAccount: perpMarket,
+                oraclePriceData: driftClient.getOracleDataForPerpMarket(
+                    perpMarket.marketIndex
+                ),
+            };
+        }
+        for (const spotMarket of driftClient.getSpotMarketAccounts()) {
+            spotMarketAndOracleData[spotMarket.marketIndex] = {
+                marketAccount: spotMarket,
+                oraclePriceData: driftClient.getOracleDataForSpotMarket(
+                    spotMarket.marketIndex
+                ),
+            };
+        }
+
+        const spotMarketIdx = 0
+        let unsettledPnl = 0;
+        for (const perpMarketIdx of Object.values(DRIFT_MARKETS)) {
+            const settleePositionWithLp = driftUser.getActivePerpPositions().find(a=>a.marketIndex === perpMarketIdx)
+            if (perpMarketAndOracleData[perpMarketIdx] && settleePositionWithLp) {                
+                const userUnsettledPnl = calculateClaimablePnl(
+                    perpMarketAndOracleData[perpMarketIdx].marketAccount,
+                    spotMarketAndOracleData[spotMarketIdx].marketAccount, // always liquidating the USDC spot market
+                    settleePositionWithLp,
+                    perpMarketAndOracleData[perpMarketIdx].oraclePriceData
+                );
+                console.log(`unsettled  ${perpMarketIdx}:`, userUnsettledPnl.toNumber())
+                unsettledPnl += userUnsettledPnl.toNumber()
+            }
+        }
+
+        console.log(`unsettledPnl:`, unsettledPnl)
+        dbStatus.DRIFT_UNSETTLED_PNL = unsettledPnl / PRICE_PRECISION.toNumber()
+
         // update wallets
         await checkBalances('../mango/secrets/accounts.json')
 
@@ -830,8 +897,8 @@ async function checkTrades() {
         dbStatus.MANGO_VALUE = mangoValue
         dbStatus.DRIFT_VALUE = formatUsdc(driftUser.getTotalAssetValue())
 
-        let usdcAmount =  driftUser.getTokenAmount(0)
-        dbStatus.DRIFT_USDC = usdcAmount.toNumber()/ 10 ** 6
+        let usdcAmount = driftUser.getTokenAmount(0)
+        dbStatus.DRIFT_USDC = usdcAmount.toNumber() / 10 ** 6
 
         const banks = Array.from(group.banksMapByName.values()).flat();
         const usdcBank: any = banks.find((bank: any) => bank.name === 'USDC');
@@ -845,7 +912,7 @@ async function checkTrades() {
             mangoGroup: group,
             placeOrders: false,
             minTradeValue: 100,
-            maxTradeAmount: 1500,
+            maxTradeAmount: 2000,
             driftOrders: cancelOrders,
         }
 
@@ -856,29 +923,29 @@ async function checkTrades() {
                 market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
-                    spread: 0.05,
-                    baseline: 120_000
-                }
-            }),
-            checkPair({
-                ...defaultParams,
-                placeOrders: true,
-                market: {
-                    symbol: 'SOL',
-                    exchange: 'MANGO',
-                    spread: 0.20,
-                    baseline: -77_500
-
+                    spread: 0.1,
+                    baseline: 128_750
                 }
             }),
             checkPair({
                 ...defaultParams,
                 placeOrders: false,
                 market: {
+                    symbol: 'SOL',
+                    exchange: 'MANGO',
+                    spread: -0.12,
+                    baseline: 0
+
+                }
+            }),
+            checkPair({
+                ...defaultParams,
+                placeOrders: true,
+                market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: 0
+                    baseline: -27_500
                 }
             }),
             checkPair({
@@ -897,8 +964,8 @@ async function checkTrades() {
                 market: {
                     symbol: 'BTC',
                     exchange: 'DRIFT',
-                    spread: 15,
-                    baseline: -0
+                    spread: 35,
+                    baseline: -25_000
                 }
             }),
             checkPair({
@@ -914,12 +981,12 @@ async function checkTrades() {
 
             checkPair({
                 ...defaultParams,
-                placeOrders: false,
+                placeOrders: true,
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
-                    spread: 0.25,
-                    baseline: -0
+                    spread: 0.7,
+                    baseline: -30_000
                 }
             }),
         ])
