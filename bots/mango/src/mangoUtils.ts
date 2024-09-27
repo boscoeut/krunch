@@ -34,7 +34,6 @@ import {
     LITE_RPC_URL,
     MANGO_DATA_API_URL,
     MAX_PRIORITY_FEE_KEYS,
-    QUICKNODE_CONNECTION_URL,
     SOL_GROUP_PK,
     SOL_MINT,
     SOL_RESERVE,
@@ -272,7 +271,6 @@ export const getClient = async (user: Keypair, prioritizationFee: number, cluste
     const backupConnections = [
         new Connection(LITE_RPC_URL),
         new Connection(LAVA_CONNECTION_URL),
-        new Connection(QUICKNODE_CONNECTION_URL),
         new Connection(GET_BLOCK_CONNECTION_URL),
     ];
 

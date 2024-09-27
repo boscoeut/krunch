@@ -58,7 +58,7 @@ export const CLUSTER_URL = CONNECTION_URL;
 export const FEE_CONNECTION_URL = LAVA_CONNECTION_URL
 export const MAX_PRIORITY_FEE_KEYS = 128
 export const GROUP_ADDRESS_LOOKUP_TABLE_KEY = new PublicKey("AgCBUZ6UMWqPLftTxeAqpQxtrfiCyL2HgRfmmM6QTfCj")
-export const QUICKNODE_CONNECTION_URL = 'https://side-indulgent-research.solana-mainnet.quiknode.pro/75ae6800554082022fe1a77e3f3b56e70067fdce';  //quicknode
+// export const QUICKNODE_CONNECTION_URL = 'https://side-indulgent-research.solana-mainnet.quiknode.pro/75ae6800554082022fe1a77e3f3b56e70067fdce';  //quicknode
 // export const CONNECTION_URL = 'https://ssc-dao.genesysgo.net';  //genesysgo
 export const GET_BLOCK_CONNECTION_URL = 'https://go.getblock.io/9c9d31fe58774a27957c60d3a35197b4';  //getblock
 export const ACTIVITY_FEED_URL = 'https://api.mngo.cloud/data/v4/stats/activity-feed?offset=0&limit=1000&mango-account='

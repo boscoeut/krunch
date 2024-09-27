@@ -1,39 +1,33 @@
 import {
-    Group,
-    HealthType,
-    MANGO_V4_ID,
-    MangoAccount,
-    MangoClient,
-    PerpOrderSide,
-    PerpOrderType,
-    PerpSelfTradeBehavior
-} from '@blockworks-foundation/mango-v4';
-import { AnchorProvider, Wallet as CoralWallet } from '@coral-xyz/anchor';
-import {
     BASE_PRECISION,
     BN,
     DriftClient,
     MarketType,
+    OraclePriceData,
     OrderType,
-    PerpMarketAccount,
-    SpotMarketAccount, OraclePriceData,
     PRICE_PRECISION,
+    PerpMarketAccount,
     PositionDirection,
+    PostOnlyParams,
+    SpotMarketAccount,
+    User,
+    Wallet,
     calculateClaimablePnl,
-    PostOnlyParams, User, decodeName,
-    Wallet
+    decodeName
 } from "@drift-labs/sdk";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Connection, Keypair } from "@solana/web3.js";
 import pkg from 'bs58';
 import fs from 'fs';
 import { CONNECTION_URL, SPREADSHEET_ID } from '../../mango/src/constants';
-const { decode } = pkg;
-import { authorize, toGoogleSheetsDate } from '../../mango/src/googleUtils';
-import { getFundingRate } from '../../mango/src/mangoUtils';
 import { checkBalances } from '../../mango/src/getWalletBalances';
+import { authorize, toGoogleSheetsDate } from '../../mango/src/googleUtils';
+const { decode } = pkg;
 
 const DRIFT_ENV = 'mainnet-beta';
 const SIX_PUBLIC_KEY = 'HpBSY6mP4khefkaDaWHVBKN9q4w7DMfV1PkCwPQudUMw'
+const DRIFT_SPOT_INDEX = 15; // Define the constant
+const JUP_SPOT_INDEX = 11; // Define the constant
+const SOL_SPOT_INDEX = 1; // Define the constant
 
 interface SolanaTransaction {
     signature: string,
@@ -71,6 +65,9 @@ const dbStatus = {
     SOL_PRICE: 0,
     JUP_PRICE: 0,
     DRIFT_USDC: 0,    
+    DRIFT_SPOT_VALUE:0,
+    SOL_SPOT_VALUE:0,
+    JUP_SPOT_VALUE:0,
 }
 
 function getKeyPair(file: string) {
@@ -594,6 +591,10 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                     values: [[dbStatus.DRIFT_VALUE]]
                 },
                 {
+                    range: `${sheetName}!F14:F16`,
+                    values: [[dbStatus.DRIFT_SPOT_VALUE],[dbStatus.JUP_SPOT_VALUE],[dbStatus.SOL_SPOT_VALUE]]
+                },
+                {
                     range: `${sheetName}!C8`,
                     values: [[dbStatus.DRIFT_FUNDING]]
                 },
@@ -700,6 +701,19 @@ async function checkTrades() {
         let usdcAmount = driftUser.getTokenAmount(0)
         dbStatus.DRIFT_USDC = usdcAmount.toNumber() / 10 ** 6
 
+        
+        for (const acct of driftClient.getSpotMarketAccounts()){
+            console.log(`${decodeName(acct.name)}:  ${acct.marketIndex}`)
+        }
+        let driftTokenValue = driftUser.getSpotMarketAssetValue(DRIFT_SPOT_INDEX); 
+        dbStatus.DRIFT_SPOT_VALUE = driftTokenValue.toNumber() / 10 ** 6
+
+        let jupTokenValue = driftUser.getSpotMarketAssetValue(JUP_SPOT_INDEX); 
+        dbStatus.JUP_SPOT_VALUE = jupTokenValue.toNumber() / 10 ** 6
+
+        let solTokenValue = driftUser.getSpotMarketAssetValue(SOL_SPOT_INDEX); 
+        dbStatus.SOL_SPOT_VALUE = solTokenValue.toNumber() / 10 ** 6
+
         const defaultParams = {
             driftUser,
             driftClient,
@@ -713,13 +727,13 @@ async function checkTrades() {
         await Promise.all([
             checkPair({
                 ...defaultParams,
-                placeOrders: false,
+                placeOrders: true,
                 minTradeValue:100,
                 market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -5_000
+                    baseline: -7_500
                 }
             }),
             checkPair({
@@ -730,7 +744,7 @@ async function checkTrades() {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
                     spread: 0.05,
-                    baseline: -88_500
+                    baseline: -90_000
                 }
             }),        
         ])
