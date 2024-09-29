@@ -796,7 +796,7 @@ async function checkTrades() {
                     symbol: 'W',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -5_500
+                    baseline: -6_500
                 }
             }), 
         ])
