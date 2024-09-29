@@ -28,6 +28,7 @@ const SIX_PUBLIC_KEY = 'HpBSY6mP4khefkaDaWHVBKN9q4w7DMfV1PkCwPQudUMw'
 const DRIFT_SPOT_INDEX = 15; // Define the constant
 const JUP_SPOT_INDEX = 11; // Define the constant
 const SOL_SPOT_INDEX = 1; // Define the constant
+const W_SPOT_INDEX = 13;
 
 interface SolanaTransaction {
     signature: string,
@@ -59,15 +60,19 @@ const dbStatus = {
     DRIFT_ETH_FUNDING_RATE: 0,
     DRIFT_BTC_FUNDING_RATE: 0,
     DRIFT_JUP_FUNDING_RATE: 0,
+    DRIFT_W_FUNDING_RATE: 0,
+    DRIFT_DRIFT_FUNDING_RATE: 0,
     LAST_UPDATED: new Date(),
     DRIFT_VALUE: 0,
     DRIFT_PRICE: 0,
     SOL_PRICE: 0,
     JUP_PRICE: 0,
+    W_PRICE: 0,
     DRIFT_USDC: 0,    
     DRIFT_SPOT_VALUE:0,
     SOL_SPOT_VALUE:0,
     JUP_SPOT_VALUE:0,
+    W_SPOT_VALUE:0,
 }
 
 function getKeyPair(file: string) {
@@ -85,7 +90,8 @@ const DRIFT_MARKETS = {
     ETH: 2,
     BTC: 1,
     SOL: 0,
-    DRIFT: 30
+    DRIFT: 30,
+    W:27
 }
 
 interface Market {
@@ -198,6 +204,12 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
     else if (symbol === "JUP") {
         dbStatus.DRIFT_JUP_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
         console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_JUP_FUNDING_RATE)
+    }else if (symbol === "W") {
+        dbStatus.DRIFT_W_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
+        console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_W_FUNDING_RATE)
+    }else if (symbol === "DRIFT") {
+        dbStatus.DRIFT_DRIFT_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
+        console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_DRIFT_FUNDING_RATE)
     }
 
     console.log('--');
@@ -547,7 +559,10 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
 
     const solPosition = db.find((a: DBItem) => a.MARKET === 'SOL')
     const jupPosition = db.find((a: DBItem) => a.MARKET === 'JUP')
+    const driftPosition = db.find((a: DBItem) => a.MARKET === 'DRIFT')
+    const wPosition = db.find((a: DBItem) => a.MARKET === 'W')
     const driftPrice = await getDriftMakretPrice(driftClient, (DRIFT_MARKETS as any)["DRIFT"])
+    const wPrice = await getDriftMakretPrice(driftClient, (DRIFT_MARKETS as any)["W"])
 
     const transValues = solTransactions.map((a: SolanaTransaction) => [a.exchange, a.market, a.signature, a.error])
     for (let i = 0; i < (6 - transValues.length); i++) {
@@ -567,19 +582,25 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                     ],[
                         solPosition.MARKET,dbStatus.DRIFT_SOL_FUNDING_RATE,solPosition.VALUE,solPosition.PNL,solPosition.ADJUSTED_VALUE,
                         solPosition.BASELINE, solPosition.ORDER, solPosition.PRICE, solPosition.PLACE_ORDERS
+                    ],[
+                        driftPosition.MARKET,dbStatus.DRIFT_DRIFT_FUNDING_RATE,driftPosition.VALUE,driftPosition.PNL,driftPosition.ADJUSTED_VALUE,
+                        driftPosition.BASELINE, driftPosition.ORDER, driftPosition.PRICE, driftPosition.PLACE_ORDERS
+                    ],[
+                        wPosition.MARKET,dbStatus.DRIFT_W_FUNDING_RATE,wPosition.VALUE,wPosition.PNL,wPosition.ADJUSTED_VALUE,
+                        wPosition.BASELINE, wPosition.ORDER, wPosition.PRICE, wPosition.PLACE_ORDERS
                     ]]
                     
                 },
                 {
-                    range: `${sheetName}!F7`,
+                    range: `${sheetName}!F9`,
                     values: [[dbStatus.DRIFT_HEALTH]]
                 },
                 {
-                    range: `${sheetName}!I8`,
+                    range: `${sheetName}!I10`,
                     values: [[toGoogleSheetsDate(dbStatus.LAST_UPDATED)]]
                 },                
                 {
-                    range: `${sheetName}!F7:F9`,
+                    range: `${sheetName}!F9:F11`,
                     values: [
                         [dbStatus.DRIFT_HEALTH],
                         [dbStatus.DRIFT_USDC],
@@ -587,19 +608,19 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                     ]
                 },            
                 {
-                    range: `${sheetName}!F11`,
+                    range: `${sheetName}!F13`,
                     values: [[dbStatus.DRIFT_VALUE]]
                 },
                 {
-                    range: `${sheetName}!F14:F16`,
-                    values: [[dbStatus.DRIFT_SPOT_VALUE],[dbStatus.JUP_SPOT_VALUE],[dbStatus.SOL_SPOT_VALUE]]
+                    range: `${sheetName}!F16:F19`,
+                    values: [[dbStatus.DRIFT_SPOT_VALUE],[dbStatus.JUP_SPOT_VALUE],[dbStatus.SOL_SPOT_VALUE],[dbStatus.W_SPOT_VALUE]]
                 },
                 {
-                    range: `${sheetName}!C8`,
+                    range: `${sheetName}!C10`,
                     values: [[dbStatus.DRIFT_FUNDING]]
                 },
                 {
-                    range: `${sheetName}!A22:D${transValues.length + 22}`,
+                    range: `${sheetName}!A26:D${transValues.length + 26}`,
                     values: transValues
                 },
                 {
@@ -613,6 +634,10 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                 {
                     range: `Market_Data!D_DRIFT_PRICE`,
                     values: [[driftPrice]]
+                },
+                {
+                    range: `Market_Data!D_W_PRICE`,
+                    values: [[wPrice]]
                 }
             ]
         }
@@ -700,10 +725,12 @@ async function checkTrades() {
 
         let usdcAmount = driftUser.getTokenAmount(0)
         dbStatus.DRIFT_USDC = usdcAmount.toNumber() / 10 ** 6
-
+        for (const acct of driftClient.getPerpMarketAccounts()){
+            console.log(`PERP ${decodeName(acct.name)}:  ${acct.marketIndex}`)
+        }
         
         for (const acct of driftClient.getSpotMarketAccounts()){
-            console.log(`${decodeName(acct.name)}:  ${acct.marketIndex}`)
+            console.log(`SPORT ${decodeName(acct.name)}:  ${acct.marketIndex}`)
         }
         let driftTokenValue = driftUser.getSpotMarketAssetValue(DRIFT_SPOT_INDEX); 
         dbStatus.DRIFT_SPOT_VALUE = driftTokenValue.toNumber() / 10 ** 6
@@ -713,6 +740,9 @@ async function checkTrades() {
 
         let solTokenValue = driftUser.getSpotMarketAssetValue(SOL_SPOT_INDEX); 
         dbStatus.SOL_SPOT_VALUE = solTokenValue.toNumber() / 10 ** 6
+
+        let wTokenValue = driftUser.getSpotMarketAssetValue(W_SPOT_INDEX); 
+        dbStatus.W_SPOT_VALUE = wTokenValue.toNumber() / 10 ** 6
 
         const defaultParams = {
             driftUser,
@@ -728,18 +758,18 @@ async function checkTrades() {
             checkPair({
                 ...defaultParams,
                 placeOrders: true,
-                minTradeValue:100,
+                minTradeValue:50,
                 market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -7_500
+                    baseline: -9_000
                 }
             }),
             checkPair({
                 ...defaultParams,
                 placeOrders:true,
-                minTradeValue: 50,
+                minTradeValue: 100,
                 market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
@@ -747,6 +777,28 @@ async function checkTrades() {
                     baseline: -90_000
                 }
             }),        
+            checkPair({
+                ...defaultParams,
+                placeOrders:true,
+                minTradeValue: 100,
+                market: {
+                    symbol: 'DRIFT',
+                    exchange: 'DRIFT',
+                    spread: 0.0001,
+                    baseline: -2_000
+                }
+            }), 
+            checkPair({
+                ...defaultParams,
+                placeOrders:true,
+                minTradeValue: 50,
+                market: {
+                    symbol: 'W',
+                    exchange: 'DRIFT',
+                    spread: 0.0001,
+                    baseline: -5_500
+                }
+            }), 
         ])
 
         console.log(dbPositions)
