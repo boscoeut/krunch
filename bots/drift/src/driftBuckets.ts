@@ -29,6 +29,7 @@ const DRIFT_SPOT_INDEX = 15; // Define the constant
 const JUP_SPOT_INDEX = 11; // Define the constant
 const SOL_SPOT_INDEX = 1; // Define the constant
 const W_SPOT_INDEX = 13;
+const ETH_SPOT_INDEX = 4;
 
 interface SolanaTransaction {
     signature: string,
@@ -67,10 +68,12 @@ const dbStatus = {
     DRIFT_PRICE: 0,
     SOL_PRICE: 0,
     JUP_PRICE: 0,
+    ETH_PRICE: 0,
     W_PRICE: 0,
     DRIFT_USDC: 0,    
     DRIFT_SPOT_VALUE:0,
     SOL_SPOT_VALUE:0,
+    ETH_SPOT_VALUE:0,
     JUP_SPOT_VALUE:0,
     W_SPOT_VALUE:0,
 }
@@ -559,6 +562,7 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
 
     const solPosition = db.find((a: DBItem) => a.MARKET === 'SOL')
     const jupPosition = db.find((a: DBItem) => a.MARKET === 'JUP')
+    const ethPosition = db.find((a: DBItem) => a.MARKET === 'ETH')
     const driftPosition = db.find((a: DBItem) => a.MARKET === 'DRIFT')
     const wPosition = db.find((a: DBItem) => a.MARKET === 'W')
     const driftPrice = await getDriftMakretPrice(driftClient, (DRIFT_MARKETS as any)["DRIFT"])
@@ -588,6 +592,9 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                     ],[
                         wPosition.MARKET,dbStatus.DRIFT_W_FUNDING_RATE,wPosition.VALUE,wPosition.PNL,wPosition.ADJUSTED_VALUE,
                         wPosition.BASELINE, wPosition.ORDER, wPosition.PRICE, wPosition.PLACE_ORDERS
+                    ],[
+                        ethPosition.MARKET,dbStatus.DRIFT_ETH_FUNDING_RATE,ethPosition.VALUE,ethPosition.PNL,ethPosition.ADJUSTED_VALUE,
+                        ethPosition.BASELINE, ethPosition.ORDER, ethPosition.PRICE, ethPosition.PLACE_ORDERS
                     ]]
                     
                 },
@@ -612,8 +619,8 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                     values: [[dbStatus.DRIFT_VALUE]]
                 },
                 {
-                    range: `${sheetName}!F16:F19`,
-                    values: [[dbStatus.DRIFT_SPOT_VALUE],[dbStatus.JUP_SPOT_VALUE],[dbStatus.SOL_SPOT_VALUE],[dbStatus.W_SPOT_VALUE]]
+                    range: `${sheetName}!F16:F20`,
+                    values: [[dbStatus.DRIFT_SPOT_VALUE],[dbStatus.JUP_SPOT_VALUE],[dbStatus.SOL_SPOT_VALUE],[dbStatus.W_SPOT_VALUE],[dbStatus.ETH_SPOT_VALUE]]
                 },
                 {
                     range: `${sheetName}!C10`,
@@ -634,6 +641,10 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                 {
                     range: `Market_Data!D_DRIFT_PRICE`,
                     values: [[driftPrice]]
+                },
+                {
+                    range: `Market_Data!D_ETH_PRICE`,
+                    values: [[ethPosition.PRICE]]
                 },
                 {
                     range: `Market_Data!D_W_PRICE`,
@@ -730,7 +741,7 @@ async function checkTrades() {
         }
         
         for (const acct of driftClient.getSpotMarketAccounts()){
-            console.log(`SPORT ${decodeName(acct.name)}:  ${acct.marketIndex}`)
+            console.log(`SPOT ${decodeName(acct.name)}:  ${acct.marketIndex}`)
         }
         let driftTokenValue = driftUser.getSpotMarketAssetValue(DRIFT_SPOT_INDEX); 
         dbStatus.DRIFT_SPOT_VALUE = driftTokenValue.toNumber() / 10 ** 6
@@ -744,12 +755,15 @@ async function checkTrades() {
         let wTokenValue = driftUser.getSpotMarketAssetValue(W_SPOT_INDEX); 
         dbStatus.W_SPOT_VALUE = wTokenValue.toNumber() / 10 ** 6
 
+        let ethTokenValue = driftUser.getSpotMarketLiabilityValue(ETH_SPOT_INDEX); 
+        dbStatus.ETH_SPOT_VALUE = ethTokenValue.toNumber() / 10 ** 6 * -1
+
         const defaultParams = {
             driftUser,
             driftClient,
             placeOrders: false,
             minTradeValue: 50,
-            maxTradeAmount: 1000,
+            maxTradeAmount: 1500,
             driftOrders: cancelOrders,
             multiplier: 1
         }
@@ -763,7 +777,7 @@ async function checkTrades() {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -9_000
+                    baseline: -30_000
                 }
             }),
             checkPair({
@@ -779,13 +793,13 @@ async function checkTrades() {
             }),        
             checkPair({
                 ...defaultParams,
-                placeOrders:true,
-                minTradeValue: 100,
+                placeOrders:false,
+                minTradeValue: 150,
                 market: {
                     symbol: 'DRIFT',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -2_000
+                    baseline: 0
                 }
             }), 
             checkPair({
@@ -796,7 +810,18 @@ async function checkTrades() {
                     symbol: 'W',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -6_500
+                    baseline: -10_000
+                }
+            }), 
+            checkPair({
+                ...defaultParams,
+                placeOrders:true,
+                minTradeValue: 100,
+                market: {
+                    symbol: 'ETH',
+                    exchange: 'DRIFT',
+                    spread: 0.35,
+                    baseline: 55_000
                 }
             }), 
         ])
