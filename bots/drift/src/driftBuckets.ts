@@ -30,6 +30,7 @@ const JUP_SPOT_INDEX = 11; // Define the constant
 const SOL_SPOT_INDEX = 1; // Define the constant
 const W_SPOT_INDEX = 13;
 const ETH_SPOT_INDEX = 4;
+const BTC_SPOT_INDEX = 3;
 
 interface SolanaTransaction {
     signature: string,
@@ -69,11 +70,13 @@ const dbStatus = {
     SOL_PRICE: 0,
     JUP_PRICE: 0,
     ETH_PRICE: 0,
+    BTC_PRICE: 0,
     W_PRICE: 0,
     DRIFT_USDC: 0,    
     DRIFT_SPOT_VALUE:0,
     SOL_SPOT_VALUE:0,
     ETH_SPOT_VALUE:0,
+    BTC_SPOT_VALUE:0,
     JUP_SPOT_VALUE:0,
     W_SPOT_VALUE:0,
 }
@@ -563,13 +566,14 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
     const solPosition = db.find((a: DBItem) => a.MARKET === 'SOL')
     const jupPosition = db.find((a: DBItem) => a.MARKET === 'JUP')
     const ethPosition = db.find((a: DBItem) => a.MARKET === 'ETH')
+    const btcPosition = db.find((a: DBItem) => a.MARKET === 'BTC')
     const driftPosition = db.find((a: DBItem) => a.MARKET === 'DRIFT')
     const wPosition = db.find((a: DBItem) => a.MARKET === 'W')
     const driftPrice = await getDriftMakretPrice(driftClient, (DRIFT_MARKETS as any)["DRIFT"])
     const wPrice = await getDriftMakretPrice(driftClient, (DRIFT_MARKETS as any)["W"])
 
     const transValues = solTransactions.map((a: SolanaTransaction) => [a.exchange, a.market, a.signature, a.error])
-    for (let i = 0; i < (6 - transValues.length); i++) {
+    for (let i = 0; i < (8 - transValues.length); i++) {
         transValues.push(["", "", "", ""])
     }
 
@@ -595,19 +599,22 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                     ],[
                         ethPosition.MARKET,dbStatus.DRIFT_ETH_FUNDING_RATE,ethPosition.VALUE,ethPosition.PNL,ethPosition.ADJUSTED_VALUE,
                         ethPosition.BASELINE, ethPosition.ORDER, ethPosition.PRICE, ethPosition.PLACE_ORDERS
+                    ],[
+                        btcPosition.MARKET,dbStatus.DRIFT_BTC_FUNDING_RATE,btcPosition.VALUE,btcPosition.PNL,btcPosition.ADJUSTED_VALUE,
+                        btcPosition.BASELINE, btcPosition.ORDER, btcPosition.PRICE, btcPosition.PLACE_ORDERS
                     ]]
                     
                 },
                 {
-                    range: `${sheetName}!F9`,
+                    range: `${sheetName}!F12`,
                     values: [[dbStatus.DRIFT_HEALTH]]
                 },
                 {
-                    range: `${sheetName}!I10`,
+                    range: `${sheetName}!I13`,
                     values: [[toGoogleSheetsDate(dbStatus.LAST_UPDATED)]]
                 },                
                 {
-                    range: `${sheetName}!F9:F11`,
+                    range: `${sheetName}!F12:F14`,
                     values: [
                         [dbStatus.DRIFT_HEALTH],
                         [dbStatus.DRIFT_USDC],
@@ -615,19 +622,19 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                     ]
                 },            
                 {
-                    range: `${sheetName}!F13`,
+                    range: `${sheetName}!F16`,
                     values: [[dbStatus.DRIFT_VALUE]]
                 },
                 {
-                    range: `${sheetName}!F16:F20`,
-                    values: [[dbStatus.DRIFT_SPOT_VALUE],[dbStatus.JUP_SPOT_VALUE],[dbStatus.SOL_SPOT_VALUE],[dbStatus.W_SPOT_VALUE],[dbStatus.ETH_SPOT_VALUE]]
+                    range: `${sheetName}!F19:F24`,
+                    values: [[dbStatus.DRIFT_SPOT_VALUE],[dbStatus.JUP_SPOT_VALUE],[dbStatus.SOL_SPOT_VALUE],[dbStatus.W_SPOT_VALUE],[dbStatus.ETH_SPOT_VALUE],[dbStatus.BTC_SPOT_VALUE]]
                 },
                 {
-                    range: `${sheetName}!C10`,
+                    range: `${sheetName}!C13`,
                     values: [[dbStatus.DRIFT_FUNDING]]
                 },
                 {
-                    range: `${sheetName}!A26:D${transValues.length + 26}`,
+                    range: `${sheetName}!A31:D${transValues.length + 31}`,
                     values: transValues
                 },
                 {
@@ -645,6 +652,10 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                 {
                     range: `Market_Data!D_ETH_PRICE`,
                     values: [[ethPosition.PRICE]]
+                },
+                {
+                    range: `Market_Data!D_BTC_PRICE`,
+                    values: [[btcPosition.PRICE]]
                 },
                 {
                     range: `Market_Data!D_W_PRICE`,
@@ -758,11 +769,14 @@ async function checkTrades() {
         let ethTokenValue = driftUser.getSpotMarketLiabilityValue(ETH_SPOT_INDEX); 
         dbStatus.ETH_SPOT_VALUE = ethTokenValue.toNumber() / 10 ** 6 * -1
 
+        let btcTokenValue = driftUser.getSpotMarketLiabilityValue(BTC_SPOT_INDEX); 
+        dbStatus.BTC_SPOT_VALUE = btcTokenValue.toNumber() / 10 ** 6 * -1
+
         const defaultParams = {
             driftUser,
             driftClient,
             placeOrders: false,
-            minTradeValue: 50,
+            minTradeValue: 75,
             maxTradeAmount: 1500,
             driftOrders: cancelOrders,
             multiplier: 1
@@ -772,23 +786,23 @@ async function checkTrades() {
             checkPair({
                 ...defaultParams,
                 placeOrders: true,
-                minTradeValue:50,
+                minTradeValue:100,
                 market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -30_000
+                    baseline: -31_750
                 }
             }),
             checkPair({
                 ...defaultParams,
                 placeOrders:true,
-                minTradeValue: 100,
+                minTradeValue: 150,
                 market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
                     spread: 0.05,
-                    baseline: -90_000
+                    baseline: -102_000
                 }
             }),        
             checkPair({
@@ -805,23 +819,34 @@ async function checkTrades() {
             checkPair({
                 ...defaultParams,
                 placeOrders:true,
-                minTradeValue: 50,
+                minTradeValue: 100,
                 market: {
                     symbol: 'W',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -10_000
+                    baseline: -13_500
                 }
             }), 
             checkPair({
                 ...defaultParams,
                 placeOrders:true,
-                minTradeValue: 100,
+                minTradeValue: 150,
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
-                    spread: 0.35,
-                    baseline: 55_000
+                    spread: 0.40,
+                    baseline: 100_000
+                }
+            }), 
+            checkPair({
+                ...defaultParams,
+                placeOrders:true,
+                minTradeValue: 150,
+                market: {
+                    symbol: 'BTC',
+                    exchange: 'DRIFT',
+                    spread: 25,
+                    baseline: -4_500
                 }
             }), 
         ])
