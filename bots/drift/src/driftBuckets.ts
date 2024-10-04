@@ -776,7 +776,7 @@ async function checkTrades() {
             driftUser,
             driftClient,
             placeOrders: false,
-            minTradeValue: 75,
+            minTradeValue: 200,
             maxTradeAmount: 1500,
             driftOrders: cancelOrders,
             multiplier: 1
@@ -785,19 +785,18 @@ async function checkTrades() {
         await Promise.all([
             checkPair({
                 ...defaultParams,
-                placeOrders: true,
+                placeOrders: false,
                 minTradeValue:100,
                 market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -31_750
+                    baseline: 0
                 }
             }),
             checkPair({
                 ...defaultParams,
                 placeOrders:true,
-                minTradeValue: 150,
                 market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
@@ -808,7 +807,6 @@ async function checkTrades() {
             checkPair({
                 ...defaultParams,
                 placeOrders:false,
-                minTradeValue: 150,
                 market: {
                     symbol: 'DRIFT',
                     exchange: 'DRIFT',
@@ -818,35 +816,32 @@ async function checkTrades() {
             }), 
             checkPair({
                 ...defaultParams,
-                placeOrders:true,
-                minTradeValue: 100,
+                placeOrders:false,
                 market: {
                     symbol: 'W',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -13_500
+                    baseline: 0
                 }
             }), 
             checkPair({
                 ...defaultParams,
                 placeOrders:true,
-                minTradeValue: 150,
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
                     spread: 0.40,
-                    baseline: 100_000
+                    baseline: 125_000
                 }
             }), 
             checkPair({
                 ...defaultParams,
                 placeOrders:true,
-                minTradeValue: 150,
                 market: {
                     symbol: 'BTC',
                     exchange: 'DRIFT',
                     spread: 25,
-                    baseline: -4_500
+                    baseline: -25_000
                 }
             }), 
         ])
