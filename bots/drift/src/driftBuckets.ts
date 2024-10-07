@@ -301,6 +301,8 @@ async function analyzeMarket(props: AnalyzeProps) {
     let totalSpread = (longValue + shortValue)
     if (baseline < 0) {
         totalSpread += totalPnl * -2
+    }else{
+        totalSpread += totalPnl
     }
 
     console.log(`
@@ -328,18 +330,12 @@ async function analyzeMarket(props: AnalyzeProps) {
         const amt = (totalSpread - baseline) * multiplier
         const maxAmount = Math.min(amt, maxTradeAmount)
         const market = enabledPositions[0]
-        const canTrade = baseline < 0 || totalPnl > 0
-        // if (canTrade) {
         await buySell("SELL", amt, maxAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue, market.exchange)
-        // }
     } else {
         // shorts exceeds long -- buy        
         const amt = (baseline - totalSpread) * multiplier
         const market = enabledPositions[0]
-        const canTrade = baseline > 0 || totalPnl > 0
-        // if (canTrade) {
         await buySell("BUY", amt, maxTradeAmount, market.symbol, market.marketIndex, market.spread, transactionInstructions, market.price, minTradeValue, market.exchange)
-        // }
     }
     return {
         totalPnl,
@@ -776,8 +772,8 @@ async function checkTrades() {
             driftUser,
             driftClient,
             placeOrders: false,
-            minTradeValue: 200,
-            maxTradeAmount: 1500,
+            minTradeValue: 150,
+            maxTradeAmount: 2500,
             driftOrders: cancelOrders,
             multiplier: 1
         }
@@ -793,17 +789,7 @@ async function checkTrades() {
                     spread: 0.0001,
                     baseline: 0
                 }
-            }),
-            checkPair({
-                ...defaultParams,
-                placeOrders:true,
-                market: {
-                    symbol: 'SOL',
-                    exchange: 'DRIFT',
-                    spread: 0.05,
-                    baseline: -102_000
-                }
-            }),        
+            }),              
             checkPair({
                 ...defaultParams,
                 placeOrders:false,
@@ -823,7 +809,17 @@ async function checkTrades() {
                     spread: 0.0001,
                     baseline: 0
                 }
-            }), 
+            }),
+            checkPair({
+                ...defaultParams,
+                placeOrders:true,
+                market: {
+                    symbol: 'SOL',
+                    exchange: 'DRIFT',
+                    spread: 0.05,
+                    baseline: -116_500
+                }
+            }),      
             checkPair({
                 ...defaultParams,
                 placeOrders:true,
@@ -831,7 +827,7 @@ async function checkTrades() {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
                     spread: 0.40,
-                    baseline: 125_000
+                    baseline: 313_000
                 }
             }), 
             checkPair({
@@ -840,8 +836,8 @@ async function checkTrades() {
                 market: {
                     symbol: 'BTC',
                     exchange: 'DRIFT',
-                    spread: 25,
-                    baseline: -25_000
+                    spread: 1,
+                    baseline: -116_500
                 }
             }), 
         ])
