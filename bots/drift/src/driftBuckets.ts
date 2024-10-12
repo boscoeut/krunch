@@ -772,13 +772,13 @@ async function checkTrades() {
             driftUser,
             driftClient,
             placeOrders: false,
-            minTradeValue: 125,
+            minTradeValue: 200,
             maxTradeAmount: 1500,
             driftOrders: cancelOrders,
-            multiplier: 1.15
+            multiplier: 1.0
         }
 
-        const ALLOW_TRADES = true
+        const ALLOW_TRADES = true  
 
         await Promise.all([
             checkPair({
@@ -829,7 +829,7 @@ async function checkTrades() {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
                     spread: 0.30,
-                    baseline: 305_000
+                    baseline: 317_500
                 }
             }), 
             checkPair({
