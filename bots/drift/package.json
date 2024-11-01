@@ -4,10 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node src/squeezeDrift.ts",
-    "cross": "ts-node src/crossSqueeze.ts",
-    "buckets": "ts-node src/buckets.ts",
+    "start": "ts-node src/driftBuckets.ts",
     "driftBuckets": "ts-node src/driftBuckets.ts"
   },
   "keywords": [],

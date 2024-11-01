@@ -185,8 +185,12 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
     const marketAccount = driftClient.getPerpMarketAccount(marketIndex);
     if (!marketAccount) throw new Error('Market not found');
 
+    const markPrice = marketAccount.amm.lastMarkPriceTwap;
+    const mark = markPrice.toNumber() / PRICE_PRECISION.toNumber();
     const oraclePrice = marketAccount.amm.lastOracleNormalisedPrice;
     const oracle = oraclePrice.toNumber() / PRICE_PRECISION.toNumber();
+
+    console.log(`Oracle: ${oracle}   Mark: ${mark}`)
     let currentAmount = oracle * baseAsset
 
     let pnl = currentAmount - baseAmount
@@ -356,18 +360,16 @@ async function analyzeMarket(props: AnalyzeProps) {
     }
 }
 
-async function retryTransaction(driftClient: DriftClient, newOrders: any[],
-    marketIndex: number, maxRetries = 10) {
+async function retryTransaction(driftClient: DriftClient, newOrders: any[], maxRetries = 10) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             if (newOrders.length > 0) {
                 const tx = await driftClient.placeOrders(newOrders);
                 console.log('SUCCESSS: New Orders Placed:', newOrders.length);
-                const market = Object.entries(DRIFT_MARKETS).find(([key, value]) => value === marketIndex)
                 solTransactions.push({
                     signature: `https://solscan.io/tx/${tx}`,
                     exchange: 'DRIFT',
-                    market: market ? market[0] : '',
+                    market: '',
                     error: ''
                 })
                 console.log('New Orders Tx:', `https://solscan.io/tx/${tx}`);
@@ -378,7 +380,6 @@ async function retryTransaction(driftClient: DriftClient, newOrders: any[],
                 console.log(`Attempt ${attempt} failed: Blockhash not found. Retrying...`);
                 await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retrying
             } else {
-                const market = Object.entries(DRIFT_MARKETS).find(([key, value]) => value === marketIndex)
                 if (!error.transactionMessage) {
                     console.log(`Error ${error.message}.  Retrying`, error);
                     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -386,7 +387,7 @@ async function retryTransaction(driftClient: DriftClient, newOrders: any[],
                     solTransactions.push({
                         signature: ``,
                         exchange: 'DRIFT',
-                        market: market ? market[0] : '',
+                        market: '',
                         error: error.message
                     })
                 }
@@ -397,8 +398,7 @@ async function retryTransaction(driftClient: DriftClient, newOrders: any[],
     throw new Error('Transaction failed after maximum retries');
 }
 
-async function retrCancelyTransaction(driftClient: DriftClient,
-    marketIndex: number, oldDriftOrders: any, maxRetries = 10) {
+async function retrCancelyTransaction(driftClient: DriftClient, oldDriftOrders: any, maxRetries = 10) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             if (oldDriftOrders.length > 0) {
@@ -412,12 +412,11 @@ async function retrCancelyTransaction(driftClient: DriftClient,
                 console.log(`Attempt ${attempt} failed: Blockhash not found. Retrying...`);
                 await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retrying
             } else {
-                const market = Object.entries(DRIFT_MARKETS).find(([key, value]) => value === marketIndex)
                 if ((error.message.includes("timeout") || !error.transactionMessage.includes('Blockhash not found')) && attempt < maxRetries) {
                     solTransactions.push({
                         signature: ``,
                         exchange: 'DRIFT',
-                        market: market ? market[0] : '',
+                        market: '',
                         error: error.message
                     })
                 }
@@ -478,7 +477,6 @@ function toFixedFloor(num: number, fixed: number = 4): number {
 async function placeDriftOrders(
     newOrders: any,
     driftClient: DriftClient,
-    market: Market,
     driftOrders: any,
     cancelAll: boolean
 ) {
@@ -488,9 +486,11 @@ async function placeDriftOrders(
         const newDriftOrders = newOrders.filter((a: any) => a.exchange === 'DRIFT')
         if (newDriftOrders.length > 0) {
             console.log('Placing Drift Orders #', newOrders.length);
+            for (const order of newOrders) {
+                console.log(`  >> ${order.side} ${order.symbol} for ${(order.tradeSize*order.price).toFixed(2)} price: ${order.price.toFixed(4)} size: ${order.tradeSize.toFixed(2)}`)
+            }
             for (const order of newDriftOrders) {
                 const baseAssetAmount = new BN(order.tradeSize * BASE_PRECISION.toNumber())
-                console.log(`baseAssetAmount: ${baseAssetAmount.toNumber()}`)
                 const direction = order.side === "BUY" ? PositionDirection.LONG : PositionDirection.SHORT
                 const newPrice = new BN(order.price * PRICE_PRECISION.toNumber())
                 transactionInstructions.push({
@@ -505,16 +505,18 @@ async function placeDriftOrders(
             }
 
         }
-        const marketIndex = (DRIFT_MARKETS as any)[market.symbol]
-        const existingOrders = driftOrders.filter((a: any) => a.marketIndex === marketIndex || cancelAll)
+
+        const marketIndexes = newOrders.map((a:any) => a.marketIndex)
+        const existingOrders = driftOrders.filter((a: any) => marketIndexes.includes(a.marketIndex) || cancelAll)
+        
         if (transactionInstructions.length + existingOrders.length > 0) {
             if (existingOrders.length > 0) {
-                await retrCancelyTransaction(driftClient,
-                    marketIndex, existingOrders, 10)
+                console.log(`Cancelling ${existingOrders.length} existing orders`)
+                await retrCancelyTransaction(driftClient, existingOrders, 10)
             }
             if (transactionInstructions.length > 0) {
-                await retryTransaction(driftClient, transactionInstructions,
-                    marketIndex, 10)
+                console.log(`Placing ${transactionInstructions.length} new orders`)
+                await retryTransaction(driftClient, transactionInstructions, 10)
             }
         }
     } catch (x: any) {
@@ -536,7 +538,6 @@ async function checkPair({
     placeOrders,
     minTradeValue,
     maxTradeAmount,
-    driftOrders,
     multiplier,
     canReduce
 
@@ -547,7 +548,6 @@ async function checkPair({
     placeOrders: boolean,
     minTradeValue: number,
     maxTradeAmount: number,
-    driftOrders: any,
     multiplier: number,
     canReduce: boolean
 }) {
@@ -569,8 +569,26 @@ async function checkPair({
             dbItem.PLACE_ORDERS = placeOrders
         }
     }
-    if (placeOrders && newOrders.length > 0) {
-        await placeDriftOrders(newOrders, driftClient, market, driftOrders, false)
+    return placeOrders ? newOrders : []
+}
+
+async function shouldRun(){
+    const { google } = require('googleapis');
+    const googleClient: any = await authorize();
+    const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
+    const sheetName = "DriftBuckets"
+    try {
+        const response = await googleSheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${sheetName}!C11`, // Specify the range for C11
+        });
+
+        const value = response.data.values ? response.data.values[0][0] : null; // Get the value from the response
+        console.log(`Value from C11: ${value}`);
+        return value; // Return the value
+    } catch (error) {
+        console.error('Error fetching value from Google Sheets:', error);
+        return "FALSE"
     }
 }
 
@@ -685,7 +703,7 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
 }
 
 
-async function checkTrades() {
+async function checkTrades(shouldTrade = true) {
     try {
 
         console.time('Connection to Solana');
@@ -791,41 +809,42 @@ async function checkTrades() {
         const defaultParams = {
             driftUser,
             driftClient,
-            placeOrders: false,
-            minTradeValue: 300,
-            maxTradeAmount: 20_000,
-            driftOrders: cancelOrders,
+            placeOrders: true,
+            minTradeValue: 250,
+            maxTradeAmount: 15_500,
             multiplier: 1.0,
-            canReduce: false
+            canReduce: true
         }
 
-        const ALLOW_TRADES = false
-
-        await Promise.all([
+        // PEROFRM TRADES
+        const ALLOW_TRADES = shouldTrade
+        const allOrders = await Promise.all([
             checkPair({
                 ...defaultParams,
-                placeOrders: false,
-                minTradeValue: 100,
+                minTradeValue:100,
+                placeOrders: true && ALLOW_TRADES,
                 market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: 80000
+                    baseline: -12_000
                 }
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: false,
+                placeOrders: true && ALLOW_TRADES,
+                minTradeValue:100,
                 market: {
                     symbol: 'DRIFT',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: 12_500
+                    baseline: -2_250
                 }
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: false,
+                placeOrders: true && ALLOW_TRADES,
+                minTradeValue:75,
                 market: {
                     symbol: 'W',
                     exchange: 'DRIFT',
@@ -839,35 +858,39 @@ async function checkTrades() {
                 market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
-                    spread: 0.0,
-                    baseline: 142_500
+                    spread: 0.01,
+                    baseline: -79_500
                 }
             }),
             checkPair({
                 ...defaultParams,
                 placeOrders: true && ALLOW_TRADES,
-                canReduce:true,
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
-                    spread: 0.0,
-                    baseline: -200_000
+                    spread: 0.40,
+                    baseline: 175_000
                 }
             }),
             checkPair({
-                ...defaultParams,
+                ...defaultParams,               
                 placeOrders: true && ALLOW_TRADES,
                 market: {
                     symbol: 'BTC',
                     exchange: 'DRIFT',
-                    spread: 1,
-                    baseline: 72_500
+                    spread: 10,
+                    baseline: -79_500
                 }
             }),
-        ])
-
- 
+        ])   
+        
         await updateGoogleSheet(dbPositions, driftClient)
+
+        // place drift orders
+        const newOrders = allOrders.flat()
+        if (ALLOW_TRADES && newOrders.length > 0) {
+            await placeDriftOrders(newOrders, driftClient, cancelOrders, false)
+        }
 
         console.log(`Closing Drift Client`)
         await driftClient.unsubscribe()
@@ -881,12 +904,18 @@ async function checkTrades() {
 }
 
 (async () => {
+    console.log('RUNNING DRIFT BUCKETS')
     const timeout = 60 * 1000 * 1
     // update wallets
-    await checkBalances('../mango/secrets/accounts.json')
+    // await checkBalances('../mango/secrets/accounts.json')
+    let count = 0;
+    const runEveryNumberOfMinutes = 3
     while (true) {
-        await checkTrades()
-        console.log(`Sleeping for ${timeout / 1000} seconds. ${new Date().toLocaleTimeString()}`)
+        const shouldExecute = await shouldRun() && true;    // disable trade executions by setting to false    
+        console.log(`count: ${count}.   count % ${runEveryNumberOfMinutes} = ${count % runEveryNumberOfMinutes}  shouldExecute = ${shouldExecute}`)
+        await checkTrades(count % runEveryNumberOfMinutes === 0 && shouldExecute)
+        count++
+        console.log(`DRIFT BUCKETS (Count=${count}) >> Sleeping for ${timeout / 1000} seconds. ${new Date().toLocaleTimeString()}`)
         await new Promise(resolve => setTimeout(resolve, timeout));
     }
 })();
