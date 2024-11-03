@@ -19,7 +19,6 @@ import { Connection, Keypair } from "@solana/web3.js";
 import pkg from 'bs58';
 import fs from 'fs';
 import { CONNECTION_URL, SPREADSHEET_ID } from '../../mango/src/constants';
-import { checkBalances } from '../../mango/src/getWalletBalances';
 import { authorize, toGoogleSheetsDate } from '../../mango/src/googleUtils';
 const { decode } = pkg;
 
@@ -187,10 +186,23 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
 
     const markPrice = marketAccount.amm.lastMarkPriceTwap;
     const mark = markPrice.toNumber() / PRICE_PRECISION.toNumber();
+
     const oraclePrice = marketAccount.amm.lastOracleNormalisedPrice;
     const oracle = oraclePrice.toNumber() / PRICE_PRECISION.toNumber();
 
-    console.log(`Oracle: ${oracle}   Mark: ${mark}`)
+    const bestBid = marketAccount.amm.lastBidPriceTwap.toNumber() / PRICE_PRECISION.toNumber();
+    const bestAsk = marketAccount.amm.lastAskPriceTwap.toNumber() / PRICE_PRECISION.toNumber();
+    const midPrice =  (bestBid + bestAsk) / 2    
+    const bestPrice = oracle
+
+    console.log(`bestBid:`, bestBid)
+    console.log(`bestAsk: ${bestAsk}`)
+    console.log(`oracle: ${oracle}`)
+    console.log(`mark: ${mark}`)
+
+    console.log(`Mid" ${midPrice} Oracle: ${oracle}   Mark: ${mark}`)
+
+    
     let currentAmount = oracle * baseAsset
 
     let pnl = currentAmount - baseAmount
@@ -231,7 +243,7 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
     console.log('*** value:', currentAmount);
 
     return {
-        price: oracle,
+        price: bestPrice,
         baseAsset,
         breakEvenPrice,
         entryPrice,
@@ -810,8 +822,8 @@ async function checkTrades(shouldTrade = true) {
             driftUser,
             driftClient,
             placeOrders: true,
-            minTradeValue: 250,
-            maxTradeAmount: 15_500,
+            minTradeValue: 200,
+            maxTradeAmount: 2_500,
             multiplier: 1.0,
             canReduce: true
         }
@@ -827,7 +839,7 @@ async function checkTrades(shouldTrade = true) {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -12_000
+                    baseline: -20_000
                 }
             }),
             checkPair({
@@ -838,7 +850,7 @@ async function checkTrades(shouldTrade = true) {
                     symbol: 'DRIFT',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -2_250
+                    baseline: -2_500
                 }
             }),
             checkPair({
@@ -849,7 +861,7 @@ async function checkTrades(shouldTrade = true) {
                     symbol: 'W',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -1750
+                    baseline: -2_500
                 }
             }),
             checkPair({
@@ -859,17 +871,18 @@ async function checkTrades(shouldTrade = true) {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
                     spread: 0.01,
-                    baseline: -79_500
+                    baseline: 0
                 }
             }),
             checkPair({
                 ...defaultParams,
+                canReduce:false,
                 placeOrders: true && ALLOW_TRADES,
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
                     spread: 0.40,
-                    baseline: 175_000
+                    baseline: 0
                 }
             }),
             checkPair({
@@ -879,7 +892,7 @@ async function checkTrades(shouldTrade = true) {
                     symbol: 'BTC',
                     exchange: 'DRIFT',
                     spread: 10,
-                    baseline: -79_500
+                    baseline: -5_000
                 }
             }),
         ])   
