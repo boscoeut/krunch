@@ -20,6 +20,7 @@ import pkg from 'bs58';
 import fs from 'fs';
 import { CONNECTION_URL, SPREADSHEET_ID } from '../../mango/src/constants';
 import { authorize, toGoogleSheetsDate } from '../../mango/src/googleUtils';
+import { checkBalances } from "../../mango/src/getWalletBalances";
 const { decode } = pkg;
 
 const DRIFT_ENV = 'mainnet-beta';
@@ -29,6 +30,7 @@ const SOL_SPOT_INDEX = 1; // Define the constant
 const W_SPOT_INDEX = 13;
 const ETH_SPOT_INDEX = 4;
 const BTC_SPOT_INDEX = 3;
+const CLOUD_SPOT_INDEX = 21;
 
 interface SolanaTransaction {
     signature: string,
@@ -46,7 +48,8 @@ interface DBItem {
     EXCHANGE: string,
     PRICE: number,
     BASELINE: number,
-    PLACE_ORDERS: boolean
+    PLACE_ORDERS: boolean,
+    FEES:number
 }
 
 const dbPositions: Array<DBItem> = []
@@ -62,6 +65,8 @@ const dbStatus = {
     DRIFT_JUP_FUNDING_RATE: 0,
     DRIFT_W_FUNDING_RATE: 0,
     DRIFT_DRIFT_FUNDING_RATE: 0,
+    DRIFT_CLOUD_FUNDING_RATE: 0,
+    DRIFT_DBR_FUNDING_RATE: 0,
     LAST_UPDATED: new Date(),
     DRIFT_VALUE: 0,
     DRIFT_PRICE: 0,
@@ -74,6 +79,7 @@ const dbStatus = {
     DRIFT_SPOT_VALUE: 0,
     SOL_SPOT_VALUE: 0,
     ETH_SPOT_VALUE: 0,
+    CLOUD_SPOT_VALUE: 0,
     BTC_SPOT_VALUE: 0,
     JUP_SPOT_VALUE: 0,
     W_SPOT_VALUE: 0,
@@ -95,7 +101,9 @@ const DRIFT_MARKETS = {
     BTC: 1,
     SOL: 0,
     DRIFT: 30,
-    W: 27
+    W: 27,
+    CLOUD: 31,
+    DBR: 47
 }
 
 interface Market {
@@ -187,6 +195,8 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
     const markPrice = marketAccount.amm.lastMarkPriceTwap;
     const mark = markPrice.toNumber() / PRICE_PRECISION.toNumber();
 
+    const settledPnl = (perpPosition?.settledPnl?.toNumber() || 0)/ PRICE_PRECISION.toNumber();
+
     const oraclePrice = marketAccount.amm.lastOracleNormalisedPrice;
     const oracle = oraclePrice.toNumber() / PRICE_PRECISION.toNumber();
 
@@ -209,6 +219,10 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
     if (baseAsset < 0) {
         pnl = baseAmount * -1 + currentAmount
     }
+
+    const feesAndFunding = settledPnl;
+    console.log(`feesAndFunding: ${feesAndFunding}  `)
+
     const perpMarketAccount = driftClient.getPerpMarketAccount(marketIndex);
     // const fundingRate24H = perpMarketAccount!.amm.last24HAvgFundingRate.toNumber()
     const fundingRate24H = perpMarketAccount!.amm.lastFundingRate.toNumber()
@@ -232,6 +246,12 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
     } else if (symbol === "DRIFT") {
         dbStatus.DRIFT_DRIFT_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
         console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_DRIFT_FUNDING_RATE)
+    }else if (symbol === "DBR") {
+        dbStatus.DRIFT_DBR_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
+        console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_DBR_FUNDING_RATE)
+    }else if (symbol === "CLOUD") {
+        dbStatus.DRIFT_CLOUD_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
+        console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_CLOUD_FUNDING_RATE)
     }
 
     console.log('--');
@@ -251,7 +271,8 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
         marketIndex,
         symbol,
         value: currentAmount,
-        existingOrders: []
+        existingOrders: [],
+        feesAndFunding
     }
 }
 
@@ -301,7 +322,8 @@ async function analyzeMarket(props: AnalyzeProps) {
         EXCHANGE: market.exchange,
         PRICE: price,
         BASELINE: market.baseline,
-        PLACE_ORDERS: false
+        PLACE_ORDERS: false,
+        FEES:position.feesAndFunding
     })
     positions.push({
         symbol: market.symbol,
@@ -612,6 +634,8 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
     console.log(`Updating Google`)
 
     const solPosition = db.find((a: DBItem) => a.MARKET === 'SOL')
+    const cloudPosition = db.find((a: DBItem) => a.MARKET === 'CLOUD')
+    const dbrPosition = db.find((a: DBItem) => a.MARKET === 'DBR')
     const jupPosition = db.find((a: DBItem) => a.MARKET === 'JUP')
     const ethPosition = db.find((a: DBItem) => a.MARKET === 'ETH')
     const btcPosition = db.find((a: DBItem) => a.MARKET === 'BTC')
@@ -633,22 +657,22 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                 {
                     range: `${sheetName}!A2:I${db.length + 1}`,
                     values: [[
-                        jupPosition.MARKET, dbStatus.DRIFT_JUP_FUNDING_RATE, jupPosition.VALUE, jupPosition.PNL, jupPosition.ADJUSTED_VALUE,
+                        jupPosition.MARKET, dbStatus.DRIFT_JUP_FUNDING_RATE, jupPosition.VALUE, jupPosition.PNL, jupPosition.FEES,
                         jupPosition.BASELINE, jupPosition.ORDER, jupPosition.PRICE, jupPosition.PLACE_ORDERS
                     ], [
-                        solPosition.MARKET, dbStatus.DRIFT_SOL_FUNDING_RATE, solPosition.VALUE, solPosition.PNL, solPosition.ADJUSTED_VALUE,
-                        solPosition.BASELINE, solPosition.ORDER, solPosition.PRICE, solPosition.PLACE_ORDERS
+                        cloudPosition.MARKET, dbStatus.DRIFT_CLOUD_FUNDING_RATE, cloudPosition.VALUE, cloudPosition.PNL, cloudPosition.FEES,
+                        cloudPosition.BASELINE, cloudPosition.ORDER, cloudPosition.PRICE, cloudPosition.PLACE_ORDERS
                     ], [
-                        driftPosition.MARKET, dbStatus.DRIFT_DRIFT_FUNDING_RATE, driftPosition.VALUE, driftPosition.PNL, driftPosition.ADJUSTED_VALUE,
+                        driftPosition.MARKET, dbStatus.DRIFT_DRIFT_FUNDING_RATE, driftPosition.VALUE, driftPosition.PNL, driftPosition.FEES,
                         driftPosition.BASELINE, driftPosition.ORDER, driftPosition.PRICE, driftPosition.PLACE_ORDERS
                     ], [
-                        wPosition.MARKET, dbStatus.DRIFT_W_FUNDING_RATE, wPosition.VALUE, wPosition.PNL, wPosition.ADJUSTED_VALUE,
-                        wPosition.BASELINE, wPosition.ORDER, wPosition.PRICE, wPosition.PLACE_ORDERS
+                        solPosition.MARKET, dbStatus.DRIFT_SOL_FUNDING_RATE, solPosition.VALUE, solPosition.PNL, solPosition.FEES,
+                        solPosition.BASELINE, solPosition.ORDER, solPosition.PRICE, solPosition.PLACE_ORDERS
                     ], [
-                        ethPosition.MARKET, dbStatus.DRIFT_ETH_FUNDING_RATE, ethPosition.VALUE, ethPosition.PNL, ethPosition.ADJUSTED_VALUE,
-                        ethPosition.BASELINE, ethPosition.ORDER, ethPosition.PRICE, ethPosition.PLACE_ORDERS
+                        dbrPosition.MARKET, dbStatus.DRIFT_DBR_FUNDING_RATE, dbrPosition.VALUE, dbrPosition.PNL, dbrPosition.FEES,
+                        dbrPosition.BASELINE, dbrPosition.ORDER, dbrPosition.PRICE, dbrPosition.PLACE_ORDERS
                     ], [
-                        btcPosition.MARKET, dbStatus.DRIFT_BTC_FUNDING_RATE, btcPosition.VALUE, btcPosition.PNL, btcPosition.ADJUSTED_VALUE,
+                        btcPosition.MARKET, dbStatus.DRIFT_BTC_FUNDING_RATE, btcPosition.VALUE, btcPosition.PNL, btcPosition.FEES,
                         btcPosition.BASELINE, btcPosition.ORDER, btcPosition.PRICE, btcPosition.PLACE_ORDERS
                     ]]
 
@@ -675,7 +699,7 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                 },
                 {
                     range: `${sheetName}!F19:F24`,
-                    values: [[dbStatus.DRIFT_SPOT_VALUE], [dbStatus.JUP_SPOT_VALUE], [dbStatus.SOL_SPOT_VALUE], [dbStatus.W_SPOT_VALUE], [dbStatus.ETH_SPOT_VALUE], [dbStatus.BTC_SPOT_VALUE]]
+                    values: [[dbStatus.DRIFT_SPOT_VALUE], [dbStatus.JUP_SPOT_VALUE], [dbStatus.SOL_SPOT_VALUE], [dbStatus.W_SPOT_VALUE], [dbStatus.CLOUD_SPOT_VALUE], [dbStatus.BTC_SPOT_VALUE]]
                 },
                 {
                     range: `${sheetName}!C13`,
@@ -812,18 +836,21 @@ async function checkTrades(shouldTrade = true) {
         let wTokenValue = driftUser.getSpotMarketAssetValue(W_SPOT_INDEX);
         dbStatus.W_SPOT_VALUE = wTokenValue.toNumber() / 10 ** 6
 
-        let ethTokenValue = driftUser.getSpotMarketLiabilityValue(ETH_SPOT_INDEX);
-        dbStatus.ETH_SPOT_VALUE = ethTokenValue.toNumber() / 10 ** 6 * -1
+        let ethTokenValue = driftUser.getSpotMarketAssetValue(ETH_SPOT_INDEX);
+        dbStatus.ETH_SPOT_VALUE = ethTokenValue.toNumber() / 10 ** 6 
 
-        let btcTokenValue = driftUser.getSpotMarketLiabilityValue(BTC_SPOT_INDEX);
-        dbStatus.BTC_SPOT_VALUE = btcTokenValue.toNumber() / 10 ** 6 * -1
+        let cloudTokenValue = driftUser.getSpotMarketAssetValue(CLOUD_SPOT_INDEX);
+        dbStatus.CLOUD_SPOT_VALUE = cloudTokenValue.toNumber() / 10 ** 6 
+
+        let btcTokenValue = driftUser.getSpotMarketAssetValue(BTC_SPOT_INDEX);
+        dbStatus.BTC_SPOT_VALUE = btcTokenValue.toNumber() / 10 ** 6 
 
         const defaultParams = {
             driftUser,
             driftClient,
             placeOrders: true,
-            minTradeValue: 200,
-            maxTradeAmount: 2_500,
+            minTradeValue: 50,
+            maxTradeAmount: 5000,
             multiplier: 1.0,
             canReduce: true
         }
@@ -833,35 +860,52 @@ async function checkTrades(shouldTrade = true) {
         const allOrders = await Promise.all([
             checkPair({
                 ...defaultParams,
-                minTradeValue:100,
+                placeOrders: false && ALLOW_TRADES,
+                market: {
+                    symbol: 'DBR',
+                    exchange: 'DRIFT',
+                    spread: 0.0001,
+                    baseline: -1_500
+                }
+            }),
+            checkPair({
+                ...defaultParams,
+                placeOrders: false && ALLOW_TRADES,
+                market: {
+                    symbol: 'CLOUD',
+                    exchange: 'DRIFT',
+                    spread: 0.0001,
+                    baseline: -13_500
+                }
+            }),
+            checkPair({
+                ...defaultParams,
                 placeOrders: true && ALLOW_TRADES,
                 market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -20_000
+                    baseline: -25_000
                 }
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: true && ALLOW_TRADES,
-                minTradeValue:100,
+                placeOrders: false && ALLOW_TRADES,
                 market: {
                     symbol: 'DRIFT',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -2_500
+                    baseline: 0
                 }
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: true && ALLOW_TRADES,
-                minTradeValue:75,
+                placeOrders: false && ALLOW_TRADES,
                 market: {
                     symbol: 'W',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -2_500
+                    baseline: 0
                 }
             }),
             checkPair({
@@ -870,14 +914,14 @@ async function checkTrades(shouldTrade = true) {
                 market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
-                    spread: 0.01,
-                    baseline: 0
+                    spread: 0.05,
+                    baseline: 25_000
                 }
             }),
             checkPair({
                 ...defaultParams,
                 canReduce:false,
-                placeOrders: true && ALLOW_TRADES,
+                placeOrders: false && ALLOW_TRADES,
                 market: {
                     symbol: 'ETH',
                     exchange: 'DRIFT',
@@ -887,12 +931,12 @@ async function checkTrades(shouldTrade = true) {
             }),
             checkPair({
                 ...defaultParams,               
-                placeOrders: true && ALLOW_TRADES,
+                placeOrders: false && ALLOW_TRADES,
                 market: {
                     symbol: 'BTC',
                     exchange: 'DRIFT',
                     spread: 10,
-                    baseline: -5_000
+                    baseline: -2_000
                 }
             }),
         ])   
@@ -920,7 +964,7 @@ async function checkTrades(shouldTrade = true) {
     console.log('RUNNING DRIFT BUCKETS')
     const timeout = 60 * 1000 * 1
     // update wallets
-    // await checkBalances('../mango/secrets/accounts.json')
+    await checkBalances('../mango/secrets/accounts.json')
     let count = 0;
     const runEveryNumberOfMinutes = 3
     while (true) {
