@@ -1,5 +1,7 @@
 import {
     BASE_PRECISION,
+    AMM_RESERVE_PRECISION,ZERO,
+    FUNDING_RATE_BUFFER_PRECISION,
     BN,
     DriftClient,
     MarketType,
@@ -11,7 +13,10 @@ import {
     PostOnlyParams,
     SpotMarketAccount,
     User,
-    Wallet,
+    Wallet,PerpPosition,
+    calculateAllEstimatedFundingRate,
+    calculateLongShortFundingRate,
+    calculateLongShortFundingRateAndLiveTwaps,
     calculateClaimablePnl,
     decodeName
 } from "@drift-labs/sdk";
@@ -30,6 +35,7 @@ const SOL_SPOT_INDEX = 1; // Define the constant
 const W_SPOT_INDEX = 13;
 const ETH_SPOT_INDEX = 4;
 const BTC_SPOT_INDEX = 3;
+const JLP_SPOT_INDEX = 19;
 const CLOUD_SPOT_INDEX = 21;
 
 interface SolanaTransaction {
@@ -49,7 +55,7 @@ interface DBItem {
     PRICE: number,
     BASELINE: number,
     PLACE_ORDERS: boolean,
-    FEES:number
+    FEES: number
 }
 
 const dbPositions: Array<DBItem> = []
@@ -65,6 +71,7 @@ const dbStatus = {
     DRIFT_JUP_FUNDING_RATE: 0,
     DRIFT_W_FUNDING_RATE: 0,
     DRIFT_DRIFT_FUNDING_RATE: 0,
+    DRIFT_RLB_FUNDING_RATE: 0,
     DRIFT_CLOUD_FUNDING_RATE: 0,
     DRIFT_DBR_FUNDING_RATE: 0,
     LAST_UPDATED: new Date(),
@@ -83,6 +90,7 @@ const dbStatus = {
     BTC_SPOT_VALUE: 0,
     JUP_SPOT_VALUE: 0,
     W_SPOT_VALUE: 0,
+    JLP_SPOT_VALUE: 0,
 }
 
 function getKeyPair(file: string) {
@@ -103,7 +111,8 @@ const DRIFT_MARKETS = {
     DRIFT: 30,
     W: 27,
     CLOUD: 31,
-    DBR: 47
+    DBR: 47,
+    RLB: 17
 }
 
 interface Market {
@@ -195,14 +204,14 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
     const markPrice = marketAccount.amm.lastMarkPriceTwap;
     const mark = markPrice.toNumber() / PRICE_PRECISION.toNumber();
 
-    const settledPnl = (perpPosition?.settledPnl?.toNumber() || 0)/ PRICE_PRECISION.toNumber();
+    const settledPnl = (perpPosition?.settledPnl?.toNumber() || 0) / PRICE_PRECISION.toNumber();
 
     const oraclePrice = marketAccount.amm.lastOracleNormalisedPrice;
     const oracle = oraclePrice.toNumber() / PRICE_PRECISION.toNumber();
 
     const bestBid = marketAccount.amm.lastBidPriceTwap.toNumber() / PRICE_PRECISION.toNumber();
     const bestAsk = marketAccount.amm.lastAskPriceTwap.toNumber() / PRICE_PRECISION.toNumber();
-    const midPrice =  (bestBid + bestAsk) / 2    
+    const midPrice = (bestBid + bestAsk) / 2
     const bestPrice = oracle
 
     console.log(`bestBid:`, bestBid)
@@ -212,7 +221,7 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
 
     console.log(`Mid" ${midPrice} Oracle: ${oracle}   Mark: ${mark}`)
 
-    
+
     let currentAmount = oracle * baseAsset
 
     let pnl = currentAmount - baseAmount
@@ -246,10 +255,13 @@ async function getDriftPosition(user: User, marketIndex: number, symbol: string,
     } else if (symbol === "DRIFT") {
         dbStatus.DRIFT_DRIFT_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
         console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_DRIFT_FUNDING_RATE)
-    }else if (symbol === "DBR") {
+    }else if (symbol === "RLB") {
+        dbStatus.DRIFT_RLB_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
+        console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_DRIFT_FUNDING_RATE)
+    } else if (symbol === "DBR") {
         dbStatus.DRIFT_DBR_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
         console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_DBR_FUNDING_RATE)
-    }else if (symbol === "CLOUD") {
+    } else if (symbol === "CLOUD") {
         dbStatus.DRIFT_CLOUD_FUNDING_RATE = fundingRate24H * 24 * 365 / 10 ** 7
         console.log(symbol + ' fundingRate24H', dbStatus.DRIFT_CLOUD_FUNDING_RATE)
     }
@@ -323,7 +335,7 @@ async function analyzeMarket(props: AnalyzeProps) {
         PRICE: price,
         BASELINE: market.baseline,
         PLACE_ORDERS: false,
-        FEES:position.feesAndFunding
+        FEES: position.feesAndFunding
     })
     positions.push({
         symbol: market.symbol,
@@ -521,7 +533,7 @@ async function placeDriftOrders(
         if (newDriftOrders.length > 0) {
             console.log('Placing Drift Orders #', newOrders.length);
             for (const order of newOrders) {
-                console.log(`  >> ${order.side} ${order.symbol} for ${(order.tradeSize*order.price).toFixed(2)} price: ${order.price.toFixed(4)} size: ${order.tradeSize.toFixed(2)}`)
+                console.log(`  >> ${order.side} ${order.symbol} for ${(order.tradeSize * order.price).toFixed(2)} price: ${order.price.toFixed(4)} size: ${order.tradeSize.toFixed(2)}`)
             }
             for (const order of newDriftOrders) {
                 const baseAssetAmount = new BN(order.tradeSize * BASE_PRECISION.toNumber())
@@ -540,9 +552,9 @@ async function placeDriftOrders(
 
         }
 
-        const marketIndexes = newOrders.map((a:any) => a.marketIndex)
+        const marketIndexes = newOrders.map((a: any) => a.marketIndex)
         const existingOrders = driftOrders.filter((a: any) => marketIndexes.includes(a.marketIndex) || cancelAll)
-        
+
         if (transactionInstructions.length + existingOrders.length > 0) {
             if (existingOrders.length > 0) {
                 console.log(`Cancelling ${existingOrders.length} existing orders`)
@@ -606,7 +618,7 @@ async function checkPair({
     return placeOrders ? newOrders : []
 }
 
-async function shouldRun(){
+async function shouldRun() {
     const { google } = require('googleapis');
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
@@ -639,6 +651,7 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
     const jupPosition = db.find((a: DBItem) => a.MARKET === 'JUP')
     const ethPosition = db.find((a: DBItem) => a.MARKET === 'ETH')
     const btcPosition = db.find((a: DBItem) => a.MARKET === 'BTC')
+    const rlbPosition = db.find((a: DBItem) => a.MARKET === 'RLB')
     const driftPosition = db.find((a: DBItem) => a.MARKET === 'DRIFT')
     const wPosition = db.find((a: DBItem) => a.MARKET === 'W')
     const driftPrice = await getDriftMakretPrice(driftClient, (DRIFT_MARKETS as any)["DRIFT"])
@@ -663,14 +676,14 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                         cloudPosition.MARKET, dbStatus.DRIFT_CLOUD_FUNDING_RATE, cloudPosition.VALUE, cloudPosition.PNL, cloudPosition.FEES,
                         cloudPosition.BASELINE, cloudPosition.ORDER, cloudPosition.PRICE, cloudPosition.PLACE_ORDERS
                     ], [
-                        driftPosition.MARKET, dbStatus.DRIFT_DRIFT_FUNDING_RATE, driftPosition.VALUE, driftPosition.PNL, driftPosition.FEES,
-                        driftPosition.BASELINE, driftPosition.ORDER, driftPosition.PRICE, driftPosition.PLACE_ORDERS
+                        ethPosition.MARKET, dbStatus.DRIFT_ETH_FUNDING_RATE, ethPosition.VALUE, ethPosition.PNL, ethPosition.FEES,
+                        ethPosition.BASELINE, ethPosition.ORDER, ethPosition.PRICE, ethPosition.PLACE_ORDERS
                     ], [
                         solPosition.MARKET, dbStatus.DRIFT_SOL_FUNDING_RATE, solPosition.VALUE, solPosition.PNL, solPosition.FEES,
                         solPosition.BASELINE, solPosition.ORDER, solPosition.PRICE, solPosition.PLACE_ORDERS
                     ], [
-                        dbrPosition.MARKET, dbStatus.DRIFT_DBR_FUNDING_RATE, dbrPosition.VALUE, dbrPosition.PNL, dbrPosition.FEES,
-                        dbrPosition.BASELINE, dbrPosition.ORDER, dbrPosition.PRICE, dbrPosition.PLACE_ORDERS
+                        driftPosition.MARKET, dbStatus.DRIFT_DRIFT_FUNDING_RATE, driftPosition.VALUE, driftPosition.PNL, driftPosition.FEES,
+                        driftPosition.BASELINE, driftPosition.ORDER, driftPosition.PRICE, driftPosition.PLACE_ORDERS
                     ], [
                         btcPosition.MARKET, dbStatus.DRIFT_BTC_FUNDING_RATE, btcPosition.VALUE, btcPosition.PNL, btcPosition.FEES,
                         btcPosition.BASELINE, btcPosition.ORDER, btcPosition.PRICE, btcPosition.PLACE_ORDERS
@@ -699,7 +712,7 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
                 },
                 {
                     range: `${sheetName}!F19:F24`,
-                    values: [[dbStatus.DRIFT_SPOT_VALUE], [dbStatus.JUP_SPOT_VALUE], [dbStatus.SOL_SPOT_VALUE], [dbStatus.W_SPOT_VALUE], [dbStatus.CLOUD_SPOT_VALUE], [dbStatus.BTC_SPOT_VALUE]]
+                    values: [[dbStatus.DRIFT_SPOT_VALUE], [dbStatus.JUP_SPOT_VALUE], [dbStatus.SOL_SPOT_VALUE], [dbStatus.W_SPOT_VALUE], [dbStatus.CLOUD_SPOT_VALUE], [dbStatus.JLP_SPOT_VALUE]]
                 },
                 {
                     range: `${sheetName}!C13`,
@@ -738,7 +751,17 @@ async function updateGoogleSheet(db: any, driftClient: DriftClient) {
     });
 }
 
-
+async function placeOracleOrder(driftClient:DriftClient) {
+    const baseAssetAmount = new BN(1000 * BASE_PRECISION.toNumber())
+    const result = await driftClient.placePerpOrder({
+        orderType:OrderType.ORACLE,
+        marketIndex:DRIFT_MARKETS.CLOUD,
+        oraclePriceOffset: -0.01 * PRICE_PRECISION.toNumber(),
+        direction:PositionDirection.LONG,
+        baseAssetAmount
+    })
+    console.log(result)
+}
 async function checkTrades(shouldTrade = true) {
     try {
 
@@ -783,6 +806,29 @@ async function checkTrades(shouldTrade = true) {
         let unsettledPnl = 0;
         for (const perpMarketIdx of Object.values(DRIFT_MARKETS)) {
             const settleePositionWithLp = driftUser.getActivePerpPositions().find(a => a.marketIndex === perpMarketIdx)
+            const feesAndFunding = calculateFeesAndFundingPnl( perpMarketAndOracleData[perpMarketIdx].marketAccount, 
+                    settleePositionWithLp!, false)
+
+            const currentMarkPrice=perpMarketAndOracleData[perpMarketIdx].marketAccount.amm.lastMarkPriceTwap
+            const oraclePriceData = perpMarketAndOracleData[perpMarketIdx].oraclePriceData
+            const results  =
+            await calculateLongShortFundingRateAndLiveTwaps(
+                perpMarketAndOracleData[perpMarketIdx].marketAccount,
+                oraclePriceData,
+                currentMarkPrice,
+                new BN(new Date().getTime())
+            );
+
+            const fRate = await calculateAllEstimatedFundingRate(perpMarketAndOracleData[perpMarketIdx].marketAccount, oraclePriceData)
+            for(const item of fRate){
+                console.log(`fRate ${decodeName(perpMarketAndOracleData[perpMarketIdx].marketAccount.name)}:  ${item.toNumber()}`)
+            }
+            
+            for(const item of results){
+                console.log(`SPOT ${decodeName(perpMarketAndOracleData[perpMarketIdx].marketAccount.name)}:  ${item.toNumber()}`)
+            }
+        
+            console.log(feesAndFunding.toNumber()/10**6);
             if (perpMarketAndOracleData[perpMarketIdx] && settleePositionWithLp) {
                 const userUnsettledPnl = calculateClaimablePnl(
                     perpMarketAndOracleData[perpMarketIdx].marketAccount,
@@ -837,13 +883,16 @@ async function checkTrades(shouldTrade = true) {
         dbStatus.W_SPOT_VALUE = wTokenValue.toNumber() / 10 ** 6
 
         let ethTokenValue = driftUser.getSpotMarketAssetValue(ETH_SPOT_INDEX);
-        dbStatus.ETH_SPOT_VALUE = ethTokenValue.toNumber() / 10 ** 6 
+        dbStatus.ETH_SPOT_VALUE = ethTokenValue.toNumber() / 10 ** 6
 
         let cloudTokenValue = driftUser.getSpotMarketAssetValue(CLOUD_SPOT_INDEX);
-        dbStatus.CLOUD_SPOT_VALUE = cloudTokenValue.toNumber() / 10 ** 6 
+        dbStatus.CLOUD_SPOT_VALUE = cloudTokenValue.toNumber() / 10 ** 6
 
         let btcTokenValue = driftUser.getSpotMarketAssetValue(BTC_SPOT_INDEX);
-        dbStatus.BTC_SPOT_VALUE = btcTokenValue.toNumber() / 10 ** 6 
+        dbStatus.BTC_SPOT_VALUE = btcTokenValue.toNumber() / 10 ** 6
+
+        let jlpTokenValue = driftUser.getSpotMarketAssetValue(JLP_SPOT_INDEX);
+        dbStatus.JLP_SPOT_VALUE = jlpTokenValue.toNumber() / 10 ** 6
 
         const defaultParams = {
             driftUser,
@@ -862,10 +911,10 @@ async function checkTrades(shouldTrade = true) {
                 ...defaultParams,
                 placeOrders: false && ALLOW_TRADES,
                 market: {
-                    symbol: 'DBR',
+                    symbol: 'ETH',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -1_500
+                    baseline: -0
                 }
             }),
             checkPair({
@@ -875,17 +924,17 @@ async function checkTrades(shouldTrade = true) {
                     symbol: 'CLOUD',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -13_500
+                    baseline: 0
                 }
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: true && ALLOW_TRADES,
+                placeOrders: false && ALLOW_TRADES,
                 market: {
                     symbol: 'JUP',
                     exchange: 'DRIFT',
                     spread: 0.0001,
-                    baseline: -25_000
+                    baseline: 0
                 }
             }),
             checkPair({
@@ -910,17 +959,17 @@ async function checkTrades(shouldTrade = true) {
             }),
             checkPair({
                 ...defaultParams,
-                placeOrders: true && ALLOW_TRADES,
+                placeOrders: false && ALLOW_TRADES,
                 market: {
                     symbol: 'SOL',
                     exchange: 'DRIFT',
                     spread: 0.05,
-                    baseline: 25_000
+                    baseline: 0
                 }
             }),
             checkPair({
                 ...defaultParams,
-                canReduce:false,
+                canReduce: false,
                 placeOrders: false && ALLOW_TRADES,
                 market: {
                     symbol: 'ETH',
@@ -930,23 +979,127 @@ async function checkTrades(shouldTrade = true) {
                 }
             }),
             checkPair({
-                ...defaultParams,               
+                ...defaultParams,
                 placeOrders: false && ALLOW_TRADES,
                 market: {
                     symbol: 'BTC',
                     exchange: 'DRIFT',
                     spread: 10,
-                    baseline: -2_000
+                    baseline: 0
                 }
             }),
-        ])   
-        
+        ])
+
+        const matchPairs = false;
+        if (matchPairs) {
+            const solPosition = dbPositions.find((a: DBItem) => a.MARKET === 'SOL')
+            const jupPosition = dbPositions.find((a: DBItem) => a.MARKET === 'JUP')
+
+            const sol = (solPosition?.VALUE || 0) + (solPosition?.PNL || 0)
+            const solBaseline = solPosition?.BASELINE || 0
+            const solDiff = sol - solBaseline
+            const jup = (jupPosition?.VALUE || 0) + (jupPosition?.PNL || 0) * -2
+            const jupBaseline = jupPosition?.BASELINE || 0
+            const jupDiff = jup - jupBaseline
+
+            console.log(`solDiff: ${solDiff}  jupDiff: ${jupDiff}`)
+            console.log(`sol: ${sol}  jup: ${jup}`)
+
+            const diff = sol + jup
+            let direction: 'LONG' | 'SHORT' = 'LONG'
+            let symbol: 'JUP' | 'SOL' = 'JUP'
+            let price: number = 0
+            if (diff > 0) {
+                // sell jup or sell sol
+                if (Math.abs(jup) < Math.abs(jupBaseline)) {
+                    // buy jup
+                    symbol = 'JUP'
+                    direction = 'SHORT'
+                    price = jupPosition?.PRICE || 0
+                } else {
+                    // sell sol
+                    symbol = 'SOL'
+                    direction = 'SHORT'
+                    price = solPosition?.PRICE || 0
+                }
+            } else {
+                // buy jup or buy sol
+                if (Math.abs(sol) < Math.abs(solBaseline)) {
+                    // buy sol
+                    symbol = 'SOL'
+                    direction = 'LONG'
+                    price = solPosition?.PRICE || 0
+                } else {
+                    // buy jup
+                    symbol = 'JUP'
+                    direction = 'LONG'
+                    price = jupPosition?.PRICE || 0
+                }
+            }
+
+            const amount = Math.abs(diff)        
+            const minTradeAmount = 50
+            const maxAmount = 1000
+            console.log(`POSSIBLE TRADE
+                Symbol: ${symbol}  
+                Direction: ${direction}                  
+                Amount: ${amount}
+                Price: ${price}
+                SOL Total: ${sol}
+                JUP Total: ${jup}
+                Diff: ${diff} 
+                Should Trade: ${ALLOW_TRADES}
+                Min Trade Amount: ${minTradeAmount}
+                Exceeds Minimum: ${amount>minTradeAmount}
+                `)
+            const marketIndex = (DRIFT_MARKETS as any)[symbol]
+            const spread = symbol === "SOL" ? 0.05 : 0.0001
+            if (amount > minTradeAmount) {
+                const transactionInstructions: any = []
+                console.log(`Possible Trade: 
+                        amount=${amount}
+                        symbol=${symbol}
+                        marketIndex=${marketIndex}
+                        spread=${spread}
+                        price=${price}
+                        direction=${direction}
+                `)
+                await buySell(direction === "LONG" ? "BUY" : "SELL",
+                    amount,
+                    maxAmount,
+                    symbol,
+                    marketIndex,
+                    spread,
+                    transactionInstructions,
+                    price,
+                    minTradeAmount,
+                    "DRIFT")
+                allOrders.push(transactionInstructions)
+                const position = dbPositions.find((a: DBItem) => a.MARKET === symbol)
+                for (let p of dbPositions){
+                    p.PLACE_ORDERS = false
+                    p.ORDER = 0
+                }
+                if (position){
+                    position.PLACE_ORDERS = true
+                    position.ORDER = direction === "LONG" ? amount : -amount
+                }
+            }
+        }
         await updateGoogleSheet(dbPositions, driftClient)
 
         // place drift orders
         const newOrders = allOrders.flat()
         if (ALLOW_TRADES && newOrders.length > 0) {
-            await placeDriftOrders(newOrders, driftClient, cancelOrders, false)
+            for(const trade of newOrders){
+                console.log(`>>> Placing Trade: 
+                    amount=${trade.tradeSize * trade.price}
+                    symbol=${trade.symbol}
+                    marketIndex=${trade.marketIndex}                    
+                    price=${trade.price}
+                    direction=${trade.side}`)
+            }
+            await placeDriftOrders(newOrders, driftClient, cancelOrders, true)
         }
 
         console.log(`Closing Drift Client`)
@@ -960,6 +1113,70 @@ async function checkTrades(shouldTrade = true) {
     }
 }
 
+/**
+ * Returns unsettled funding pnl for the position
+ *
+ * To calculate all fees and funding pnl including settled, use calculateFeesAndFundingPnl
+ *
+ * @param market
+ * @param PerpPosition
+ * @returns // QUOTE_PRECISION
+ */
+export function calculateUnsettledFundingPnl(
+	market: PerpMarketAccount,
+	perpPosition: PerpPosition
+): BN {
+	if (perpPosition.baseAssetAmount.eq(ZERO)) {
+		return ZERO;
+	}
+
+	let ammCumulativeFundingRate: BN;
+	if (perpPosition.baseAssetAmount.gt(ZERO)) {
+		ammCumulativeFundingRate = market.amm.cumulativeFundingRateLong;
+	} else {
+		ammCumulativeFundingRate = market.amm.cumulativeFundingRateShort;
+	}
+
+	const perPositionFundingRate = ammCumulativeFundingRate
+		.sub(perpPosition.lastCumulativeFundingRate)
+		.mul(perpPosition.baseAssetAmount)
+		.div(AMM_RESERVE_PRECISION)
+		.div(FUNDING_RATE_BUFFER_PRECISION)
+		.mul(new BN(-1));
+
+	return perPositionFundingRate;
+}
+
+/**
+ * Returns total fees and funding pnl for a position
+ *
+ * @param market
+ * @param PerpPosition
+ * @param includeUnsettled include unsettled funding in return value (default: true)
+ * @returns — // QUOTE_PRECISION
+ */
+export function calculateFeesAndFundingPnl(
+	market: PerpMarketAccount,
+	perpPosition: PerpPosition,
+	includeUnsettled = true
+): BN {
+    if(!perpPosition) return new BN(0)
+	const settledFundingAndFeesPnl = perpPosition.quoteBreakEvenAmount.sub(
+		perpPosition.quoteEntryAmount
+	);
+
+	if (!includeUnsettled) {
+		return settledFundingAndFeesPnl;
+	}
+
+	const unsettledFundingPnl = calculateUnsettledFundingPnl(
+		market,
+		perpPosition
+	);
+
+	return settledFundingAndFeesPnl.add(unsettledFundingPnl);
+}
+
 (async () => {
     console.log('RUNNING DRIFT BUCKETS')
     const timeout = 60 * 1000 * 1
@@ -968,7 +1185,7 @@ async function checkTrades(shouldTrade = true) {
     let count = 0;
     const runEveryNumberOfMinutes = 3
     while (true) {
-        const shouldExecute = await shouldRun() && true;    // disable trade executions by setting to false    
+        const shouldExecute = await shouldRun() && false;    // disable trade executions by setting to false    
         console.log(`count: ${count}.   count % ${runEveryNumberOfMinutes} = ${count % runEveryNumberOfMinutes}  shouldExecute = ${shouldExecute}`)
         await checkTrades(count % runEveryNumberOfMinutes === 0 && shouldExecute)
         count++

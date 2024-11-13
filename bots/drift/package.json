@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/driftBuckets.ts",
-    "driftBuckets": "ts-node src/driftBuckets.ts"
+    "driftBuckets": "ts-node src/driftBuckets.ts",
+    "longShort": "ts-node src/driftLongShort.ts"
   },
   "keywords": [],
   "author": "",
