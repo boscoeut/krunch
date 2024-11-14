@@ -17,6 +17,7 @@ import pkg from 'bs58';
 import fs from 'fs';
 import { CONNECTION_URL, SPREADSHEET_ID } from '../../mango/src/constants';
 import { authorize } from '../../mango/src/googleUtils';
+import { checkBalances } from "../../mango/src/getWalletBalances";
 const { decode } = pkg;
 
 const DRIFT_ENV = 'mainnet-beta';
@@ -47,7 +48,8 @@ function formatUsdc(usdc: any) {
 
 async function getDriftClient(connection: Connection, wallet: string) {
     console.time('New Drift Client');
-    const driftWallet = new Wallet(getKeyPair(wallet))
+    const keyPair=getKeyPair(wallet)
+    const driftWallet = new Wallet(keyPair)
     const driftClient = new DriftClient({
         connection,
         wallet: driftWallet,
@@ -76,7 +78,7 @@ async function getDriftClient(connection: Connection, wallet: string) {
     console.timeEnd('Get User');
 
     return {
-        driftClient, user
+        driftClient, user, publicKey: keyPair.publicKey
     }
 }
 
@@ -132,9 +134,9 @@ interface SpotPosition {
     name: string,
     balance: number,
     account: string,
-    price:number,
-    value:number,
-    diff:number
+    price: number,
+    value: number,
+    diff: number
 }
 
 interface PerpRecord {
@@ -147,15 +149,13 @@ interface PerpRecord {
     value: number,
     feesAndFunding: number,
     account: string
-
 }
 
 async function getTotals() {
     const connection = new Connection(CONNECTION_URL);
-    const { driftClient, user: driftUser } = await getDriftClient(connection, 'driftWallet')
+    const { driftClient, user: driftUser,publicKey } = await getDriftClient(connection, 'driftWallet')
 
-    const userAccounts = await driftClient.getUserAccountsForAuthority(new PublicKey("2WGHpu5jkLJZNNgzB6VbFqXz8TGv8cjzPTGKCbTRtaT8"))
-
+    const userAccounts = await driftClient.getUserAccountsForAuthority(publicKey)
     let perpRecords: Array<PerpRecord> = []
     let spotPositions: Array<SpotPosition> = []
 
@@ -215,12 +215,12 @@ async function getTotals() {
         const spotMarketAccounts = driftClient.getSpotMarketAccounts()
         const balances = driftUser.getActiveSpotPositionsForUserAccount(userAccount)
         for (const spotMarket of balances) {
-            let driftTokenValue = spotMarket.scaledBalance.toNumber()/10**9;
-            if (spotMarket.balanceType === SpotBalanceType.DEPOSIT){
-                driftTokenValue *-1
+            let driftTokenValue = spotMarket.scaledBalance.toNumber() / 10 ** 9;
+            if (spotMarket.balanceType === SpotBalanceType.DEPOSIT) {
+                driftTokenValue * -1
             }
-            const account = spotMarketAccounts.find(a=>a.marketIndex===spotMarket.marketIndex)
-            const accountName = decodeName(userAccount?.name!   )
+            const account = spotMarketAccounts.find(a => a.marketIndex === spotMarket.marketIndex)
+            const accountName = decodeName(userAccount?.name!)
             const name = decodeName(account?.name!)
             console.log(`${name}:  Asset=${driftTokenValue}`)
 
@@ -237,13 +237,13 @@ async function getTotals() {
         }
     }
 
-    for (const spotPosition of spotPositions){
-        const perp = perpRecords.find(p=>(p.name.replace("-PERP","") === spotPosition.name) || (p.name==="ETH-PERP" && spotPosition.name==="wETH"))
-        if (perp){
+    for (const spotPosition of spotPositions) {
+        const perp = perpRecords.find(p => (p.name.replace("-PERP", "") === spotPosition.name) || (p.name === "ETH-PERP" && spotPosition.name === "wETH"))
+        if (perp) {
             spotPosition.price = perp.oraclePrice
             spotPosition.value = perp.oraclePrice * spotPosition.balance
             spotPosition.diff = spotPosition.balance + perp.baseAsset
-        }else{
+        } else {
             spotPosition.price = 1
             spotPosition.value = spotPosition.balance
         }
@@ -285,11 +285,14 @@ async function updateGoogleSheet(perpRecords: Array<PerpRecord>, spotPositions: 
     console.log('RUNNING DRIFT LONG SHORT')
     const timeout = 60 * 1000 * 1
     let count = 0;
-    const runEveryNumberOfMinutes = 3
-    while (true) {
+    const SHOULD_RUN = false
+
+    do {
         const { perpRecords, spotPositions } = await getTotals()
         await updateGoogleSheet(perpRecords, spotPositions)
         console.log(`DRIFT LONG SHORT (Count=${count}) >> Sleeping for ${timeout / 1000} seconds. ${new Date().toLocaleTimeString()}`)
         await new Promise(resolve => setTimeout(resolve, timeout));
-    }
+    } while (SHOULD_RUN)
+
+    await checkBalances('../mango/secrets/accounts.json')
 })();
