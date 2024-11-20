@@ -1,4 +1,7 @@
 import {
+    toUiDecimals
+} from '@blockworks-foundation/mango-v4';
+import {
     AMM_RESERVE_PRECISION,
     BN,
     DriftClient,
@@ -10,16 +13,41 @@ import {
     SpotBalanceType,
     Wallet,
     ZERO,
-    decodeName
+    decodeName,
+    User
 } from "@drift-labs/sdk";
+import { TokenInstructions } from '@project-serum/serum';
 import { Connection, Keypair } from "@solana/web3.js";
 import pkg from 'bs58';
 import fs from 'fs';
 import { CONNECTION_URL, SPREADSHEET_ID } from '../../mango/src/constants';
-import { authorize } from '../../mango/src/googleUtils';
 import { checkBalances } from "../../mango/src/getWalletBalances";
-const { decode } = pkg;
+import { authorize } from '../../mango/src/googleUtils';
 
+const { decode } = pkg;
+export class TokenAccount {
+    publicKey!: PublicKey
+    mint!: PublicKey
+    owner!: PublicKey
+    amount!: number
+    decimals!: number
+    uiAmount: number
+
+    constructor(
+        publicKey: PublicKey,
+        decoded: {
+            mint: PublicKey
+            owner: PublicKey
+            amount: number
+            decimals: number
+            uiAmount: number
+        },
+    ) {
+        this.publicKey = publicKey
+        this.uiAmount = 0
+        Object.assign(this, decoded)
+    }
+}
 const DRIFT_ENV = 'mainnet-beta';
 
 
@@ -46,16 +74,15 @@ function formatUsdc(usdc: any) {
     return usdc / 10 ** 6
 }
 
-async function getDriftClient(connection: Connection, wallet: string) {
+async function getDriftClient(connection: Connection, wallet: string, subAccountId?: number) {
     console.time('New Drift Client');
-    const keyPair=getKeyPair(wallet)
+    const keyPair = getKeyPair(wallet)
     const driftWallet = new Wallet(keyPair)
     const driftClient = new DriftClient({
         connection,
         wallet: driftWallet,
         env: DRIFT_ENV,
-
-
+        activeSubAccountId: subAccountId,
         accountSubscription: {
             resubTimeoutMs: 15000,
             type: 'websocket'
@@ -148,27 +175,105 @@ interface PerpRecord {
     baseAsset: number,
     value: number,
     feesAndFunding: number,
-    account: string
+    account: string,
+    fundingRatePercent: number
+}
+export async function getTokenAccountsByOwnerWithWrappedSol(
+    connection: Connection,
+    owner: PublicKey,
+): Promise<TokenAccount[]> {
+    const solReq = connection.getAccountInfo(owner)
+    const tokenReq = connection.getParsedTokenAccountsByOwner(owner, {
+        programId: TokenInstructions.TOKEN_PROGRAM_ID,
+    })
+
+    // fetch data
+    const [solResp, tokenResp] = await Promise.all([solReq, tokenReq])
+
+    // parse token accounts
+    const tokenAccounts = tokenResp.value.map((t) => {
+        return {
+            publicKey: t.pubkey,
+            mint: t.account.data.parsed.info.mint,
+            owner: t.account.data.parsed.info.owner,
+            amount: t.account.data.parsed.info.tokenAmount.amount,
+            uiAmount: t.account.data.parsed.info.tokenAmount.uiAmount,
+            decimals: t.account.data.parsed.info.tokenAmount.decimals,
+        }
+    })
+    // create fake wrapped sol account to reflect sol balances in user's wallet
+    const lamports = solResp?.lamports || 0
+    const solAccount = new TokenAccount(owner, {
+        mint: TokenInstructions.WRAPPED_SOL_MINT,
+        owner,
+        amount: lamports,
+        uiAmount: toUiDecimals(lamports, 9),
+        decimals: 9,
+    })
+
+    // prepend SOL account to beginning of list
+    return [solAccount].concat(tokenAccounts)
+}
+
+async function withdraw(connection: Connection, publicKey: PublicKey, driftClient: DriftClient) {
+    const tokens = await getTokenAccountsByOwnerWithWrappedSol(connection, publicKey)
+    const CLOUD_MINT = "CLoUDKc4Ane7HeQcPpE3YHnznRxhMimJ4MyaUqyHFzAu"
+    const cloudToken = tokens.find((t) => t.mint.toString() === CLOUD_MINT)
+
+    await driftClient.withdraw(new BN(1), 21, cloudToken?.publicKey!, true)
 }
 
 async function getTotals() {
     const connection = new Connection(CONNECTION_URL);
-    const { driftClient, user: driftUser,publicKey } = await getDriftClient(connection, 'driftWallet')
+    const { driftClient, publicKey } = await getDriftClient(connection, 'driftWallet')
 
     const userAccounts = await driftClient.getUserAccountsForAuthority(publicKey)
     let perpRecords: Array<PerpRecord> = []
     let spotPositions: Array<SpotPosition> = []
+    let driftUser: User = driftClient.getUser()
+
+    let mainHealth = 0
+    let mainFunding = 0
+    let mainValue = 0
+
+    let renderHealth = 0
+    let renderFunding = 0
+    let renderValue = 0
 
     // perp markets
+    let subAccountId = 0;
     for (const userAccount of userAccounts) {
-        const perpPositions = driftUser.getActivePerpPositionsForUserAccount(userAccount)
+        driftClient.switchActiveUser(subAccountId)
+        driftUser = driftClient.getUser()
+        subAccountId++
+        const perpPositions = driftUser.getActivePerpPositions()
         const perpMarkets = driftClient.getPerpMarketAccounts()
         const accountName = decodeName(userAccount.name)
+
+        const funding = driftUser.getUnrealizedFundingPNL()
+        const unrealizedFunding = formatUsdc(funding)
+        const cumulativePerpFunding = userAccount?.cumulativePerpFunding?.toNumber() ?? 0
+        const formattedFunding = formatUsdc(cumulativePerpFunding)
+
+        const driftFunding = unrealizedFunding + formattedFunding
+        const driftValue = formatUsdc(driftUser.getNetUsdValue())
+        const driftHealth = driftUser.getHealth()
+
+        if (accountName === "Main Account") {
+            mainHealth = driftHealth
+            mainFunding = driftFunding
+            mainValue = driftValue
+        } else {
+            renderHealth = driftHealth
+            renderFunding = driftFunding
+            renderValue = driftValue
+        }
 
         for (const perpPosition of perpPositions) {
             const marketAccount = perpMarkets.find(m => m.marketIndex === perpPosition.marketIndex)
             const feesAndFunding = calculateFeesAndFundingPnl(marketAccount!, perpPosition, false)
             const marketName = decodeName(marketAccount?.name!)
+
 
             const baseAssetAmount = perpPosition?.baseAssetAmount?.toNumber() || 0
             let baseAsset = convertAmount(baseAssetAmount);
@@ -187,7 +292,11 @@ async function getTotals() {
                 pnl = baseAmount * -1 + currentAmount
             }
             const fundingRate24H = marketAccount!.amm.lastFundingRate.toNumber()
-            const fundingRatePercent = fundingRate24H * 24 * 365 / 10 ** 7
+            const tickSize = marketAccount!.amm.orderTickSize.toNumber()
+            const orderStepSize = marketAccount!.amm.orderStepSize.toNumber()
+            // const fundingRatePercent = fundingRate24H * 24 * 365 / orderStepSize
+
+            const fundingRatePercent = marketAccount!.amm.last24HAvgFundingRate.toNumber() / tickSize / 100
             console.log(`-- ${marketName} --`);
             console.log('*** Break Even Price:', breakEvenPrice);
             console.log('*** Entry Price:', entryPrice);
@@ -197,6 +306,11 @@ async function getTotals() {
             console.log('*** value:', currentAmount);
             console.log('*** fees and funding:', feesAndFunding.toNumber() / 10 ** 6);
             console.log('*** fundingRatePercent:', fundingRatePercent);
+
+            const unrealizedFunding = driftUser.getUnrealizedFundingPNL()
+            const funding = formatUsdc(userAccount.cumulativePerpFunding.toNumber())
+            console.log(' unrealizedFunding ', formatUsdc(unrealizedFunding.toNumber()))
+            console.log(' funding ', funding)
             perpRecords.push(
                 {
                     name: marketName,
@@ -207,7 +321,8 @@ async function getTotals() {
                     baseAsset,
                     value: currentAmount,
                     feesAndFunding: feesAndFunding.toNumber() / 10 ** 6,
-                    account: accountName
+                    account: accountName,
+                    fundingRatePercent
                 })
         }
 
@@ -248,37 +363,54 @@ async function getTotals() {
             spotPosition.value = spotPosition.balance
         }
     }
+
     return {
         perpRecords,
-        spotPositions
+        spotPositions,
+        mainHealth,
+        mainFunding,
+        mainValue,
+        renderHealth,
+        renderFunding,
+        renderValue
     }
-
 }
 
-async function updateGoogleSheet(perpRecords: Array<PerpRecord>, spotPositions: Array<SpotPosition>) {
+async function updateGoogleSheet(perpRecords: Array<PerpRecord>,
+    spotPositions: Array<SpotPosition>,
+    mainFunding: number, mainHealth: number, mainValue: number,
+    renderFunding: number, renderHealth: number, renderValue: number) {
     const { google } = require('googleapis');
     const googleClient: any = await authorize();
     const googleSheets = google.sheets({ version: 'v4', auth: googleClient });
     const sheetName = "DriftValue"
+
+    // Sort perpRecords and spotPositions by name
+    const sortedPerpRecords = [...perpRecords].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedSpotPositions = [...spotPositions].sort((a, b) => a.name.localeCompare(b.name));
+
     await googleSheets.spreadsheets.values.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
         resource: {
             valueInputOption: 'RAW',
             data: [{
-                range: `${sheetName}!A4:I${perpRecords.length + 3}`,
-                values: perpRecords.map(p => {
-                    return [p.account, p.name, p.entryPrice, p.breakEvenPrice, p.oraclePrice, p.pnl, p.baseAsset, p.value, p.feesAndFunding]
+                range: `${sheetName}!A4:J${perpRecords.length + 3}`,
+                values: sortedPerpRecords.map(p => {
+                    return [p.account, p.name, p.fundingRatePercent, p.entryPrice, p.breakEvenPrice, p.oraclePrice, p.pnl, p.baseAsset, p.value, p.feesAndFunding]
                 })
             },
             {
                 range: `${sheetName}!N4:S${spotPositions.length + 3}`,
-                values: spotPositions.map(p => {
+                values: sortedSpotPositions.map(p => {
                     return [p.account, p.name, p.balance, p.price, p.value, p.diff]
                 })
+            },
+            {
+                range: `${sheetName}!V4:V9`,
+                values: [[mainFunding], [mainHealth], [mainValue], [renderFunding], [renderHealth], [renderValue]]
             }]
         }
     });
-
 }
 
 (async () => {
@@ -288,8 +420,8 @@ async function updateGoogleSheet(perpRecords: Array<PerpRecord>, spotPositions: 
     const SHOULD_RUN = false
 
     do {
-        const { perpRecords, spotPositions } = await getTotals()
-        await updateGoogleSheet(perpRecords, spotPositions)
+        const { perpRecords, spotPositions, mainHealth, mainFunding, mainValue, renderHealth, renderFunding, renderValue } = await getTotals()
+        await updateGoogleSheet(perpRecords, spotPositions, mainFunding, mainHealth, mainValue, renderFunding, renderHealth, renderValue)
         console.log(`DRIFT LONG SHORT (Count=${count}) >> Sleeping for ${timeout / 1000} seconds. ${new Date().toLocaleTimeString()}`)
         await new Promise(resolve => setTimeout(resolve, timeout));
     } while (SHOULD_RUN)
