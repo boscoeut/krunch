@@ -45,9 +45,11 @@ export const FUNDING_HOURLY = 'https://api.mngo.cloud/data/v4/one-hour-funding-r
 export const MANGO_DATA_API_URL = 'https://api.mngo.cloud/data/v4'
 export const SOL_GROUP_PK = '78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
 export const COMMITTMENT = 'processed'
-export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/odv67ZxOsKsh9lMdK-_SDDpwj4dmC9P8'; // alchemy PAID
+export const SYNCICA_CONNECTION_URL = 'https://solana-mainnet.api.syndica.io/api-key/'+"9dDnwXBjwi4yf8gg5QQpgeKUkVCYwZxbTTVoZtoyBChsUSodLjzGvjgBwxi85nZ8VsLcLQxhyV1Qu21DxbDCNKo9ZCdYyVMmKa"
+export const ALCHEMY_PAID_CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/odv67ZxOsKsh9lMdK-_SDDpwj4dmC9P8'; // alchemy PAID
 export const ROBO_CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0'; // alchemy robo
 // export const CONNECTION_URL = 'https://solana-mainnet.g.alchemy.com/v2/TwEGOh2Jxfb6fiqCCsZ9k3urgbjOtRSH'; // alchemy boscoe
+export const CONNECTION_URL = SYNCICA_CONNECTION_URL
 
 export const ALCHEMY_WS_URL = "wss://solana-mainnet.g.alchemy.com/v2/YgL0vPVzbS8fh9y5l-eb35JE2emITsv0"
 export const LITE_RPC_URL = "https://api.mngo.cloud/lite-rpc/v1/"
