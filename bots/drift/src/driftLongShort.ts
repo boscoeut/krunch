@@ -400,13 +400,13 @@ async function updateGoogleSheet(perpRecords: Array<PerpRecord>,
                 })
             },
             {
-                range: `${sheetName}!N4:S${spotPositions.length + 3}`,
+                range: `${sheetName}!P4:U${spotPositions.length + 3}`,
                 values: sortedSpotPositions.map(p => {
                     return [p.account, p.name, p.balance, p.price, p.value, p.diff]
                 })
             },
             {
-                range: `${sheetName}!V4:V9`,
+                range: `${sheetName}!X4:X9`,
                 values: [[mainFunding], [mainHealth], [mainValue], [renderFunding], [renderHealth], [renderValue]]
             }]
         }
